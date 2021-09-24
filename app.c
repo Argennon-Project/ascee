@@ -26,8 +26,8 @@ int main() {
     string_buffer buf = StringBuffer(100);
 
     append_str(&buf, str);
-    string_t str2 = String("How are you?");
-    append_str(&buf, str2);
+    append_int64(&buf, 45);
+    append_int64(&buf, 123456);
     printf("%s :: %d\n", buf.buffer, buf.end);
 
 }

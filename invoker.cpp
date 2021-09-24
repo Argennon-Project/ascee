@@ -185,7 +185,7 @@ void append_str(StringBuffer* buf, String str) {
         buf->end += str.length;
 }
 
-extern "C" inline
+extern "C"
 void append_int64(StringBuffer* buf, int64 i) {
     string str = to_string(i);
     append_str(buf, String{str.c_str(), static_cast<int>(str.size() + 1)});
