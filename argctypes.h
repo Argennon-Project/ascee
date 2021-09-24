@@ -12,8 +12,21 @@ typedef __float128 float128;
 typedef uint32_t short_id_t;
 typedef uint64_t std_id_t;
 typedef __uint128_t full_id_t;
+typedef struct String string_t;
+typedef struct StringBuffer string_buffer;
 
-typedef int (* dispatcher_ptr_t)(void*, const char*, char*);
+struct String {
+    const char* content;
+    int length;
+};
+
+struct StringBuffer {
+    char* buffer;
+    int maxSize;
+    int end;
+};
+
+typedef int (* dispatcher_ptr_t)(void*, string_t);
 
 #define HTTP_OK 200
 #define BAD_REQUEST 400

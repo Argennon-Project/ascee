@@ -1,6 +1,10 @@
 #include <stdio.h>
+#include <string.h>
 #include "argctypes.h"
 #include "argcrtl.h"
+
+#define String(str) {.content = str, .length = sizeof str}
+#define StringBuffer(size) {.buffer = (char[size]){}, .maxSize = size, .end = 0}
 
 int fib(int n) {
     if (n <= 1) return n;
@@ -16,4 +20,16 @@ int dispatcher(void* session, const char* request, char* response) {
         }
     };
 }
+
+int main() {
+    string_t str = String("Hello!!!  ");
+    string_buffer buf = StringBuffer(100);
+
+    append_str(&buf, str);
+    string_t str2 = String("How are you?");
+    append_str(&buf, str2);
+    printf("%s :: %d\n", buf.buffer, buf.end);
+
+}
+
 

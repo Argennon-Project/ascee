@@ -14,25 +14,29 @@
 #include <memory>
 #include <vector>
 
-#define RESPONSE_MAX_SIZE 1024
+#define RESPONSE_MAX_SIZE 2*1024
 struct SessionInfo;
 
 struct DispatcherArgs {
     SessionInfo* session;
     int maxGasUsage;
     std_id_t appID;
-    const char* request;
-    char* response;
+    string_t request;
 };
 
 struct DeferredArgs {
     std_id_t appID;
-    unique_ptr<char> request;
+    string request;
 };
 
 struct SessionInfo {
     unique_ptr<HeapModifier> heapModifier;
     unordered_map<std_id_t, bool> entranceLocks;
+    StringBuffer responseBuffer = {
+            .buffer = (char[RESPONSE_MAX_SIZE]) {},
+            .maxSize = RESPONSE_MAX_SIZE,
+            .end = 0
+    };
 
     struct CallContext {
         std_id_t appID;
@@ -42,6 +46,11 @@ struct SessionInfo {
 
     CallContext* currentCall;
 };
+
+extern "C" inline
+string_buffer* getResponse(SessionInfo* session) {
+    return &session->responseBuffer;
+}
 
 int64_t calculate_max_time(int64_t max_cost) {
     return max_cost * 1000000;
@@ -56,17 +65,12 @@ void* caller(void* arg) {
             .remainingExternalGas = arguments->maxGasUsage / 2,
     };
     arguments->session->currentCall = &newCall;
+    arguments->session->responseBuffer.end = 0;
 
     // we save a check point before changing the context
     arguments->session->heapModifier->saveCheckPoint();
     arguments->session->heapModifier->changeContext(calledApp);
-    int ret;
-    if (arguments->response == nullptr) {
-        char dummyBuffer[RESPONSE_MAX_SIZE];
-        ret = AppLoader::getDispatcher(calledApp)(arguments->session, arguments->request, dummyBuffer);
-    } else {
-        ret = AppLoader::getDispatcher(calledApp)(arguments->session, arguments->request, arguments->response);
-    }
+    int ret = AppLoader::getDispatcher(calledApp)(arguments->session, arguments->request);
     if (ret >= BAD_REQUEST) {
         arguments->session->heapModifier->RestoreCheckPoint();
     } else {
@@ -79,8 +83,10 @@ void* caller(void* arg) {
                     .session = arguments->session,
                     .maxGasUsage = arguments->maxGasUsage / (int) deferredCalls.size(),
                     .appID = dCall->appID,
-                    .request = dCall->request.get(),
-                    .response = nullptr,
+                    .request = string_t{
+                            dCall->request.c_str(),
+                            static_cast<int>(dCall->request.length() + 1)
+                    },
             };
             int* temp = static_cast<int*>(caller(&dArgs));
             if (*temp >= BAD_REQUEST) {
@@ -97,11 +103,11 @@ void* caller(void* arg) {
 }
 
 extern "C"
-void invoke_deferred(SessionInfo* session, std_id_t app_id, char* request) {
+void invoke_deferred(SessionInfo* session, std_id_t app_id, string_t request) {
     session->currentCall->deferredCalls.push_back(
             make_unique<DeferredArgs>(DeferredArgs{
                     .appID = app_id,
-                    .request = unique_ptr<char>(strdup(request)),
+                    .request = string(request.content, request.length),
             }));
 }
 
@@ -110,7 +116,7 @@ Heap heapStorage;
 
 
 extern "C"
-int invoke_dispatcher(SessionInfo* session, int max_gas, std_id_t app_id, const char* request, char* response) {
+int invoke_dispatcher(SessionInfo* session, int max_gas, std_id_t app_id, string_t request) {
     if (session->currentCall->remainingExternalGas < max_gas) {
         return NOT_ACCEPTABLE;
     }
@@ -122,7 +128,6 @@ int invoke_dispatcher(SessionInfo* session, int max_gas, std_id_t app_id, const 
             .maxGasUsage = max_gas,
             .appID = app_id,
             .request = request,
-            .response = response,
     };
     pthread_t new_thread;
     if (pthread_create(&new_thread, nullptr, caller, &args) != 0) {
@@ -143,9 +148,9 @@ int invoke_dispatcher(SessionInfo* session, int max_gas, std_id_t app_id, const 
     }
 
     /* Start the timer */
-    auto time_nsecs = calculate_max_time(max_gas);
-    its.it_value.tv_sec = time_nsecs / 1000000000;
-    its.it_value.tv_nsec = time_nsecs % 1000000000;
+    auto time_nsec = calculate_max_time(max_gas);
+    its.it_value.tv_sec = time_nsec / 1000000000;
+    its.it_value.tv_nsec = time_nsec % 1000000000;
     its.it_interval.tv_sec = 0;
     its.it_interval.tv_nsec = 0;
     if (timer_settime(exec_timer, 0, &its, nullptr) != 0) {
@@ -168,9 +173,35 @@ int64 loadInt64(void* session, int32 offset) {
     return static_cast<SessionInfo*>(session)->heapModifier->loadInt64(offset);
 }
 
+extern "C"
+void append_str(StringBuffer* buf, String str) {
+    if (buf->maxSize < buf->end + str.length) {
+        raise(SIGSEGV);
+    }
+    strncpy(buf->buffer + buf->end, str.content, str.length);
+    if (str.content[str.length - 1] == '\0')
+        buf->end += str.length - 1;
+    else
+        buf->end += str.length;
+}
+
+extern "C" inline
+void append_int64(StringBuffer* buf, int64 i) {
+    string str = to_string(i);
+    append_str(buf, String{str.c_str(), static_cast<int>(str.size() + 1)});
+}
+
+extern "C" inline
+String buf_to_string(const StringBuffer* buf) {
+    return String{
+            .content = buf->buffer,
+            .length = buf->end
+    };
+}
 
 void executeSession(int transactionInfo) {
-    SessionInfo s{};
-    s.heapModifier = unique_ptr<HeapModifier>(heapStorage.setupSession(transactionInfo));
-    invoke_dispatcher(&s, 20, 1, NULL, NULL);
+    SessionInfo session{
+        .heapModifier = unique_ptr<struct HeapModifier>(heapStorage.setupSession(transactionInfo)),
+    };
+    invoke_dispatcher(&session, 20, 1, String{});
 }

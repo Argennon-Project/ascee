@@ -43,7 +43,7 @@ void init_handlers()
         exit(EXIT_FAILURE);
     }
 }
-
+/*
 int main(int argc, char const* argv[]) {
     AppLoader::init();
     init_handlers();
@@ -56,3 +56,4 @@ int main(int argc, char const* argv[]) {
     t2.join();
     return 0;
 }
+*/
