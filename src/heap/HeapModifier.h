@@ -1,15 +1,15 @@
-//
-// Created by aybehrouz on 9/22/21.
-//
 
 #include "../../include/argc/types.h"
 #include <iostream>
 
-#ifndef ASCEE_HEAPMODIFIER_H
-#define ASCEE_HEAPMODIFIER_H
+#ifndef ASCEE_HEAP_MODIFIER_H
+#define ASCEE_HEAP_MODIFIER_H
+
+namespace ascee {
 
 class HeapModifier {
     friend class Heap;
+
 private:
     int context;
 
@@ -22,7 +22,11 @@ public:
 
     void loadChunk(short_id_t chunkID);
 
-    void changeContext(std_id_t appID);
+    void openContext(std_id_t appID);
+
+    void closeContextNormally(std_id_t from, std_id_t to);
+
+    void closeContextAbruptly(std_id_t from, std_id_t to);
 
     void save();
 
@@ -30,15 +34,11 @@ public:
 
     void discard();
 
-    void saveCheckPoint();
-
-    void RestoreCheckPoint();
-    void DiscardCheckPoint();
-
     ~HeapModifier() {
         std::cout << "mod:dest" << std::endl;
     }
 };
 
-#endif //ASCEE_HEAPMODIFIER_H
+} // namespace ascee
+#endif // ASCEE_HEAP_MODIFIER_H
 

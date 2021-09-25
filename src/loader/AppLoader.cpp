@@ -3,9 +3,10 @@
 #include <dlfcn.h>
 #include <thread>
 
+using namespace ascee;
 using std::string, std::runtime_error, std::out_of_range;
 
-unordered_map<std_id_t, dispatcher_ptr_t> AppLoader::dispatchersMap;
+std::unordered_map<std_id_t, dispatcher_ptr_t> AppLoader::dispatchersMap;
 
 void AppLoader::init() {
     void* handle;
@@ -28,7 +29,7 @@ void AppLoader::init() {
         dlclose(handle);
         throw runtime_error(error);
     }
-    //todo: we should close the dll file somewhere.
+    //todo: we should close these dll files somewhere.
     std::cout << "success!!!!\n";
 }
 

@@ -42,7 +42,7 @@ void init_handlers()
 }
 
 int main(int argc, char const* argv[]) {
-    AppLoader::init();
+    ascee::AppLoader::init();
     init_handlers();
 
     thread t1(executeSession, 111);

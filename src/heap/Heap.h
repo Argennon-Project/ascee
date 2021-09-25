@@ -7,10 +7,13 @@
 
 #include "HeapModifier.h"
 
+namespace ascee {
+
 class Heap {
 private:
 public:
     static HeapModifier* setupSession(int);
 };
 
-#endif //ASCEE_HEAP_H
+} // namespace ascee
+#endif // ASCEE_HEAP_H

@@ -5,22 +5,20 @@
 #include <stdio.h>
 #include "HeapModifier.h"
 
+using namespace ascee;
+
 int64 HeapModifier::loadInt64(int32 offset) {
     printf("\n%d-->%d\n", context, offset);
 }
 
-void HeapModifier::changeContext(std_id_t appID) {
+void HeapModifier::openContext(std_id_t appID) {
 
 }
 
-void HeapModifier::saveCheckPoint() {
+void HeapModifier::closeContextNormally(std_id_t from, std_id_t to) {
 
 }
 
-void HeapModifier::RestoreCheckPoint() {
-
-}
-
-void HeapModifier::DiscardCheckPoint() {
+void HeapModifier::closeContextAbruptly(std_id_t from, std_id_t to) {
 
 }

@@ -17,14 +17,15 @@
 
 #define RESPONSE_MAX_SIZE 2*1024
 
-using std::string, std::unique_ptr, std::vector;
+using std::string, std::unique_ptr, std::vector, std::unordered_map;
+using namespace ascee;
 
 struct SessionInfo;
 
 struct DispatcherArgs {
     SessionInfo* session;
     std_id_t appID;
-    string_t &request;
+    string_t& request;
 };
 
 struct DeferredArgs {
@@ -93,15 +94,14 @@ int invoke_dispatcher(SessionInfo* session, byte forwarded_gas, std_id_t app_id,
     session->currentCall = &newCall;
     session->responseBuffer.end = 0;
 
-    // we save a check point before changing the context
-    session->heapModifier->saveCheckPoint();
-    session->heapModifier->changeContext(app_id);
-
     DispatcherArgs args{
             .session = session,
             .appID = app_id,
             .request = request,
     };
+
+    session->heapModifier->openContext(app_id);
+
     pthread_t new_thread;
     if (pthread_create(&new_thread, nullptr, callerThread, &args) != 0) {
         throw std::runtime_error("error creating new thread");
@@ -133,9 +133,9 @@ int invoke_dispatcher(SessionInfo* session, byte forwarded_gas, std_id_t app_id,
     int ret = *(int*) ret_ptr;
     free(ret_ptr);
 
-    auto &deferredCalls = session->currentCall->deferredCalls;
+    auto& deferredCalls = session->currentCall->deferredCalls;
     if (ret < BAD_REQUEST) {
-        for (auto &dCall: deferredCalls) {
+        for (auto& dCall: deferredCalls) {
             int temp = invoke_dispatcher(session, 0, dCall->appID,
                                          string_t{dCall->request.c_str(),
                                                   static_cast<int>(dCall->request.length() + 1)});
@@ -147,11 +147,10 @@ int invoke_dispatcher(SessionInfo* session, byte forwarded_gas, std_id_t app_id,
     }
 
     if (ret >= BAD_REQUEST) {
-        session->heapModifier->RestoreCheckPoint();
+        session->heapModifier->closeContextAbruptly(app_id, oldCallInfo->appID);
     } else {
-        session->heapModifier->DiscardCheckPoint();
+        session->heapModifier->closeContextNormally(app_id, oldCallInfo->appID);
     }
-    session->heapModifier->changeContext(oldCallInfo->appID);
 
     // restore previous call info
     session->currentCall = oldCallInfo;
