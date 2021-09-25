@@ -1,7 +1,7 @@
-#ifndef INVOKER_ARGC_TYPES_H
-#define INVOKER_ARGC_TYPES_H
+#ifndef ASCEE_ARGC_TYPES_H_
+#define ASCEE_ARGC_TYPES_H_
 
-#include <stdint.h>
+#include <stdint.h> // NOLINT(modernize-deprecated-headers)
 
 /// int represents a signed integer with the most efficient size for the platform which MUST NOT be smaller than 32 bits.
 typedef uint8_t byte;
@@ -17,6 +17,8 @@ typedef __uint128_t full_id_t;
 typedef struct String string_t;
 typedef struct StringBuffer string_buffer;
 
+typedef int (* dispatcher_ptr_t)(void*, string_t);
+
 struct String {
     const char* content;
     int length;
@@ -28,11 +30,10 @@ struct StringBuffer {
     int end;
 };
 
-typedef int (* dispatcher_ptr_t)(void*, string_t);
-
+/// HTTP status codes. new costume coded could be defined.
 #define HTTP_OK 200
 #define BAD_REQUEST 400
 #define INTERNAL_ERROR 500
 #define LOOP_DETECTED 508
 
-#endif //INVOKER_ARGC_TYPES_H
+#endif // ASCEE_ARGC_TYPES_H_

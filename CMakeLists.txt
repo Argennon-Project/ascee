@@ -1,15 +1,15 @@
 cmake_minimum_required(VERSION 3.20)
 project(ascee)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_C_STANDARD 99)
 
 add_subdirectory(tests)
 
 add_library(app1 SHARED app.c)
 
-add_library(argcrt SHARED invoker.cpp Heap.cpp Heap.h HeapModifier.cpp HeapModifier.h)
+add_library(argcrt SHARED src/argcrt/string.cpp src/argcrt/invoker.cpp src/heap/Heap.cpp src/heap/Heap.h src/heap/HeapModifier.cpp src/heap/HeapModifier.h)
 target_link_libraries(argcrt pthread rt stdc++)
 
-add_executable(ascee main.cpp AppLoader.cpp AppLoader.h argctypes.h app.c)
+add_executable(ascee src/main.cpp src/loader/AppLoader.cpp src/loader/AppLoader.h include/argc/types.h)
 target_link_libraries(ascee dl stdc++ argcrt)

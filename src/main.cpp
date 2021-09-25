@@ -1,18 +1,15 @@
 #include <thread>
-#include "AppLoader.h"
-#include "Heap.h"
+#include "loader/AppLoader.h"
 #include <unordered_map>
-#include <iostream>
 #include <csignal>
 
-using namespace std;
+using std::thread;
+
 void executeSession(int transactionInfo);
 
-static void sig_handler(int sig, siginfo_t *info, void *ucontext)
-{
-    if (sig == SIGFPE || sig == SIGABRT || sig == SIGSEGV)
-    {
-        int *ret = (int *)malloc(sizeof(int));
+static void sig_handler(int sig, siginfo_t* info, void* ucontext) {
+    if (sig == SIGFPE || sig == SIGABRT || sig == SIGSEGV) {
+        int* ret = (int*) malloc(sizeof(int));
         *ret = INTERNAL_ERROR;
         if (sig == SIGABRT)
             *ret = LOOP_DETECTED;

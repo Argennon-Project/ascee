@@ -10,7 +10,7 @@
 class Heap {
 private:
 public:
-    HeapModifier* setupSession(int);
+    static HeapModifier* setupSession(int);
 };
 
 #endif //ASCEE_HEAP_H

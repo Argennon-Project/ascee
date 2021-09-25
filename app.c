@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
-#include "argctypes.h"
-#include "argcrtl.h"
+#include "include/argc/types.h"
+#include "include/argc/runtime.h"
 
 #define String(str) {.content = str, .length = sizeof str}
 #define StringBuffer(size) {.buffer = (char[size]){}, .maxSize = size, .end = 0}

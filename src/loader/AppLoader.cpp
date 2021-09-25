@@ -3,14 +3,15 @@
 #include <dlfcn.h>
 #include <thread>
 
+using std::string, std::runtime_error, std::out_of_range;
+
 unordered_map<std_id_t, dispatcher_ptr_t> AppLoader::dispatchersMap;
 
-void AppLoader::init()
-{
-    void *handle;
-    char *error;
+void AppLoader::init() {
+    void* handle;
+    char* error;
     std_id_t appID = 1;
-    string appFile = string("./libapp") + to_string(appID) + string(".so");
+    string appFile = string("./libapp") + std::to_string(appID) + string(".so");
 
     handle = dlopen(appFile.c_str(), RTLD_LAZY);
     if (handle == nullptr)
@@ -28,7 +29,7 @@ void AppLoader::init()
         throw runtime_error(error);
     }
     //todo: we should close the dll file somewhere.
-    cout << "success!!!!\n";
+    std::cout << "success!!!!\n";
 }
 
 dispatcher_ptr_t AppLoader::getDispatcher(std_id_t appID)
@@ -39,7 +40,7 @@ dispatcher_ptr_t AppLoader::getDispatcher(std_id_t appID)
     }
     catch (const out_of_range &e)
     {
-        cerr << "err:" << e.what() << '\n';
+        std::cerr << "err:" << e.what() << '\n';
         return nullptr;
     }
 }
