@@ -19,9 +19,8 @@ struct SessionInfo;
 
 struct DispatcherArgs {
     SessionInfo* session;
-    int maxGasUsage;
     std_id_t appID;
-    string_t request;
+    string_t &request;
 };
 
 struct DeferredArgs {
@@ -52,51 +51,16 @@ string_buffer* getResponse(SessionInfo* session) {
     return &session->responseBuffer;
 }
 
+static
 int64_t calculate_max_time(int64_t max_cost) {
     return max_cost * 1000000;
 }
 
-void* caller(void* arg) {
+static
+void* callerThread(void* arg) {
     auto* arguments = static_cast<DispatcherArgs*>(arg);
-    std_id_t calledApp = arguments->appID;
+    int ret = AppLoader::getDispatcher(arguments->appID)(arguments->session, arguments->request);
 
-    SessionInfo::CallContext newCall = {
-            .appID = calledApp,
-            .remainingExternalGas = arguments->maxGasUsage / 2,
-    };
-    arguments->session->currentCall = &newCall;
-    arguments->session->responseBuffer.end = 0;
-
-    // we save a check point before changing the context
-    arguments->session->heapModifier->saveCheckPoint();
-    arguments->session->heapModifier->changeContext(calledApp);
-    int ret = AppLoader::getDispatcher(calledApp)(arguments->session, arguments->request);
-    if (ret >= BAD_REQUEST) {
-        arguments->session->heapModifier->RestoreCheckPoint();
-    } else {
-        arguments->session->heapModifier->DiscardCheckPoint();
-    }
-    auto &deferredCalls = arguments->session->currentCall->deferredCalls;
-    if (ret < BAD_REQUEST) {
-        for (auto &dCall: deferredCalls) {
-            DispatcherArgs dArgs = {
-                    .session = arguments->session,
-                    .maxGasUsage = arguments->maxGasUsage / (int) deferredCalls.size(),
-                    .appID = dCall->appID,
-                    .request = string_t{
-                            dCall->request.c_str(),
-                            static_cast<int>(dCall->request.length() + 1)
-                    },
-            };
-            int* temp = static_cast<int*>(caller(&dArgs));
-            if (*temp >= BAD_REQUEST) {
-                ret = *temp;
-                free(temp);
-                break;
-            }
-            free(temp);
-        }
-    }
     int* retMem = (int*) malloc(sizeof(int));
     *retMem = ret;
     return retMem;
@@ -114,28 +78,34 @@ void invoke_deferred(SessionInfo* session, std_id_t app_id, string_t request) {
 using namespace std;
 Heap heapStorage;
 
-
 extern "C"
-int invoke_dispatcher(SessionInfo* session, int max_gas, std_id_t app_id, string_t request) {
-    if (session->currentCall->remainingExternalGas < max_gas) {
-        return NOT_ACCEPTABLE;
-    }
-    session->currentCall->remainingExternalGas -= max_gas;
+int invoke_dispatcher(SessionInfo* session, byte forwarded_gas, std_id_t app_id, string_t request) {
+    int maxCurrentGas = (session->currentCall->remainingExternalGas * forwarded_gas) >> 8;
+    session->currentCall->remainingExternalGas -= maxCurrentGas;
+
     auto oldCallInfo = session->currentCall;
+    SessionInfo::CallContext newCall = {
+            .appID = app_id,
+            .remainingExternalGas = maxCurrentGas / 2,
+    };
+    session->currentCall = &newCall;
+    session->responseBuffer.end = 0;
+
+    // we save a check point before changing the context
+    session->heapModifier->saveCheckPoint();
+    session->heapModifier->changeContext(app_id);
 
     DispatcherArgs args{
             .session = session,
-            .maxGasUsage = max_gas,
             .appID = app_id,
             .request = request,
     };
     pthread_t new_thread;
-    if (pthread_create(&new_thread, nullptr, caller, &args) != 0) {
-        printf("error creating thread\n");
-        exit(EXIT_FAILURE);
+    if (pthread_create(&new_thread, nullptr, callerThread, &args) != 0) {
+        throw runtime_error("error creating new thread");
     }
 
-    /* Creating the execution timer */
+    // Creating the execution timer
     timer_t exec_timer;
     struct sigevent sev{};
     struct itimerspec its{};
@@ -143,28 +113,46 @@ int invoke_dispatcher(SessionInfo* session, int max_gas, std_id_t app_id, string
     sev.sigev_signo = SIGALRM;
     sev.sigev_value.sival_ptr = &new_thread;
     if (timer_create(CLOCK_THREAD_CPUTIME_ID, &sev, &exec_timer) != 0) {
-        printf("error in creating timer\n");
-        exit(EXIT_FAILURE);
+        throw runtime_error("error in creating the cpu timer");
     }
 
-    /* Start the timer */
-    auto time_nsec = calculate_max_time(max_gas);
+    // Start the timer
+    auto time_nsec = calculate_max_time(maxCurrentGas);
     its.it_value.tv_sec = time_nsec / 1000000000;
     its.it_value.tv_nsec = time_nsec % 1000000000;
     its.it_interval.tv_sec = 0;
     its.it_interval.tv_nsec = 0;
     if (timer_settime(exec_timer, 0, &its, nullptr) != 0) {
-        printf("error in starting timer\n");
-        exit(EXIT_FAILURE);
+        throw runtime_error("error in starting the timer");
     }
-
-    // restore previous call info
-    session->currentCall = oldCallInfo;
 
     void* ret_ptr = malloc(sizeof(int));
     pthread_join(new_thread, &ret_ptr);
     int ret = *(int*) ret_ptr;
     free(ret_ptr);
+
+    auto &deferredCalls = session->currentCall->deferredCalls;
+    if (ret < BAD_REQUEST) {
+        for (auto &dCall: deferredCalls) {
+            int temp = invoke_dispatcher(session, 0, dCall->appID,
+                                         string_t{dCall->request.c_str(),
+                                                  static_cast<int>(dCall->request.length() + 1)});
+            if (temp >= BAD_REQUEST) {
+                ret = temp;
+                break;
+            }
+        }
+    }
+
+    if (ret >= BAD_REQUEST) {
+        session->heapModifier->RestoreCheckPoint();
+    } else {
+        session->heapModifier->DiscardCheckPoint();
+    }
+    session->heapModifier->changeContext(oldCallInfo->appID);
+
+    // restore previous call info
+    session->currentCall = oldCallInfo;
     return ret;
 }
 
@@ -200,8 +188,13 @@ String buf_to_string(const StringBuffer* buf) {
 }
 
 void executeSession(int transactionInfo) {
-    SessionInfo session{
-        .heapModifier = unique_ptr<struct HeapModifier>(heapStorage.setupSession(transactionInfo)),
+    SessionInfo::CallContext newCall = {
+            .appID = 0,
+            .remainingExternalGas = 40000,
     };
-    invoke_dispatcher(&session, 20, 1, String{});
+    SessionInfo session{
+            .heapModifier = unique_ptr<struct HeapModifier>(heapStorage.setupSession(transactionInfo)),
+            .currentCall = &newCall,
+    };
+    invoke_dispatcher(&session, 50, 1, String{});
 }

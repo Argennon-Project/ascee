@@ -3,7 +3,9 @@
 
 #include <stdint.h>
 
+/// int represents a signed integer with the most efficient size for the platform which MUST NOT be smaller than 32 bits.
 typedef uint8_t byte;
+typedef uint16_t uint16;
 typedef int32_t int32;
 typedef int64_t int64;
 typedef __int128_t int128;
@@ -30,11 +32,7 @@ typedef int (* dispatcher_ptr_t)(void*, string_t);
 
 #define HTTP_OK 200
 #define BAD_REQUEST 400
-#define NOT_ACCEPTABLE 406
-#define FATAL_ERROR 1
-#define APP_NOT_FOUND 2
-#define MALFORMED_APP 3
-#define INTERNAL_ERROR 4
-#define OUT_OF_TIME 5
+#define INTERNAL_ERROR 500
+#define LOOP_DETECTED 508
 
 #endif //INVOKER_ARGC_TYPES_H

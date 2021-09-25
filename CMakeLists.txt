@@ -6,6 +6,8 @@ set(CMAKE_C_STANDARD 99)
 
 add_subdirectory(tests)
 
+add_library(app1 SHARED app.c)
+
 add_library(argcrt SHARED invoker.cpp Heap.cpp Heap.h HeapModifier.cpp HeapModifier.h)
 target_link_libraries(argcrt pthread rt stdc++)
 

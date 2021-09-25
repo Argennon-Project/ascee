@@ -10,7 +10,7 @@ void AppLoader::init()
     void *handle;
     char *error;
     std_id_t appID = 1;
-    string appFile = string("./../app") + to_string(appID) + string(".so");
+    string appFile = string("./libapp") + to_string(appID) + string(".so");
 
     handle = dlopen(appFile.c_str(), RTLD_LAZY);
     if (handle == nullptr)

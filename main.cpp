@@ -15,7 +15,7 @@ static void sig_handler(int sig, siginfo_t *info, void *ucontext)
         int *ret = (int *)malloc(sizeof(int));
         *ret = INTERNAL_ERROR;
         if (sig == SIGABRT)
-            *ret = OUT_OF_TIME;
+            *ret = LOOP_DETECTED;
         pthread_exit(ret);
     }
     else if (sig == SIGALRM)
@@ -43,17 +43,16 @@ void init_handlers()
         exit(EXIT_FAILURE);
     }
 }
-/*
+
 int main(int argc, char const* argv[]) {
     AppLoader::init();
     init_handlers();
 
-    thread t1(executeSession, 1);
-    thread t2(executeSession, 2);
+    thread t1(executeSession, 111);
+    thread t2(executeSession, 222);
 
 
     t1.join();
     t2.join();
     return 0;
 }
-*/

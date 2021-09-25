@@ -12,16 +12,6 @@ int fib(int n) {
 }
 
 int dispatcher(void* session, const char* request, char* response) {
-    loadInt64(session, 777);
-    printf("%s \n fib:%d\n", request, fib(10));
-    while (1) {
-        printf("%s\n", request);
-        for (int i = 0; i < 100000000; ++i) {
-        }
-    };
-}
-
-int main() {
     string_t str = String("Hello!!!  ");
     string_buffer buf = StringBuffer(100);
 
@@ -30,6 +20,11 @@ int main() {
     append_int64(&buf, 123456);
     printf("%s :: %d\n", buf.buffer, buf.end);
 
+    loadInt64(session, 777);
+    printf("%s \n fib:%d\n", request, fib(10));
+    while (1) {
+        printf("%s\n", request);
+        for (int i = 0; i < 100000000; ++i) {
+        }
+    };
 }
-
-
