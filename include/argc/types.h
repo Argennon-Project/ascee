@@ -33,6 +33,7 @@ struct StringBuffer {
 /// HTTP status codes. new costume coded could be defined.
 #define HTTP_OK 200
 #define BAD_REQUEST 400
+#define NOT_FOUND 404
 #define INTERNAL_ERROR 500
 #define LOOP_DETECTED 508
 

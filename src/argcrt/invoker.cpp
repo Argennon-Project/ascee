@@ -63,8 +63,8 @@ int64_t calculate_max_time(int64_t max_cost) {
 static
 void* callerThread(void* arg) {
     auto* arguments = static_cast<DispatcherArgs*>(arg);
-    //todo: check null return
-    int ret = AppLoader::getDispatcher(arguments->appID)(arguments->session, arguments->request);
+    auto dispatcher = AppLoader::getDispatcher(arguments->appID);
+    int ret = (dispatcher == nullptr) ? NOT_FOUND : dispatcher(arguments->session, arguments->request);
 
     int* retMem = (int*) malloc(sizeof(int));
     *retMem = ret;
