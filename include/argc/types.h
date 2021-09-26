@@ -1,5 +1,5 @@
-#ifndef ASCEE_ARGC_TYPES_H_
-#define ASCEE_ARGC_TYPES_H_
+#ifndef ASCEE_ARGC_TYPES_H
+#define ASCEE_ARGC_TYPES_H
 
 #include <stdint.h> // NOLINT(modernize-deprecated-headers)
 
@@ -37,4 +37,4 @@ struct StringBuffer {
 #define INTERNAL_ERROR 500
 #define LOOP_DETECTED 508
 
-#endif // ASCEE_ARGC_TYPES_H_
+#endif // ASCEE_ARGC_TYPES_H

@@ -1,7 +1,6 @@
 #include <stdio.h>
-#include <string.h>
 #include "include/argc/types.h"
-#include "include/argc/runtime.h"
+#include "include/argc/functions.h"
 
 #define String(str) {.content = str, .length = sizeof str}
 #define StringBuffer(size) {.buffer = (char[size]){}, .maxSize = size, .end = 0}

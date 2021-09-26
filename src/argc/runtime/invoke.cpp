@@ -1,54 +1,27 @@
 
 #include <pthread.h>
-#include <cstdio>
 #include <ctime>
 #include <csignal>
 #include <cstdlib>
 
-#include <cstring>
 #include <memory>
 #include <unordered_map>
 #include <vector>
 
-#include "../../include/argc/types.h"
-#include "../heap/HeapModifier.h"
-#include "../heap/Heap.h"
-#include "../loader/AppLoader.h"
+#include "session.h"
+#include "../../../include/argc/types.h"
+#include "../../heap/HeapModifier.h"
+#include "../../heap/Heap.h"
+#include "../../loader/AppLoader.h"
 
-#define RESPONSE_MAX_SIZE 2*1024
 
 using std::string, std::unique_ptr, std::vector, std::unordered_map;
 using namespace ascee;
-
-struct SessionInfo;
 
 struct DispatcherArgs {
     SessionInfo* session;
     std_id_t appID;
     string_t& request;
-};
-
-struct DeferredArgs {
-    std_id_t appID;
-    string request;
-};
-
-struct SessionInfo {
-    unique_ptr<HeapModifier> heapModifier;
-    unordered_map<std_id_t, bool> entranceLocks;
-    StringBuffer responseBuffer = {
-            .buffer = (char[RESPONSE_MAX_SIZE]) {},
-            .maxSize = RESPONSE_MAX_SIZE,
-            .end = 0
-    };
-
-    struct CallContext {
-        std_id_t appID;
-        int remainingExternalGas;
-        vector<unique_ptr<DeferredArgs>> deferredCalls;
-    };
-
-    CallContext* currentCall;
 };
 
 extern "C" inline
@@ -155,11 +128,6 @@ int invoke_dispatcher(SessionInfo* session, byte forwarded_gas, std_id_t app_id,
     // restore previous call info
     session->currentCall = oldCallInfo;
     return ret;
-}
-
-extern "C"
-int64 loadInt64(void* session, int32 offset) {
-    return static_cast<SessionInfo*>(session)->heapModifier->loadInt64(offset);
 }
 
 void executeSession(int transactionInfo) {

@@ -8,7 +8,7 @@ add_subdirectory(tests)
 
 add_library(app1 SHARED app.c)
 
-add_library(argcrt SHARED src/argcrt/string.cpp src/argcrt/invoker.cpp src/heap/Heap.cpp src/heap/Heap.h src/heap/HeapModifier.cpp src/heap/HeapModifier.h)
+add_library(argcrt SHARED src/argc/runtime/string.cpp src/argc/runtime/invoke.cpp src/heap/Heap.cpp src/heap/Heap.h src/heap/HeapModifier.cpp src/heap/HeapModifier.h src/argc/runtime/heapAccess.cpp src/argc/runtime/session.h)
 target_link_libraries(argcrt pthread rt stdc++)
 
 add_executable(ascee src/main.cpp src/loader/AppLoader.cpp src/loader/AppLoader.h include/argc/types.h)
