@@ -48,7 +48,6 @@ int main(int argc, char const* argv[]) {
     thread t1(executeSession, 111);
     thread t2(executeSession, 222);
 
-
     t1.join();
     t2.join();
     return 0;

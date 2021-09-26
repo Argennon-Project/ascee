@@ -14,6 +14,7 @@
 #include "../../loader/AppLoader.h"
 
 
+
 using std::string, std::unique_ptr, std::vector, std::unordered_map;
 using namespace ascee;
 
@@ -57,7 +58,6 @@ void* callerThread(void* arg) {
 
     // Start the timer
     auto time_nsec = calculate_max_time(arguments->maxGas);
-    printf("%ld", time_nsec);
     its.it_value.tv_sec = time_nsec / 1000000000;
     its.it_value.tv_nsec = time_nsec % 1000000000;
     its.it_interval.tv_sec = 0;
@@ -89,8 +89,8 @@ void invoke_deferred(SessionInfo* session, std_id_t app_id, string_t request) {
 extern "C"
 int invoke_dispatcher(SessionInfo* session, byte forwarded_gas, std_id_t app_id, string_t request) {
     int maxCurrentGas = (session->currentCall->remainingExternalGas * forwarded_gas) >> 8;
-    session->currentCall->remainingExternalGas -= maxCurrentGas;
 
+    session->currentCall->remainingExternalGas -= maxCurrentGas;
     auto oldCallInfo = session->currentCall;
     SessionInfo::CallContext newCall = {
             .appID = app_id,
@@ -98,6 +98,7 @@ int invoke_dispatcher(SessionInfo* session, byte forwarded_gas, std_id_t app_id,
     };
     session->currentCall = &newCall;
     session->responseBuffer.end = 0;
+    session->heapModifier->openContext(app_id);
 
     DispatcherArgs args{
             .session = session,
@@ -105,27 +106,30 @@ int invoke_dispatcher(SessionInfo* session, byte forwarded_gas, std_id_t app_id,
             .maxGas = maxCurrentGas,
             .request = request,
     };
-
-    session->heapModifier->openContext(app_id);
-
     pthread_t new_thread;
     if (pthread_create(&new_thread, nullptr, callerThread, &args) != 0) {
         throw std::runtime_error("error creating new thread");
     }
 
-    void* ret_ptr = malloc(sizeof(int));
+    void* ret_ptr = nullptr;
     pthread_join(new_thread, &ret_ptr);
     int ret = *(int*) ret_ptr;
     free(ret_ptr);
 
-    auto& deferredCalls = session->currentCall->deferredCalls;
     if (ret < BAD_REQUEST) {
-        for (auto& dCall: deferredCalls) {
-            int temp = invoke_dispatcher(session, 0, dCall->appID,
-                                         string_t{dCall->request.c_str(),
-                                                  static_cast<int>(dCall->request.length() + 1)});
+        auto numOfCalls = session->currentCall->deferredCalls.size();
+        for (const auto& dCall: session->currentCall->deferredCalls) {
+            int temp = invoke_dispatcher(
+                    session,
+                    (256 / numOfCalls == 0) ? 1 : 256 / numOfCalls,
+                    dCall->appID,
+                    // we should NOT use length + 1 here.
+                    string_t{dCall->request.data(), static_cast<int>(dCall->request.length())}
+            );
+            numOfCalls--;
             if (temp >= BAD_REQUEST) {
-                ret = temp;
+                // we should be careful not to return REQUEST_TIMEOUT from here.
+                ret = MISDIRECTED_REQUEST;
                 break;
             }
         }
@@ -134,7 +138,7 @@ int invoke_dispatcher(SessionInfo* session, byte forwarded_gas, std_id_t app_id,
     // if ret == REQUEST_TIMEOUT the signal handler has already closed the context and we should not close it again.
     if (ret >= BAD_REQUEST && ret != REQUEST_TIMEOUT) {
         session->heapModifier->closeContextAbruptly(app_id, oldCallInfo->appID);
-    } else {
+    } else if (ret < BAD_REQUEST) {
         session->heapModifier->closeContextNormally(app_id, oldCallInfo->appID);
     }
 

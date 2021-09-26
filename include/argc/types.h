@@ -36,6 +36,8 @@ struct StringBuffer {
 #define NOT_FOUND 404
 /// The HTTP status code used when an app is out of gas, and its execution time is too long.
 #define REQUEST_TIMEOUT 408
+/// The HTTP status code used when a deferred called (spawned invocation) has failed.
+#define MISDIRECTED_REQUEST 421
 #define INTERNAL_ERROR 500
 
 #endif // ASCEE_ARGC_TYPES_H

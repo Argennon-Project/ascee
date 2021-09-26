@@ -12,4 +12,4 @@ add_library(argcrt SHARED src/argc/runtime/string.cpp src/argc/runtime/invoke.cp
 target_link_libraries(argcrt pthread rt stdc++)
 
 add_executable(ascee src/main.cpp src/loader/AppLoader.cpp src/loader/AppLoader.h include/argc/types.h)
-target_link_libraries(ascee dl stdc++ argcrt)
+target_link_libraries(ascee dl stdc++ argcrt app1)
