@@ -3,6 +3,8 @@
 #include <unordered_map>
 #include <csignal>
 
+#include "argc/runtime/session.h"
+
 using std::thread;
 
 void executeSession(int transactionInfo);
@@ -12,30 +14,28 @@ static void sig_handler(int sig, siginfo_t* info, void* ucontext) {
         int* ret = (int*) malloc(sizeof(int));
         *ret = INTERNAL_ERROR;
         if (sig == SIGABRT)
-            *ret = LOOP_DETECTED;
+            *ret = REQUEST_TIMEOUT;
         pthread_exit(ret);
-    }
-    else if (sig == SIGALRM)
-    {
-        printf("Caught signal %d for %p\n", sig, info->si_value.sival_ptr);
-        pthread_kill(*(pthread_t *)info->si_value.sival_ptr, SIGABRT);
+    } else if (sig == SIGALRM) {
+        auto context = (ContextInfo*) info->si_value.sival_ptr;
+        printf("Caught signal %d for app %ld::%ld\n", sig, context->currentApp, context->execThread);
+        context->modifier->closeContextAbruptly(context->currentApp, context->previousApp);
+        pthread_kill(context->execThread, SIGABRT);
     }
 }
 
-void init_handlers()
-{
+void init_handlers() {
     struct sigaction action{};
 
     action.sa_flags = SA_SIGINFO;
     action.sa_sigaction = sig_handler;
     sigemptyset(&action.sa_mask);
     int err = 0;
-    err += sigaction(SIGALRM, &action, NULL);
-    err += sigaction(SIGABRT, &action, NULL);
-    err += sigaction(SIGFPE, &action, NULL);
-    err += sigaction(SIGSEGV, &action, NULL);
-    if (err != 0)
-    {
+    err += sigaction(SIGALRM, &action, nullptr);
+    err += sigaction(SIGABRT, &action, nullptr);
+    err += sigaction(SIGFPE, &action, nullptr);
+    err += sigaction(SIGSEGV, &action, nullptr);
+    if (err != 0) {
         printf("error in creating handlers\n");
         exit(EXIT_FAILURE);
     }

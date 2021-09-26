@@ -9,7 +9,6 @@
 #include <vector>
 
 #include "session.h"
-#include "../../../include/argc/types.h"
 #include "../../heap/HeapModifier.h"
 #include "../../heap/Heap.h"
 #include "../../loader/AppLoader.h"
@@ -20,7 +19,8 @@ using namespace ascee;
 
 struct DispatcherArgs {
     SessionInfo* session;
-    std_id_t appID;
+    std_id_t previousAppID;
+    int maxGas;
     string_t& request;
 };
 
@@ -37,8 +37,40 @@ int64_t calculate_max_time(int64_t max_cost) {
 static
 void* callerThread(void* arg) {
     auto* arguments = static_cast<DispatcherArgs*>(arg);
-    auto dispatcher = AppLoader::getDispatcher(arguments->appID);
+
+    // Creating the execution timer
+    timer_t exec_timer;
+    struct sigevent sev{};
+    struct itimerspec its{};
+    sev.sigev_notify = SIGEV_SIGNAL;
+    sev.sigev_signo = SIGALRM;
+    ContextInfo context = {
+            .modifier = arguments->session->heapModifier.get(),
+            .currentApp = arguments->session->currentCall->appID,
+            .previousApp = arguments->previousAppID,
+            .execThread = pthread_self(),
+    };
+    sev.sigev_value.sival_ptr = &context;
+    if (timer_create(CLOCK_THREAD_CPUTIME_ID, &sev, &exec_timer) != 0) {
+        throw std::runtime_error("error in creating the cpu timer");
+    }
+
+    // Start the timer
+    auto time_nsec = calculate_max_time(arguments->maxGas);
+    printf("%ld", time_nsec);
+    its.it_value.tv_sec = time_nsec / 1000000000;
+    its.it_value.tv_nsec = time_nsec % 1000000000;
+    its.it_interval.tv_sec = 0;
+    its.it_interval.tv_nsec = 0;
+    if (timer_settime(exec_timer, 0, &its, nullptr) != 0) {
+        throw std::runtime_error("error in starting the timer");
+    }
+
+    auto dispatcher = AppLoader::getDispatcher(arguments->session->currentCall->appID);
     int ret = (dispatcher == nullptr) ? NOT_FOUND : dispatcher(arguments->session, arguments->request);
+
+    // we don't let an app manually return REQUEST_TIMEOUT
+    if (ret == REQUEST_TIMEOUT) ret = INTERNAL_ERROR;
 
     int* retMem = (int*) malloc(sizeof(int));
     *retMem = ret;
@@ -69,7 +101,8 @@ int invoke_dispatcher(SessionInfo* session, byte forwarded_gas, std_id_t app_id,
 
     DispatcherArgs args{
             .session = session,
-            .appID = app_id,
+            .previousAppID = oldCallInfo->appID,
+            .maxGas = maxCurrentGas,
             .request = request,
     };
 
@@ -78,27 +111,6 @@ int invoke_dispatcher(SessionInfo* session, byte forwarded_gas, std_id_t app_id,
     pthread_t new_thread;
     if (pthread_create(&new_thread, nullptr, callerThread, &args) != 0) {
         throw std::runtime_error("error creating new thread");
-    }
-
-    // Creating the execution timer
-    timer_t exec_timer;
-    struct sigevent sev{};
-    struct itimerspec its{};
-    sev.sigev_notify = SIGEV_SIGNAL;
-    sev.sigev_signo = SIGALRM;
-    sev.sigev_value.sival_ptr = &new_thread;
-    if (timer_create(CLOCK_THREAD_CPUTIME_ID, &sev, &exec_timer) != 0) {
-        throw std::runtime_error("error in creating the cpu timer");
-    }
-
-    // Start the timer
-    auto time_nsec = calculate_max_time(maxCurrentGas);
-    its.it_value.tv_sec = time_nsec / 1000000000;
-    its.it_value.tv_nsec = time_nsec % 1000000000;
-    its.it_interval.tv_sec = 0;
-    its.it_interval.tv_nsec = 0;
-    if (timer_settime(exec_timer, 0, &its, nullptr) != 0) {
-        throw std::runtime_error("error in starting the timer");
     }
 
     void* ret_ptr = malloc(sizeof(int));
@@ -119,7 +131,8 @@ int invoke_dispatcher(SessionInfo* session, byte forwarded_gas, std_id_t app_id,
         }
     }
 
-    if (ret >= BAD_REQUEST) {
+    // if ret == REQUEST_TIMEOUT the signal handler has already closed the context and we should not close it again.
+    if (ret >= BAD_REQUEST && ret != REQUEST_TIMEOUT) {
         session->heapModifier->closeContextAbruptly(app_id, oldCallInfo->appID);
     } else {
         session->heapModifier->closeContextNormally(app_id, oldCallInfo->appID);
@@ -133,11 +146,11 @@ int invoke_dispatcher(SessionInfo* session, byte forwarded_gas, std_id_t app_id,
 void executeSession(int transactionInfo) {
     SessionInfo::CallContext newCall = {
             .appID = 0,
-            .remainingExternalGas = 40000,
+            .remainingExternalGas = 30000,
     };
     SessionInfo session{
             .heapModifier = unique_ptr<struct HeapModifier>(Heap::setupSession(transactionInfo)),
             .currentCall = &newCall,
     };
-    invoke_dispatcher(&session, 50, 1, String{});
+    invoke_dispatcher(&session, 50, 1, String{"Hey!", 5});
 }

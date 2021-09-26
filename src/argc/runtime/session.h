@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <memory>
 #include <vector>
+#include <pthread.h>
 #include "../../../include/argc/types.h"
 #include "../../heap/HeapModifier.h"
 
@@ -33,6 +34,13 @@ struct SessionInfo {
     };
 
     CallContext* currentCall;
+};
+
+struct ContextInfo {
+    ascee::HeapModifier* modifier;
+    std_id_t currentApp;
+    std_id_t previousApp;
+    pthread_t execThread;
 };
 
 #endif // ASCEE_SESSION_H
