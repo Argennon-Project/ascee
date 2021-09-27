@@ -10,11 +10,12 @@ using std::thread;
 void executeSession(int transactionInfo);
 
 static void sig_handler(int sig, siginfo_t* info, void* ucontext) {
+    printf("Caught signal %d\n", sig);
     if (sig == SIGFPE || sig == SIGABRT || sig == SIGSEGV || sig == SIGUSR1) {
         int* ret = (int*) malloc(sizeof(int));
         *ret = INTERNAL_ERROR;
         if (sig == SIGABRT) *ret = REQUEST_TIMEOUT;
-        if (sig == SIGUSR1) *ret = FAILED_DEPENDENCY;
+        if (sig == SIGUSR1) *ret = REENTRANCY_DETECTED;
         pthread_exit(ret);
     } else if (sig == SIGALRM) {
         pthread_t thread_id = *static_cast<pthread_t*>(info->si_value.sival_ptr);
@@ -42,13 +43,14 @@ void init_handlers() {
 }
 
 int main(int argc, char const* argv[]) {
-    ascee::AppLoader::init();
+    ascee::AppLoader::init(1);
+    ascee::AppLoader::init(2);
     init_handlers();
 
     thread t1(executeSession, 111);
-    thread t2(executeSession, 222);
+    //thread t2(executeSession, 222);
 
     t1.join();
-    t2.join();
+    //t2.join();
     return 0;
 }

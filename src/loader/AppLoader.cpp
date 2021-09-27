@@ -8,24 +8,21 @@ using std::string, std::runtime_error, std::out_of_range;
 
 std::unordered_map<std_id_t, dispatcher_ptr_t> AppLoader::dispatchersMap;
 
-void AppLoader::init() {
+void AppLoader::init(std_id_t appID) {
     void* handle;
     char* error;
-    std_id_t appID = 1;
     string appFile = string("./libapp") + std::to_string(appID) + string(".so");
 
     handle = dlopen(appFile.c_str(), RTLD_LAZY);
-    if (handle == nullptr)
-    {
+    if (handle == nullptr) {
         throw runtime_error(dlerror());
     }
     dlerror(); /* Clear any existing error */
 
-    dispatchersMap[appID] = (dispatcher_ptr_t)dlsym(handle, "dispatcher");
+    dispatchersMap[appID] = (dispatcher_ptr_t) dlsym(handle, "dispatcher");
 
     error = dlerror();
-    if (error != nullptr)
-    {
+    if (error != nullptr) {
         dlclose(handle);
         throw runtime_error(error);
     }
@@ -33,14 +30,11 @@ void AppLoader::init() {
     std::cout << "success!!!!\n";
 }
 
-dispatcher_ptr_t AppLoader::getDispatcher(std_id_t appID)
-{
-    try
-    {
+dispatcher_ptr_t AppLoader::getDispatcher(std_id_t appID) {
+    try {
         return dispatchersMap.at(appID);
     }
-    catch (const out_of_range &e)
-    {
+    catch (const out_of_range& e) {
         std::cerr << "err:" << e.what() << '\n';
         return nullptr;
     }

@@ -23,14 +23,12 @@ struct DispatcherArgs {
     string_t& request;
 };
 
-
 static
-void sigMask(int how) {
+void maskSignals(int how) {
     sigset_t set;
 
 // Block SIGALRM;
     sigemptyset(&set);
-    sigaddset(&set, SIGALRM);
     sigaddset(&set, SIGABRT);
     int s = pthread_sigmask(how, &set, nullptr);
     if (s != 0) throw std::runtime_error("error in masking signals");
@@ -38,15 +36,16 @@ void sigMask(int how) {
 
 static
 void blockSignals() {
-    sigMask(SIG_BLOCK);
+    maskSignals(SIG_BLOCK);
 }
 
 static
 void unBlockSignals() {
-    sigMask(SIG_UNBLOCK);
+    maskSignals(SIG_UNBLOCK);
 }
 
-extern "C" inline
+// todo: small function should be defined as inline
+extern "C"
 string_buffer* getResponse(SessionInfo* session) {
     return &session->responseBuffer;
 }
@@ -67,9 +66,12 @@ void enter_area(SessionInfo* session) {
 
 extern "C"
 void exit_area(SessionInfo* session) {
+    blockSignals();
     if (session->currentCall->hasLock) {
         session->isLocked[session->currentCall->appID] = false;
+        session->currentCall->hasLock = false;
     }
+    unBlockSignals();
 }
 
 static
@@ -147,14 +149,17 @@ int invoke_dispatcher(SessionInfo* session, byte forwarded_gas, std_id_t app_id,
             .request = request,
     };
     pthread_t new_thread;
-    void* ret_ptr = nullptr;
     int err = pthread_create(&new_thread, nullptr, callerThread, &args);
-
     if (err != 0) {
         // there is no need to unblock signals.
         throw std::runtime_error("error creating new thread");
     }
+
+    void* ret_ptr = nullptr;
     pthread_join(new_thread, &ret_ptr);
+
+    // as soon as possible we should release the entrance lock of the app (if any)
+    exit_area(session);
 
     int ret = *(int*) ret_ptr;
     free(ret_ptr);
@@ -169,7 +174,7 @@ int invoke_dispatcher(SessionInfo* session, byte forwarded_gas, std_id_t app_id,
                     string_t{dCall->request.data(), static_cast<int>(dCall->request.length())}
             );
             if (temp >= BAD_REQUEST) {
-                ret = MISDIRECTED_REQUEST;
+                ret = FAILED_DEPENDENCY;
                 break;
             }
         }
@@ -180,8 +185,6 @@ int invoke_dispatcher(SessionInfo* session, byte forwarded_gas, std_id_t app_id,
     } else {
         session->heapModifier->closeContextNormally(app_id, oldCallInfo->appID);
     }
-    // now we release the entrance lock of the app (if any)
-    exit_area(session);
 
     // restore previous call info
     session->currentCall = oldCallInfo;
@@ -192,11 +195,12 @@ int invoke_dispatcher(SessionInfo* session, byte forwarded_gas, std_id_t app_id,
 void executeSession(int transactionInfo) {
     SessionInfo::CallContext newCall = {
             .appID = 0,
-            .remainingExternalGas = 30000,
+            .remainingExternalGas = 500000,
     };
     SessionInfo session{
             .heapModifier = unique_ptr<HeapModifier>(Heap::setupSession(transactionInfo)),
             .currentCall = &newCall,
     };
-    invoke_dispatcher(&session, 50, 1, String{"Hey!", 5});
+    int ret = invoke_dispatcher(&session, 50, 1, String{"Hey!", 5});
+    std::cout << "returned: " << ret << std::endl;
 }

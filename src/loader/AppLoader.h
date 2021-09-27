@@ -12,7 +12,7 @@ class AppLoader {
 private:
     static std::unordered_map<std_id_t, dispatcher_ptr_t> dispatchersMap;
 public:
-    static void init();
+    static void init(std_id_t);
 
     static dispatcher_ptr_t getDispatcher(std_id_t appID);
 };
