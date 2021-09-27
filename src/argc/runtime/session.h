@@ -15,12 +15,13 @@
 
 struct DeferredArgs {
     std_id_t appID;
+    byte forwardedGas;
     std::string request;
 };
 
 struct SessionInfo {
     std::unique_ptr<ascee::HeapModifier> heapModifier;
-    std::unordered_map<std_id_t, bool> entranceLocks;
+    std::unordered_map<std_id_t, bool> isLocked;
     StringBuffer responseBuffer = {
             .buffer = (char[RESPONSE_MAX_SIZE]) {},
             .maxSize = RESPONSE_MAX_SIZE,
@@ -30,17 +31,11 @@ struct SessionInfo {
     struct CallContext {
         std_id_t appID;
         int remainingExternalGas;
+        bool hasLock = false;
         std::vector<std::unique_ptr<DeferredArgs>> deferredCalls;
     };
 
     CallContext* currentCall;
-};
-
-struct ContextInfo {
-    ascee::HeapModifier* modifier;
-    std_id_t currentApp;
-    std_id_t previousApp;
-    pthread_t execThread;
 };
 
 #endif // ASCEE_SESSION_H

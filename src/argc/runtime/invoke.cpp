@@ -14,20 +14,62 @@
 #include "../../loader/AppLoader.h"
 
 
-
 using std::string, std::unique_ptr, std::vector, std::unordered_map;
 using namespace ascee;
 
 struct DispatcherArgs {
     SessionInfo* session;
-    std_id_t previousAppID;
     int maxGas;
     string_t& request;
 };
 
+
+static
+void sigMask(int how) {
+    sigset_t set;
+
+// Block SIGALRM;
+    sigemptyset(&set);
+    sigaddset(&set, SIGALRM);
+    sigaddset(&set, SIGABRT);
+    int s = pthread_sigmask(how, &set, nullptr);
+    if (s != 0) throw std::runtime_error("error in masking signals");
+}
+
+static
+void blockSignals() {
+    sigMask(SIG_BLOCK);
+}
+
+static
+void unBlockSignals() {
+    sigMask(SIG_UNBLOCK);
+}
+
 extern "C" inline
 string_buffer* getResponse(SessionInfo* session) {
     return &session->responseBuffer;
+}
+
+extern "C"
+void enter_area(SessionInfo* session) {
+    if (session->currentCall->hasLock) return;
+
+    if (session->isLocked[session->currentCall->appID]) {
+        raise(SIGUSR1);
+    } else {
+        blockSignals();
+        session->isLocked[session->currentCall->appID] = true;
+        session->currentCall->hasLock = true;
+        unBlockSignals();
+    }
+}
+
+extern "C"
+void exit_area(SessionInfo* session) {
+    if (session->currentCall->hasLock) {
+        session->isLocked[session->currentCall->appID] = false;
+    }
 }
 
 static
@@ -45,13 +87,8 @@ void* callerThread(void* arg) {
     struct itimerspec its{};
     sev.sigev_notify = SIGEV_SIGNAL;
     sev.sigev_signo = SIGALRM;
-    ContextInfo context = {
-            .modifier = arguments->session->heapModifier.get(),
-            .currentApp = arguments->session->currentCall->appID,
-            .previousApp = arguments->previousAppID,
-            .execThread = pthread_self(),
-    };
-    sev.sigev_value.sival_ptr = &context;
+    pthread_t thread_id = pthread_self();
+    sev.sigev_value.sival_ptr = &thread_id;
     if (timer_create(CLOCK_THREAD_CPUTIME_ID, &sev, &exec_timer) != 0) {
         throw std::runtime_error("error in creating the cpu timer");
     }
@@ -67,7 +104,9 @@ void* callerThread(void* arg) {
     }
 
     auto dispatcher = AppLoader::getDispatcher(arguments->session->currentCall->appID);
+    unBlockSignals();
     int ret = (dispatcher == nullptr) ? NOT_FOUND : dispatcher(arguments->session, arguments->request);
+    blockSignals();
 
     // we don't let an app manually return REQUEST_TIMEOUT
     if (ret == REQUEST_TIMEOUT) ret = INTERNAL_ERROR;
@@ -78,16 +117,18 @@ void* callerThread(void* arg) {
 }
 
 extern "C"
-void invoke_deferred(SessionInfo* session, std_id_t app_id, string_t request) {
+void invoke_deferred(SessionInfo* session, byte forwarded_gas, std_id_t app_id, string_t request) {
     session->currentCall->deferredCalls.push_back(
             std::make_unique<DeferredArgs>(DeferredArgs{
                     .appID = app_id,
+                    .forwardedGas = forwarded_gas,
                     .request = string(request.content, request.length),
             }));
 }
 
 extern "C"
 int invoke_dispatcher(SessionInfo* session, byte forwarded_gas, std_id_t app_id, string_t request) {
+    blockSignals();
     int maxCurrentGas = (session->currentCall->remainingExternalGas * forwarded_gas) >> 8;
 
     session->currentCall->remainingExternalGas -= maxCurrentGas;
@@ -102,48 +143,49 @@ int invoke_dispatcher(SessionInfo* session, byte forwarded_gas, std_id_t app_id,
 
     DispatcherArgs args{
             .session = session,
-            .previousAppID = oldCallInfo->appID,
             .maxGas = maxCurrentGas,
             .request = request,
     };
     pthread_t new_thread;
-    if (pthread_create(&new_thread, nullptr, callerThread, &args) != 0) {
+    void* ret_ptr = nullptr;
+    int err = pthread_create(&new_thread, nullptr, callerThread, &args);
+
+    if (err != 0) {
+        // there is no need to unblock signals.
         throw std::runtime_error("error creating new thread");
     }
-
-    void* ret_ptr = nullptr;
     pthread_join(new_thread, &ret_ptr);
+
     int ret = *(int*) ret_ptr;
     free(ret_ptr);
 
     if (ret < BAD_REQUEST) {
-        auto numOfCalls = session->currentCall->deferredCalls.size();
         for (const auto& dCall: session->currentCall->deferredCalls) {
             int temp = invoke_dispatcher(
                     session,
-                    (256 / numOfCalls == 0) ? 1 : 256 / numOfCalls,
+                    dCall->forwardedGas,
                     dCall->appID,
                     // we should NOT use length + 1 here.
                     string_t{dCall->request.data(), static_cast<int>(dCall->request.length())}
             );
-            numOfCalls--;
             if (temp >= BAD_REQUEST) {
-                // we should be careful not to return REQUEST_TIMEOUT from here.
                 ret = MISDIRECTED_REQUEST;
                 break;
             }
         }
     }
 
-    // if ret == REQUEST_TIMEOUT the signal handler has already closed the context and we should not close it again.
-    if (ret >= BAD_REQUEST && ret != REQUEST_TIMEOUT) {
+    if (ret >= BAD_REQUEST) {
         session->heapModifier->closeContextAbruptly(app_id, oldCallInfo->appID);
-    } else if (ret < BAD_REQUEST) {
+    } else {
         session->heapModifier->closeContextNormally(app_id, oldCallInfo->appID);
     }
+    // now we release the entrance lock of the app (if any)
+    exit_area(session);
 
     // restore previous call info
     session->currentCall = oldCallInfo;
+    unBlockSignals();
     return ret;
 }
 
@@ -153,7 +195,7 @@ void executeSession(int transactionInfo) {
             .remainingExternalGas = 30000,
     };
     SessionInfo session{
-            .heapModifier = unique_ptr<struct HeapModifier>(Heap::setupSession(transactionInfo)),
+            .heapModifier = unique_ptr<HeapModifier>(Heap::setupSession(transactionInfo)),
             .currentCall = &newCall,
     };
     invoke_dispatcher(&session, 50, 1, String{"Hey!", 5});

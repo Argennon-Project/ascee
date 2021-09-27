@@ -10,17 +10,16 @@ using std::thread;
 void executeSession(int transactionInfo);
 
 static void sig_handler(int sig, siginfo_t* info, void* ucontext) {
-    if (sig == SIGFPE || sig == SIGABRT || sig == SIGSEGV) {
+    if (sig == SIGFPE || sig == SIGABRT || sig == SIGSEGV || sig == SIGUSR1) {
         int* ret = (int*) malloc(sizeof(int));
         *ret = INTERNAL_ERROR;
-        if (sig == SIGABRT)
-            *ret = REQUEST_TIMEOUT;
+        if (sig == SIGABRT) *ret = REQUEST_TIMEOUT;
+        if (sig == SIGUSR1) *ret = FAILED_DEPENDENCY;
         pthread_exit(ret);
     } else if (sig == SIGALRM) {
-        auto context = (ContextInfo*) info->si_value.sival_ptr;
-        printf("Caught signal %d for app %ld::%ld\n", sig, context->currentApp, context->execThread);
-        context->modifier->closeContextAbruptly(context->currentApp, context->previousApp);
-        pthread_kill(context->execThread, SIGABRT);
+        pthread_t thread_id = *static_cast<pthread_t*>(info->si_value.sival_ptr);
+        printf("Caught signal %d for app %ld\n", sig, thread_id);
+        pthread_kill(thread_id, SIGABRT);
     }
 }
 
@@ -32,6 +31,7 @@ void init_handlers() {
     sigemptyset(&action.sa_mask);
     int err = 0;
     err += sigaction(SIGALRM, &action, nullptr);
+    err += sigaction(SIGUSR1, &action, nullptr);
     err += sigaction(SIGABRT, &action, nullptr);
     err += sigaction(SIGFPE, &action, nullptr);
     err += sigaction(SIGSEGV, &action, nullptr);

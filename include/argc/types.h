@@ -38,6 +38,8 @@ struct StringBuffer {
 #define REQUEST_TIMEOUT 408
 /// The HTTP status code used when a deferred called (spawned invocation) has failed.
 #define MISDIRECTED_REQUEST 421
+/// This HTTP status is returned when the entrance lock is activated
+#define FAILED_DEPENDENCY 424
 #define INTERNAL_ERROR 500
 
 #endif // ASCEE_ARGC_TYPES_H
