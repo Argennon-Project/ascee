@@ -8,7 +8,7 @@ int fib(int n) {
 }
 
 int dispatcher(void* session, string_t request) {
-    //enter_area(session);
+    enter_area(session);
     string_t str = String("Hello!!!  new");
     string_buffer buf = StringBuffer(100);
 
@@ -19,7 +19,7 @@ int dispatcher(void* session, string_t request) {
 
     loadInt64(session, 777);
     printf("fib:%d\n", fib(10));
-    for (int i = 0; i < 200000000; ++i) {}
+    // for (int i = 0; i < 20000000000; ++i) {}
 
     invoke_dispatcher(session, 220, 2, str);
     exit_area(session);

@@ -11,16 +11,15 @@ void executeSession(int transactionInfo);
 
 static void sig_handler(int sig, siginfo_t* info, void* ucontext) {
     printf("Caught signal %d\n", sig);
-    if (sig == SIGFPE || sig == SIGABRT || sig == SIGSEGV || sig == SIGUSR1) {
+    if (sig != SIGALRM) {
         int* ret = (int*) malloc(sizeof(int));
         *ret = INTERNAL_ERROR;
-        if (sig == SIGABRT) *ret = REQUEST_TIMEOUT;
-        if (sig == SIGUSR1) *ret = REENTRANCY_DETECTED;
+        if (sig == SIGUSR1) *ret = REQUEST_TIMEOUT;
         pthread_exit(ret);
-    } else if (sig == SIGALRM) {
+    } else {
         pthread_t thread_id = *static_cast<pthread_t*>(info->si_value.sival_ptr);
         printf("Caught signal %d for app %ld\n", sig, thread_id);
-        pthread_kill(thread_id, SIGABRT);
+        pthread_kill(thread_id, SIGUSR1);
     }
 }
 
@@ -29,13 +28,13 @@ void init_handlers() {
 
     action.sa_flags = SA_SIGINFO;
     action.sa_sigaction = sig_handler;
-    sigemptyset(&action.sa_mask);
+    sigfillset(&action.sa_mask);
     int err = 0;
     err += sigaction(SIGALRM, &action, nullptr);
-    err += sigaction(SIGUSR1, &action, nullptr);
-    err += sigaction(SIGABRT, &action, nullptr);
     err += sigaction(SIGFPE, &action, nullptr);
+    err += sigaction(SIGUSR1, &action, nullptr);
     err += sigaction(SIGSEGV, &action, nullptr);
+    err += sigaction(SIGBUS, &action, nullptr);
     if (err != 0) {
         printf("error in creating handlers\n");
         exit(EXIT_FAILURE);

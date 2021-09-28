@@ -12,6 +12,7 @@
 #include "../../heap/HeapModifier.h"
 
 #define RESPONSE_MAX_SIZE 2*1024
+#define THREAD_EXIT(ret_val)   int* ret = (int*) malloc(sizeof(int)); *ret = (ret_val); pthread_exit(ret)
 
 struct DeferredArgs {
     std_id_t appID;

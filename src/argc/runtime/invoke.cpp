@@ -27,8 +27,9 @@ static
 void maskSignals(int how) {
     sigset_t set;
 
-// Block SIGALRM;
+// Block timer's signal
     sigemptyset(&set);
+    sigaddset(&set, SIGUSR1);
     sigaddset(&set, SIGABRT);
     int s = pthread_sigmask(how, &set, nullptr);
     if (s != 0) throw std::runtime_error("error in masking signals");
@@ -53,15 +54,14 @@ string_buffer* getResponse(SessionInfo* session) {
 extern "C"
 void enter_area(SessionInfo* session) {
     if (session->currentCall->hasLock) return;
-
+    blockSignals();
     if (session->isLocked[session->currentCall->appID]) {
-        raise(SIGUSR1);
+        THREAD_EXIT(REENTRANCY_DETECTED);
     } else {
-        blockSignals();
         session->isLocked[session->currentCall->appID] = true;
         session->currentCall->hasLock = true;
-        unBlockSignals();
     }
+    unBlockSignals();
 }
 
 extern "C"
@@ -131,6 +131,9 @@ void invoke_deferred(SessionInfo* session, byte forwarded_gas, std_id_t app_id, 
 extern "C"
 int invoke_dispatcher(SessionInfo* session, byte forwarded_gas, std_id_t app_id, string_t request) {
     blockSignals();
+    if (session->currentCall->appID == app_id) {
+        THREAD_EXIT(INTERNAL_ERROR);
+    }
     int maxCurrentGas = (session->currentCall->remainingExternalGas * forwarded_gas) >> 8;
 
     session->currentCall->remainingExternalGas -= maxCurrentGas;
@@ -195,7 +198,7 @@ int invoke_dispatcher(SessionInfo* session, byte forwarded_gas, std_id_t app_id,
 void executeSession(int transactionInfo) {
     SessionInfo::CallContext newCall = {
             .appID = 0,
-            .remainingExternalGas = 500000,
+            .remainingExternalGas = 20000,
     };
     SessionInfo session{
             .heapModifier = unique_ptr<HeapModifier>(Heap::setupSession(transactionInfo)),
