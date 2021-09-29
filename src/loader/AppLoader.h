@@ -17,6 +17,6 @@ public:
     static dispatcher_ptr_t getDispatcher(std_id_t appID);
 };
 
-}
+} // namespace ascee
 
 #endif // ASCEE_APP_LOADER_H

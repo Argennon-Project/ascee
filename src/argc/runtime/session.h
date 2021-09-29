@@ -2,17 +2,20 @@
 #ifndef ASCEE_SESSION_H
 #define ASCEE_SESSION_H
 
+#include <pthread.h>
+#include <csetjmp>
 
 #include <string>
 #include <unordered_map>
 #include <memory>
 #include <vector>
-#include <pthread.h>
+
 #include "../../../include/argc/types.h"
 #include "../../heap/HeapModifier.h"
+#include "../../ThreadCpuTimer.h"
 
 #define RESPONSE_MAX_SIZE 2*1024
-#define THREAD_EXIT(ret_val)   int* ret = (int*) malloc(sizeof(int)); *ret = (ret_val); pthread_exit(ret)
+namespace ascee {
 
 struct DeferredArgs {
     std_id_t appID;
@@ -21,7 +24,9 @@ struct DeferredArgs {
 };
 
 struct SessionInfo {
+    jmp_buf* envPointer;
     std::unique_ptr<ascee::HeapModifier> heapModifier;
+    ascee::ThreadCpuTimer cpuTimer;
     std::unordered_map<std_id_t, bool> isLocked;
     StringBuffer responseBuffer = {
             .buffer = (char[RESPONSE_MAX_SIZE]) {},
@@ -38,5 +43,10 @@ struct SessionInfo {
 
     CallContext* currentCall;
 };
+
+// extern thread_local jmp_buf* envPointer;
+extern thread_local SessionInfo* session;
+
+} // namespace ascee
 
 #endif // ASCEE_SESSION_H

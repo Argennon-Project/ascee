@@ -17,7 +17,7 @@ typedef __uint128_t full_id_t;
 typedef struct String string_t;
 typedef struct StringBuffer string_buffer;
 
-typedef int (* dispatcher_ptr_t)(void*, string_t);
+typedef int (* dispatcher_ptr_t)(string_t request);
 
 #define String(str) {.content = (str), .length = sizeof (str)}
 #define StringBuffer(size) {.buffer = (char[size]){}, .maxSize = (size), .end = 0}

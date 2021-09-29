@@ -3,8 +3,8 @@
 
 #include "stdio.h"
 
-int dispatcher(void* session, string_t request) {
+int dispatcher(string_t request) {
     string_t req = String("Hi!");
     printf("woohoo called!!!\n");
-    return invoke_dispatcher(session, 200, 1, req);
+    return invoke_dispatcher(200, 1, req);
 };

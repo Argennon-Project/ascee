@@ -1,15 +1,15 @@
 #ifndef ASCEE_ARGC_FUNCTIONS_H
 #define ASCEE_ARGC_FUNCTIONS_H
 
-int64 loadInt64(void* session, int32 offset);
+int64 loadInt64(int32 offset);
 
-int invoke_dispatcher(void* session, byte forwarded_gas, std_id_t app_id, string_t request);
+int invoke_dispatcher(byte forwarded_gas, std_id_t app_id, string_t request);
 
-void invoke_deferred(void* session, byte forwarded_gas, std_id_t app_id, string_t request);
+void invoke_deferred(byte forwarded_gas, std_id_t app_id, string_t request);
 
-void enter_area(void* session);
+void enter_area();
 
-void exit_area(void* session);
+void exit_area();
 
 void append_str(string_buffer*, string_t);
 

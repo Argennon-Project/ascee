@@ -7,6 +7,7 @@
 #include <memory>
 #include <unordered_map>
 #include <vector>
+#include <csetjmp>
 
 #include "session.h"
 #include "../../heap/HeapModifier.h"
@@ -47,16 +48,16 @@ void unBlockSignals() {
 
 // todo: small function should be defined as inline
 extern "C"
-string_buffer* getResponse(SessionInfo* session) {
+string_buffer* getResponse() {
     return &session->responseBuffer;
 }
 
 extern "C"
-void enter_area(SessionInfo* session) {
+void enter_area() {
     if (session->currentCall->hasLock) return;
     blockSignals();
     if (session->isLocked[session->currentCall->appID]) {
-        THREAD_EXIT(REENTRANCY_DETECTED);
+        raise(SIGUSR2);
     } else {
         session->isLocked[session->currentCall->appID] = true;
         session->currentCall->hasLock = true;
@@ -65,7 +66,7 @@ void enter_area(SessionInfo* session) {
 }
 
 extern "C"
-void exit_area(SessionInfo* session) {
+void exit_area() {
     blockSignals();
     if (session->currentCall->hasLock) {
         session->isLocked[session->currentCall->appID] = false;
@@ -79,47 +80,8 @@ int64_t calculate_max_time(int64_t max_cost) {
     return max_cost * 1000000;
 }
 
-static
-void* callerThread(void* arg) {
-    auto* arguments = static_cast<DispatcherArgs*>(arg);
-
-    // Creating the execution timer
-    timer_t exec_timer;
-    struct sigevent sev{};
-    struct itimerspec its{};
-    sev.sigev_notify = SIGEV_SIGNAL;
-    sev.sigev_signo = SIGALRM;
-    pthread_t thread_id = pthread_self();
-    sev.sigev_value.sival_ptr = &thread_id;
-    if (timer_create(CLOCK_THREAD_CPUTIME_ID, &sev, &exec_timer) != 0) {
-        throw std::runtime_error("error in creating the cpu timer");
-    }
-
-    // Start the timer
-    auto time_nsec = calculate_max_time(arguments->maxGas);
-    its.it_value.tv_sec = time_nsec / 1000000000;
-    its.it_value.tv_nsec = time_nsec % 1000000000;
-    its.it_interval.tv_sec = 0;
-    its.it_interval.tv_nsec = 0;
-    if (timer_settime(exec_timer, 0, &its, nullptr) != 0) {
-        throw std::runtime_error("error in starting the timer");
-    }
-
-    auto dispatcher = AppLoader::getDispatcher(arguments->session->currentCall->appID);
-    unBlockSignals();
-    int ret = (dispatcher == nullptr) ? NOT_FOUND : dispatcher(arguments->session, arguments->request);
-    blockSignals();
-
-    // we don't let an app manually return REQUEST_TIMEOUT
-    if (ret == REQUEST_TIMEOUT) ret = INTERNAL_ERROR;
-
-    int* retMem = (int*) malloc(sizeof(int));
-    *retMem = ret;
-    return retMem;
-}
-
 extern "C"
-void invoke_deferred(SessionInfo* session, byte forwarded_gas, std_id_t app_id, string_t request) {
+void invoke_deferred(byte forwarded_gas, std_id_t app_id, string_t request) {
     session->currentCall->deferredCalls.push_back(
             std::make_unique<DeferredArgs>(DeferredArgs{
                     .appID = app_id,
@@ -129,11 +91,12 @@ void invoke_deferred(SessionInfo* session, byte forwarded_gas, std_id_t app_id, 
 }
 
 extern "C"
-int invoke_dispatcher(SessionInfo* session, byte forwarded_gas, std_id_t app_id, string_t request) {
-    blockSignals();
-    if (session->currentCall->appID == app_id) {
-        THREAD_EXIT(INTERNAL_ERROR);
+int invoke_dispatcher(byte forwarded_gas, std_id_t app_id, string_t request) {
+    auto dispatcher = AppLoader::getDispatcher(app_id);
+    if (dispatcher == nullptr || session->currentCall->appID == app_id) {
+        return NOT_FOUND;
     }
+    blockSignals();
     int maxCurrentGas = (session->currentCall->remainingExternalGas * forwarded_gas) >> 8;
 
     session->currentCall->remainingExternalGas -= maxCurrentGas;
@@ -146,31 +109,30 @@ int invoke_dispatcher(SessionInfo* session, byte forwarded_gas, std_id_t app_id,
     session->responseBuffer.end = 0;
     session->heapModifier->openContext(app_id);
 
-    DispatcherArgs args{
-            .session = session,
-            .maxGas = maxCurrentGas,
-            .request = request,
-    };
-    pthread_t new_thread;
-    int err = pthread_create(&new_thread, nullptr, callerThread, &args);
-    if (err != 0) {
-        // there is no need to unblock signals.
-        throw std::runtime_error("error creating new thread");
+    int64_t remainingExecTime = session->cpuTimer.setAlarm(calculate_max_time(maxCurrentGas));
+
+    jmp_buf* oldEnv = session->envPointer;
+    jmp_buf env;
+    session->envPointer = &env;
+
+    int ret, jmpRet = sigsetjmp(env, 1);
+    if (jmpRet == 0) {
+        unBlockSignals();
+        ret = dispatcher(request);
+        blockSignals();
+    } else {
+        // because we have used sigsetjmp and saved the signal mask, we don't need to call blockSignals() here.
+        ret = jmpRet;
     }
 
-    void* ret_ptr = nullptr;
-    pthread_join(new_thread, &ret_ptr);
-
-    // as soon as possible we should release the entrance lock of the app (if any)
-    exit_area(session);
-
-    int ret = *(int*) ret_ptr;
-    free(ret_ptr);
+    // as soon as possible we should release the entrance lock of the app (if any) and restore the old env value
+    exit_area();
+    session->envPointer = oldEnv;
+    session->cpuTimer.setAlarm(remainingExecTime);
 
     if (ret < BAD_REQUEST) {
         for (const auto& dCall: session->currentCall->deferredCalls) {
             int temp = invoke_dispatcher(
-                    session,
                     dCall->forwardedGas,
                     dCall->appID,
                     // we should NOT use length + 1 here.
@@ -195,15 +157,34 @@ int invoke_dispatcher(SessionInfo* session, byte forwarded_gas, std_id_t app_id,
     return ret;
 }
 
+void* registerRecoveryStack() {
+    stack_t sig_stack;
+
+    sig_stack.ss_sp = malloc(SIGSTKSZ);
+    if (sig_stack.ss_sp == nullptr) {
+        throw std::runtime_error("could not allocate memory for the recovery stack");
+    }
+    sig_stack.ss_size = SIGSTKSZ;
+    sig_stack.ss_flags = 0;
+    if (sigaltstack(&sig_stack, nullptr) == -1) {
+        throw std::runtime_error("sigaltstack could not register the recovery stack");
+    }
+    return sig_stack.ss_sp;
+}
+
 void executeSession(int transactionInfo) {
+    void* p = registerRecoveryStack();
     SessionInfo::CallContext newCall = {
             .appID = 0,
-            .remainingExternalGas = 20000,
+            .remainingExternalGas = 2000000,
     };
-    SessionInfo session{
+    SessionInfo threadSession{
             .heapModifier = unique_ptr<HeapModifier>(Heap::setupSession(transactionInfo)),
             .currentCall = &newCall,
     };
-    int ret = invoke_dispatcher(&session, 50, 1, String{"Hey!", 5});
+    session = &threadSession;
+    int ret = invoke_dispatcher(50, 1, String{"Hey!", 5});
     std::cout << "returned: " << ret << std::endl;
+    free(p);
 }
+

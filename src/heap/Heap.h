@@ -16,4 +16,5 @@ public:
 };
 
 } // namespace ascee
+
 #endif // ASCEE_HEAP_H
