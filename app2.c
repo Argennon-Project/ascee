@@ -9,7 +9,7 @@ void foo() {
 
 
 int dispatcher(string_t request) {
-    string_t req = String("Hi!");
+    string_t req = STRING("Hi!");
     foo();
     return 0;
     // printf("woohoo called!!!\n");

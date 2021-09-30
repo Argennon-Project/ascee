@@ -19,8 +19,8 @@ typedef struct StringBuffer string_buffer;
 
 typedef int (* dispatcher_ptr_t)(string_t request);
 
-#define String(str) {.content = (str), .length = sizeof (str)}
-#define StringBuffer(name, size) char name##_buf_[size]; string_buffer name = {name##_buf_, size, 0}
+#define STRING(str) {.content = (str), .length = sizeof (str)}
+#define STRING_BUFFER(name, size) char __##name##_buf_[size]; string_buffer name = {__##name##_buf_, size, 0}
 
 struct String {
     const char* content;

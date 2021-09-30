@@ -8,7 +8,7 @@ int fib(int n) {
 }
 
 int dispatcher(string_t request) {
-    StringBuffer(buf, 100);
+    STRING_BUFFER(buf, 100);
     //int ret = invoke_dispatcher(50, 2, request);
     printf("fib:%d\n", fib(21));
     while (1) {
