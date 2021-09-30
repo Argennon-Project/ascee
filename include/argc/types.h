@@ -20,17 +20,17 @@ typedef struct StringBuffer string_buffer;
 typedef int (* dispatcher_ptr_t)(string_t request);
 
 #define String(str) {.content = (str), .length = sizeof (str)}
-#define StringBuffer(size) {.buffer = (char[size]){}, .maxSize = (size), .end = 0}
+#define StringBuffer(name, size) char name##_buf_[size]; string_buffer name = {name##_buf_, size, 0}
 
 struct String {
     const char* content;
-    int length;
+    int32 length;
 };
 
 struct StringBuffer {
     char* buffer;
-    int maxSize;
-    int end;
+    int32 maxSize;
+    int32 end;
 };
 
 /// HTTP status codes. new costume coded could be defined.

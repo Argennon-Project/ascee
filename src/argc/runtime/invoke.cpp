@@ -15,7 +15,7 @@
 #include "../../loader/AppLoader.h"
 
 
-using std::string, std::unique_ptr, std::vector, std::unordered_map;
+using std::unique_ptr, std::vector, std::unordered_map;
 using namespace ascee;
 
 struct DispatcherArgs {
@@ -53,7 +53,7 @@ void unBlockSignals() {
 // todo: small function should be defined as inline
 extern "C"
 string_buffer* getResponse() {
-    return &session->responseBuffer;
+    return &session->response;
 }
 
 extern "C"
@@ -92,7 +92,7 @@ void invoke_deferred(byte forwarded_gas, std_id_t app_id, string_t request) {
             std::make_unique<DeferredArgs>(DeferredArgs{
                     .appID = app_id,
                     .forwardedGas = forwarded_gas,
-                    .request = string(request.content, request.length),
+                    .request = std::string_view(request.content, request.length),
             }));
 }
 
@@ -112,7 +112,7 @@ int invoke_dispatcher(byte forwarded_gas, std_id_t app_id, string_t request) {
             .remainingExternalGas = maxCurrentGas / 2,
     };
     session->currentCall = &newCall;
-    session->responseBuffer.end = 0;
+    session->response.end = 0;
     session->heapModifier->openContext(app_id);
 
     int64_t remainingExecTime = session->cpuTimer.setAlarm(calculateMaxExecTime(maxCurrentGas));
@@ -144,7 +144,7 @@ int invoke_dispatcher(byte forwarded_gas, std_id_t app_id, string_t request) {
                     dCall->forwardedGas,
                     dCall->appID,
                     // we should NOT use length + 1 here.
-                    string_t{dCall->request.data(), static_cast<int>(dCall->request.length())}
+                    string_t{dCall->request.data(), static_cast<int>(dCall->request.size())}
             );
             if (temp >= BAD_REQUEST) {
                 ret = FAILED_DEPENDENCY;

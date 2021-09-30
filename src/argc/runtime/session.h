@@ -20,7 +20,7 @@ namespace ascee {
 struct DeferredArgs {
     std_id_t appID;
     byte forwardedGas;
-    std::string request;
+    std::string_view request;
 };
 
 struct SessionInfo {
@@ -30,8 +30,9 @@ struct SessionInfo {
     std::unique_ptr<ascee::HeapModifier> heapModifier;
     ascee::ThreadCpuTimer cpuTimer;
     std::unordered_map<std_id_t, bool> isLocked;
-    StringBuffer responseBuffer = {
-            .buffer = (char[RESPONSE_MAX_SIZE]) {},
+    char buf[RESPONSE_MAX_SIZE];
+    StringBuffer response = {
+            .buffer = buf,
             .maxSize = RESPONSE_MAX_SIZE,
             .end = 0
     };
