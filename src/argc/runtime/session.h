@@ -24,7 +24,9 @@ struct DeferredArgs {
 };
 
 struct SessionInfo {
-    jmp_buf* envPointer;
+    jmp_buf* recentEnvPointer;
+    jmp_buf* rootEnvPointer;
+    bool criticalArea = false;
     std::unique_ptr<ascee::HeapModifier> heapModifier;
     ascee::ThreadCpuTimer cpuTimer;
     std::unordered_map<std_id_t, bool> isLocked;

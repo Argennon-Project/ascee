@@ -23,6 +23,7 @@ ThreadCpuTimer::~ThreadCpuTimer() {
     printf("timer deleted\n");
 }
 
+/// in the implementation of this function nsec = 0 should always stop the timer.
 int64_t ThreadCpuTimer::setAlarm(int64_t nsec) {
     struct itimerspec its{};
 

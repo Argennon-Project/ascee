@@ -3,8 +3,17 @@
 
 #include "stdio.h"
 
+void foo() {
+    foo();
+}
+
+
 int dispatcher(string_t request) {
     string_t req = String("Hi!");
-    printf("woohoo called!!!\n");
-    return invoke_dispatcher(200, 1, req);
+    foo();
+    return 0;
+    // printf("woohoo called!!!\n");
+    //while(1);
+    //foo();
+    //return invoke_dispatcher(250, 1, req);
 };

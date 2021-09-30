@@ -19,11 +19,15 @@ void executeSession(int transactionInfo);
 static
 void sig_handler(int sig, siginfo_t* info, void* ucontext) {
     printf("Caught signal %d\n", sig);
+    // important: session is not valid when sig == SIGALRM
     if (sig != SIGALRM) {
+        if (ascee::session->criticalArea) {
+            siglongjmp(*ascee::session->rootEnvPointer, LOOP_DETECTED);
+        }
         int ret = INTERNAL_ERROR;
         if (sig == SIGUSR1) ret = REQUEST_TIMEOUT;
         if (sig == SIGUSR2) ret = REENTRANCY_DETECTED;
-        siglongjmp(*ascee::session->envPointer, ret);
+        siglongjmp(*ascee::session->recentEnvPointer, ret);
     } else {
         pthread_t thread_id = *static_cast<pthread_t*>(info->si_value.sival_ptr);
         printf("Caught signal %d for app %ld\n", sig, thread_id);
@@ -55,10 +59,10 @@ int main(int argc, char const* argv[]) {
     ascee::AppLoader::init(2);
     init_handlers();
 
-    thread t1(executeSession, 111);
-    //thread t2(executeSession, 222);
+    thread t1(executeSession, 1);
+    thread t2(executeSession, 2);
 
     t1.join();
-    //t2.join();
+    t2.join();
     return 0;
 }

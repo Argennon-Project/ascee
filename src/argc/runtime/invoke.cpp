@@ -32,18 +32,22 @@ void maskSignals(int how) {
     sigemptyset(&set);
     sigaddset(&set, SIGUSR1);
     sigaddset(&set, SIGABRT);
+    sigaddset(&set, SIGBUS);
     int s = pthread_sigmask(how, &set, nullptr);
     if (s != 0) throw std::runtime_error("error in masking signals");
+
 }
 
 static
 void blockSignals() {
     maskSignals(SIG_BLOCK);
+    session->criticalArea = true;
 }
 
 static
 void unBlockSignals() {
     maskSignals(SIG_UNBLOCK);
+    session->criticalArea = false;
 }
 
 // todo: small function should be defined as inline
@@ -75,9 +79,11 @@ void exit_area() {
     unBlockSignals();
 }
 
+/// This function must not return zero, and instead of zero it should return a small positive value.
 static
-int64_t calculate_max_time(int64_t max_cost) {
-    return max_cost * 1000000;
+int64_t calculateMaxExecTime(int64_t max_cost) {
+    int64_t ret = max_cost * 1000000;
+    return (ret == 0) ? 1000 : ret;
 }
 
 extern "C"
@@ -109,25 +115,27 @@ int invoke_dispatcher(byte forwarded_gas, std_id_t app_id, string_t request) {
     session->responseBuffer.end = 0;
     session->heapModifier->openContext(app_id);
 
-    int64_t remainingExecTime = session->cpuTimer.setAlarm(calculate_max_time(maxCurrentGas));
+    int64_t remainingExecTime = session->cpuTimer.setAlarm(calculateMaxExecTime(maxCurrentGas));
 
-    jmp_buf* oldEnv = session->envPointer;
+    jmp_buf* oldEnv = session->recentEnvPointer;
     jmp_buf env;
-    session->envPointer = &env;
+    session->recentEnvPointer = &env;
 
     int ret, jmpRet = sigsetjmp(env, 1);
     if (jmpRet == 0) {
         unBlockSignals();
         ret = dispatcher(request);
-        blockSignals();
     } else {
         // because we have used sigsetjmp and saved the signal mask, we don't need to call blockSignals() here.
         ret = jmpRet;
     }
+    // blockSignals() activates the criticalArea flag. That way if we raise another signal here, we won't get stuck in
+    // an infinite loop.
+    blockSignals();
 
     // as soon as possible we should release the entrance lock of the app (if any) and restore the old env value
     exit_area();
-    session->envPointer = oldEnv;
+    session->recentEnvPointer = oldEnv;
     session->cpuTimer.setAlarm(remainingExecTime);
 
     if (ret < BAD_REQUEST) {
@@ -174,16 +182,28 @@ void* registerRecoveryStack() {
 
 void executeSession(int transactionInfo) {
     void* p = registerRecoveryStack();
+    jmp_buf env;
+
     SessionInfo::CallContext newCall = {
             .appID = 0,
-            .remainingExternalGas = 2000000,
+            .remainingExternalGas = 25000,
     };
     SessionInfo threadSession{
+            .rootEnvPointer = &env,
             .heapModifier = unique_ptr<HeapModifier>(Heap::setupSession(transactionInfo)),
             .currentCall = &newCall,
     };
     session = &threadSession;
-    int ret = invoke_dispatcher(50, 1, String{"Hey!", 5});
+
+    int ret, jmpRet = sigsetjmp(env, 1);
+    if (jmpRet == 0) {
+        ret = invoke_dispatcher(100, transactionInfo, String{"Hey!", 5});
+    } else {
+        // critical error
+        printf("**critical**\n");
+        ret = jmpRet;
+    }
+
     std::cout << "returned: " << ret << std::endl;
     free(p);
 }
