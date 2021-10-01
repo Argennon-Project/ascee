@@ -3,7 +3,7 @@
 #include "../include/argc/functions.h"
 
 
-TEST(StringTest, AppendStr) {
+TEST(ArgcStringDeathTest, AppendStr) {
     STRING_BUFFER(strBuf, 10);
 
     append_str(&strBuf, STRING("str1"));
@@ -46,11 +46,11 @@ TEST(StringTest, AppendStr) {
     );
 }
 
-TEST(StringTest, AppendInt) {
+TEST(ArgcStringDeathTest, AppendInt) {
     STRING_BUFFER(strBuf, 30);
 
     append_int64(&strBuf, 123);
-    EXPECT_STREQ(strBuf.buffer, "123");
+    EXPECT_STREQ(strBuf.buffer, "13");
 
     append_str(&strBuf, STRING("  "));
     append_int64(&strBuf, -33);
