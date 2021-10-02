@@ -1,7 +1,8 @@
 #include "gtest/gtest.h"
-#include "../include/argc/types.h"
-#include "../include/argc/functions.h"
+#include "argc/types.h"
+#include "argc/functions.h"
 
+using namespace argcrt;
 
 TEST(ArgcStringDeathTest, AppendStr) {
     STRING_BUFFER(strBuf, 10);

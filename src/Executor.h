@@ -52,6 +52,8 @@ struct SessionInfo {
 
 struct Transaction {
     std_id_t calledAppID;
+    int gas;
+
 };
 
 class Executor {
@@ -71,7 +73,7 @@ public:
         return session;
     }
 
-    std::string_view startSession(const Transaction& t);
+    int startSession(const Transaction& t);
 };
 
 } // namespace ascee

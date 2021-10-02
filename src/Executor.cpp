@@ -62,13 +62,13 @@ void* Executor::registerRecoveryStack() {
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "LocalValueEscapesScope"
 
-std::string_view Executor::startSession(const Transaction& t) {
+int Executor::startSession(const Transaction& t) {
     void* p = registerRecoveryStack();
     jmp_buf env;
 
     SessionInfo::CallContext newCall = {
             .appID = 0,
-            .remainingExternalGas = 25000,
+            .remainingExternalGas = t.gas,
     };
     SessionInfo threadSession{
             .rootEnvPointer = &env,
@@ -79,16 +79,15 @@ std::string_view Executor::startSession(const Transaction& t) {
 
     int ret, jmpRet = sigsetjmp(env, true);
     if (jmpRet == 0) {
-        ret = argcrt::invoke_dispatcher(100, t.calledAppID, String{"Hey!", 5});
+        ret = argcrt::invoke_dispatcher(255, t.calledAppID, String{"Hey!", 5});
     } else {
         // critical error
         printf("**critical**\n");
         ret = jmpRet;
     }
 
-    std::cout << "returned: " << ret << std::endl;
     free(p);
-    return "dfdf";
+    return ret;
 }
 
 #pragma clang diagnostic pop
