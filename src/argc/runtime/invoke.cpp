@@ -7,20 +7,14 @@
 #include <vector>
 #include <csetjmp>
 
-#include "session.h"
+#include <Executor.h>
+#include <argc/functions.h>
 #include "heap/HeapModifier.h"
-#include "heap/Heap.h"
 #include "loader/AppLoader.h"
 
 
 using std::unique_ptr, std::vector, std::unordered_map;
 using namespace ascee;
-
-struct DispatcherArgs {
-    SessionInfo* session;
-    int maxGas;
-    string_t& request;
-};
 
 static
 void maskSignals(int how) {
@@ -39,42 +33,13 @@ void maskSignals(int how) {
 static
 void blockSignals() {
     maskSignals(SIG_BLOCK);
-    session->criticalArea = true;
+    Executor::getSession()->criticalArea = true;
 }
 
 static
 void unBlockSignals() {
     maskSignals(SIG_UNBLOCK);
-    session->criticalArea = false;
-}
-
-// todo: small function should be defined as inline
-extern "C"
-string_buffer* getResponse() {
-    return &session->response;
-}
-
-extern "C"
-void enter_area() {
-    if (session->currentCall->hasLock) return;
-    blockSignals();
-    if (session->isLocked[session->currentCall->appID]) {
-        raise(SIGUSR2);
-    } else {
-        session->isLocked[session->currentCall->appID] = true;
-        session->currentCall->hasLock = true;
-    }
-    unBlockSignals();
-}
-
-extern "C"
-void exit_area() {
-    blockSignals();
-    if (session->currentCall->hasLock) {
-        session->isLocked[session->currentCall->appID] = false;
-        session->currentCall->hasLock = false;
-    }
-    unBlockSignals();
+    Executor::getSession()->criticalArea = false;
 }
 
 /// This function must not return zero, and instead of zero it should return a small positive value.
@@ -84,9 +49,39 @@ int64_t calculateMaxExecTime(int64_t max_cost) {
     return (ret == 0) ? 1000 : ret;
 }
 
+// todo: small function should be defined as inline
 extern "C"
-void invoke_deferred(byte forwarded_gas, std_id_t app_id, string_t request) {
-    session->currentCall->deferredCalls.push_back(
+string_buffer* argcrt::getResponse() {
+    return &Executor::getSession()->response;
+}
+
+extern "C"
+void argcrt::enter_area() {
+    if (Executor::getSession()->currentCall->hasLock) return;
+    blockSignals();
+    if (Executor::getSession()->isLocked[Executor::getSession()->currentCall->appID]) {
+        raise(SIGUSR2);
+    } else {
+        Executor::getSession()->isLocked[Executor::getSession()->currentCall->appID] = true;
+        Executor::getSession()->currentCall->hasLock = true;
+    }
+    unBlockSignals();
+}
+
+extern "C"
+void argcrt::exit_area() {
+    blockSignals();
+    if (Executor::getSession()->currentCall->hasLock) {
+        Executor::getSession()->isLocked[Executor::getSession()->currentCall->appID] = false;
+        Executor::getSession()->currentCall->hasLock = false;
+    }
+    unBlockSignals();
+}
+
+
+extern "C"
+void argcrt::invoke_deferred(byte forwarded_gas, std_id_t app_id, string_t request) {
+    Executor::getSession()->currentCall->deferredCalls.push_back(
             std::make_unique<DeferredArgs>(DeferredArgs{
                     .appID = app_id,
                     .forwardedGas = forwarded_gas,
@@ -95,29 +90,29 @@ void invoke_deferred(byte forwarded_gas, std_id_t app_id, string_t request) {
 }
 
 extern "C"
-int invoke_dispatcher(byte forwarded_gas, std_id_t app_id, string_t request) {
+int argcrt::invoke_dispatcher(byte forwarded_gas, std_id_t app_id, string_t request) {
     auto dispatcher = AppLoader::getDispatcher(app_id);
-    if (dispatcher == nullptr || session->currentCall->appID == app_id) {
+    if (dispatcher == nullptr || Executor::getSession()->currentCall->appID == app_id) {
         return NOT_FOUND;
     }
     blockSignals();
-    int maxCurrentGas = (session->currentCall->remainingExternalGas * forwarded_gas) >> 8;
+    int maxCurrentGas = (Executor::getSession()->currentCall->remainingExternalGas * forwarded_gas) >> 8;
 
-    session->currentCall->remainingExternalGas -= maxCurrentGas;
-    auto oldCallInfo = session->currentCall;
+    Executor::getSession()->currentCall->remainingExternalGas -= maxCurrentGas;
+    auto oldCallInfo = Executor::getSession()->currentCall;
     SessionInfo::CallContext newCall = {
             .appID = app_id,
             .remainingExternalGas = maxCurrentGas / 2,
     };
-    session->currentCall = &newCall;
-    session->response.end = 0;
-    session->heapModifier->openContext(app_id);
+    Executor::getSession()->currentCall = &newCall;
+    Executor::getSession()->response.end = 0;
+    Executor::getSession()->heapModifier->openContext(app_id);
 
-    int64_t remainingExecTime = session->cpuTimer.setAlarm(calculateMaxExecTime(maxCurrentGas));
+    int64_t remainingExecTime = Executor::getSession()->cpuTimer.setAlarm(calculateMaxExecTime(maxCurrentGas));
 
-    jmp_buf* oldEnv = session->recentEnvPointer;
+    jmp_buf* oldEnv = Executor::getSession()->recentEnvPointer;
     jmp_buf env;
-    session->recentEnvPointer = &env;
+    Executor::getSession()->recentEnvPointer = &env;
 
     int ret, jmpRet = sigsetjmp(env, 1);
     if (jmpRet == 0) {
@@ -133,11 +128,11 @@ int invoke_dispatcher(byte forwarded_gas, std_id_t app_id, string_t request) {
 
     // as soon as possible we should release the entrance lock of the app (if any) and restore the old env value
     exit_area();
-    session->recentEnvPointer = oldEnv;
-    session->cpuTimer.setAlarm(remainingExecTime);
+    Executor::getSession()->recentEnvPointer = oldEnv;
+    Executor::getSession()->cpuTimer.setAlarm(remainingExecTime);
 
     if (ret < BAD_REQUEST) {
-        for (const auto& dCall: session->currentCall->deferredCalls) {
+        for (const auto& dCall: Executor::getSession()->currentCall->deferredCalls) {
             int temp = invoke_dispatcher(
                     dCall->forwardedGas,
                     dCall->appID,
@@ -152,57 +147,13 @@ int invoke_dispatcher(byte forwarded_gas, std_id_t app_id, string_t request) {
     }
 
     if (ret >= BAD_REQUEST) {
-        session->heapModifier->closeContextAbruptly(app_id, oldCallInfo->appID);
+        Executor::getSession()->heapModifier->closeContextAbruptly(app_id, oldCallInfo->appID);
     } else {
-        session->heapModifier->closeContextNormally(app_id, oldCallInfo->appID);
+        Executor::getSession()->heapModifier->closeContextNormally(app_id, oldCallInfo->appID);
     }
 
     // restore previous call info
-    session->currentCall = oldCallInfo;
+    Executor::getSession()->currentCall = oldCallInfo;
     unBlockSignals();
     return ret;
 }
-
-void* registerRecoveryStack() {
-    stack_t sig_stack;
-
-    sig_stack.ss_sp = malloc(SIGSTKSZ);
-    if (sig_stack.ss_sp == nullptr) {
-        throw std::runtime_error("could not allocate memory for the recovery stack");
-    }
-    sig_stack.ss_size = SIGSTKSZ;
-    sig_stack.ss_flags = 0;
-    if (sigaltstack(&sig_stack, nullptr) == -1) {
-        throw std::runtime_error("sigaltstack could not register the recovery stack");
-    }
-    return sig_stack.ss_sp;
-}
-
-void executeSession(int transactionInfo) {
-    void* p = registerRecoveryStack();
-    jmp_buf env;
-
-    SessionInfo::CallContext newCall = {
-            .appID = 0,
-            .remainingExternalGas = 25000,
-    };
-    SessionInfo threadSession{
-            .rootEnvPointer = &env,
-            .heapModifier = unique_ptr<HeapModifier>(Heap::setupSession(transactionInfo)),
-            .currentCall = &newCall,
-    };
-    session = &threadSession;
-
-    int ret, jmpRet = sigsetjmp(env, 1);
-    if (jmpRet == 0) {
-        ret = invoke_dispatcher(100, transactionInfo, String{"Hey!", 5});
-    } else {
-        // critical error
-        printf("**critical**\n");
-        ret = jmpRet;
-    }
-
-    std::cout << "returned: " << ret << std::endl;
-    free(p);
-}
-

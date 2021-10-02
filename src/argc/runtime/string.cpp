@@ -3,13 +3,14 @@
 #include <cstring>
 
 #include <string>
+#include <argc/functions.h>
 
 #include "argc/types.h"
 
 using std::string;
 
 extern "C"
-void append_str(StringBuffer* buf, String str) {
+void argcrt::append_str(StringBuffer* buf, String str) {
     if (buf->maxSize < buf->end + str.length) {
         raise(SIGSEGV);
     }
@@ -21,12 +22,11 @@ void append_str(StringBuffer* buf, String str) {
 }
 
 extern "C"
-void append_int64(StringBuffer* buf, int64 i) {
+void argcrt::append_int64(StringBuffer* buf, int64 i) {
     string str = std::to_string(i);
     append_str(buf, String{str.c_str(), static_cast<int>(str.size() + 1)});
 }
 
-extern "C" inline
 String buf_to_string(const StringBuffer* buf) {
     return String{
             .content = buf->buffer,

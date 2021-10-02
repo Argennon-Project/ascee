@@ -1,9 +1,11 @@
 
-#ifndef ASCEE_SESSION_H
-#define ASCEE_SESSION_H
+#ifndef ASCEE_EXECUTOR_H
+#define ASCEE_EXECUTOR_H
+
 
 #include <pthread.h>
 #include <csetjmp>
+#include <csignal>
 
 #include <string>
 #include <unordered_map>
@@ -15,6 +17,7 @@
 #include "ThreadCpuTimer.h"
 
 #define RESPONSE_MAX_SIZE 2*1024
+
 namespace ascee {
 
 struct DeferredArgs {
@@ -47,9 +50,29 @@ struct SessionInfo {
     CallContext* currentCall;
 };
 
-// extern thread_local jmp_buf* envPointer;
-extern thread_local SessionInfo* session;
+struct Transaction {
+    std_id_t calledAppID;
+};
+
+class Executor {
+private:
+    static thread_local SessionInfo* session;
+
+    static void sig_handler(int sig, siginfo_t* info, void* ucontext);
+
+    void* registerRecoveryStack();
+
+    void initHandlers();
+
+public:
+    Executor();
+
+    static SessionInfo* getSession() {
+        return session;
+    }
+
+    std::string_view startSession(const Transaction& t);
+};
 
 } // namespace ascee
-
-#endif // ASCEE_SESSION_H
+#endif // ASCEE_EXECUTOR_H

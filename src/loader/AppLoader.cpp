@@ -2,16 +2,21 @@
 #include "AppLoader.h"
 #include <dlfcn.h>
 #include <thread>
+#include <filesystem>
+#include <utility>
 
 using namespace ascee;
-using std::string, std::runtime_error, std::out_of_range;
+using namespace std;
 
-std::unordered_map<std_id_t, dispatcher_ptr_t> AppLoader::dispatchersMap;
+unordered_map<std_id_t, dispatcher_ptr_t> AppLoader::dispatchersMap;
+filesystem::path libFilesDir;
 
-void AppLoader::init(std_id_t appID) {
+void AppLoader::loadApp(std_id_t appID) {
     void* handle;
     char* error;
-    string appFile = string("./libapp") + std::to_string(appID) + string(".so");
+    auto appFile = libFilesDir / ("libapp" + std::to_string(appID) + ".so");
+
+    printf("loading: %s...\n", appFile.c_str());
 
     handle = dlopen(appFile.c_str(), RTLD_LAZY);
     if (handle == nullptr) {
@@ -33,9 +38,17 @@ void AppLoader::init(std_id_t appID) {
 dispatcher_ptr_t AppLoader::getDispatcher(std_id_t appID) {
     try {
         return dispatchersMap.at(appID);
+    } catch (const out_of_range& out) {
+        try {
+            loadApp(appID);
+            return getDispatcher(appID);
+        } catch (const runtime_error& rte) {
+            std::cerr << "err:" << rte.what() << '\n';
+            return nullptr;
+        }
     }
-    catch (const out_of_range& e) {
-        std::cerr << "err:" << e.what() << '\n';
-        return nullptr;
-    }
+}
+
+void AppLoader::init(const filesystem::path& p) {
+    libFilesDir = p;
 }
