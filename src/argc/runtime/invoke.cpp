@@ -1,6 +1,4 @@
 
-#include <pthread.h>
-#include <ctime>
 #include <csignal>
 #include <cstdlib>
 
@@ -10,9 +8,9 @@
 #include <csetjmp>
 
 #include "session.h"
-#include "../../heap/HeapModifier.h"
-#include "../../heap/Heap.h"
-#include "../../loader/AppLoader.h"
+#include "heap/HeapModifier.h"
+#include "heap/Heap.h"
+#include "loader/AppLoader.h"
 
 
 using std::unique_ptr, std::vector, std::unordered_map;

@@ -10,9 +10,9 @@
 #include <memory>
 #include <vector>
 
-#include "../../../include/argc/types.h"
-#include "../../heap/HeapModifier.h"
-#include "../../ThreadCpuTimer.h"
+#include "argc/types.h"
+#include "heap/HeapModifier.h"
+#include "ThreadCpuTimer.h"
 
 #define RESPONSE_MAX_SIZE 2*1024
 namespace ascee {

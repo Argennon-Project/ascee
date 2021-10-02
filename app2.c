@@ -1,5 +1,4 @@
-#include "include/argc/types.h"
-#include "include/argc/functions.h"
+#include "argc/types.h"
 
 #include "stdio.h"
 

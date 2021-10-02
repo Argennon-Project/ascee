@@ -4,6 +4,8 @@ project(ascee)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_C_STANDARD 99)
 
+include_directories(include src)
+
 add_subdirectory(tests)
 
 add_library(app1 SHARED app1.c)

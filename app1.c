@@ -1,6 +1,5 @@
 #include <stdio.h>
-#include "include/argc/types.h"
-#include "include/argc/functions.h"
+#include "argc/types.h"
 
 int fib(int n) {
     if (n <= 1) return n;
