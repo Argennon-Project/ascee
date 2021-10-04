@@ -4,8 +4,8 @@
 
 int dispatcher(string_t request) {
     string_t response = STRING(" is DONE!");
-    append_str(getResponseBuffer(), request);
-    append_str(getResponseBuffer(), response);
+    append_str(response_buffer(), request);
+    append_str(response_buffer(), response);
     return HTTP_OK;
 }
 

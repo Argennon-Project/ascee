@@ -5,6 +5,7 @@
 #include <filesystem>
 
 using namespace ascee;
+using namespace argc;
 using namespace std;
 
 unique_ptr<AppLoader> AppLoader::global;

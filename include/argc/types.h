@@ -3,6 +3,10 @@
 
 #include <stdint.h> // NOLINT(modernize-deprecated-headers)
 
+#ifdef __cplusplus
+namespace argc {
+
+#endif
 /// int represents a signed integer with the most efficient size for the platform which MUST NOT be smaller than 32 bits.
 typedef uint8_t byte;
 typedef uint16_t uint16;
@@ -50,4 +54,8 @@ struct StringBuffer {
 /// This HTTP status is returned when the entrance lock is activated.
 #define REENTRANCY_DETECTED 513
 
+#ifdef __cplusplus
+
+} // namespace argcrt
+#endif
 #endif // ASCEE_ARGC_TYPES_H

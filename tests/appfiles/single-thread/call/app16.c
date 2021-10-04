@@ -5,6 +5,6 @@
 int dispatcher(string_t request) {
     invoke_dispatcher(85, 555, request);
     string_t response = STRING(" wrong app!");
-    append_str(getResponseBuffer(), response);
+    append_str(response_buffer(), response);
     return HTTP_OK;
 }

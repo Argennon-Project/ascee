@@ -21,8 +21,8 @@
 namespace ascee {
 
 struct DeferredArgs {
-    std_id_t appID;
-    byte forwardedGas;
+    argc::std_id_t appID;
+    argc::byte forwardedGas;
     std::string_view request;
 };
 
@@ -32,20 +32,20 @@ struct SessionInfo {
     bool criticalArea = false;
 
     std::unique_ptr<ascee::HeapModifier> heapModifier;
-    std::unordered_map<std_id_t, dispatcher_ptr_t> appTable;
-    std::unordered_map<std_id_t, bool> isLocked;
+    std::unordered_map<argc::std_id_t, argc::dispatcher_ptr_t> appTable;
+    std::unordered_map<argc::std_id_t, bool> isLocked;
 
     ascee::ThreadCpuTimer cpuTimer;
 
     char buf[RESPONSE_MAX_SIZE];
-    StringBuffer response = {
+    argc::StringBuffer response = {
             .buffer = buf,
             .maxSize = RESPONSE_MAX_SIZE,
             .end = 0
     };
 
     struct CallContext {
-        std_id_t appID;
+        argc::std_id_t appID;
         int64_t remainingExternalGas;
         bool hasLock = false;
         std::vector<std::unique_ptr<DeferredArgs>> deferredCalls;
@@ -55,10 +55,10 @@ struct SessionInfo {
 };
 
 struct Transaction {
-    std_id_t calledAppID;
-    String request;
+    argc::std_id_t calledAppID;
+    argc::String request;
     int64_t gas;
-    std::vector<std_id_t> appAccessList;
+    std::vector<argc::std_id_t> appAccessList;
 };
 
 class Executor {

@@ -81,7 +81,7 @@ string_view Executor::startSession(const Transaction& t) {
 
     int ret, jmpRet = sigsetjmp(env, true);
     if (jmpRet == 0) {
-        ret = argcrt::invoke_dispatcher(255, t.calledAppID, t.request);
+        ret = argc::invoke_dispatcher(255, t.calledAppID, t.request);
     } else {
         // critical error
         printf("**critical**\n");

@@ -7,18 +7,18 @@
 
 using namespace ascee;
 
-int64 HeapModifier::loadInt64(int32 offset) {
+int64_t HeapModifier::loadInt64(int32_t offset) {
     printf("\n%d-->%d\n", context, offset);
 }
 
-void HeapModifier::openContext(std_id_t appID) {
+void HeapModifier::openContext(argc::std_id_t appID) {
 
 }
 
-void HeapModifier::closeContextNormally(std_id_t from, std_id_t to) {
+void HeapModifier::closeContextNormally(argc::std_id_t from, argc::std_id_t to) {
 
 }
 
-void HeapModifier::closeContextAbruptly(std_id_t from, std_id_t to) {
+void HeapModifier::closeContextAbruptly(argc::std_id_t from, argc::std_id_t to) {
 
 }

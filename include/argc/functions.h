@@ -4,7 +4,7 @@
 #include "types.h"
 
 #ifdef __cplusplus
-namespace argcrt {
+namespace argc {
 
 extern "C" {
 #endif
@@ -16,7 +16,7 @@ void enter_area();
 void exit_area();
 void append_str(string_buffer*, string_t);
 void append_int64(string_buffer*, int64);
-string_buffer* getResponseBuffer();
+string_buffer* response_buffer();
 void clear_buffer(string_buffer* buf);
 
 #ifdef __cplusplus

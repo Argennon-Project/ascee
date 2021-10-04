@@ -8,9 +8,10 @@
 #include "argc/types.h"
 
 using std::string;
+using namespace argc;
 
 extern "C"
-void argcrt::append_str(StringBuffer* buf, String str) {
+void argc::append_str(StringBuffer* buf, String str) {
     if (buf->maxSize < buf->end + str.length) {
         raise(SIGSEGV);
     }
@@ -22,13 +23,13 @@ void argcrt::append_str(StringBuffer* buf, String str) {
 }
 
 extern "C"
-void argcrt::append_int64(StringBuffer* buf, int64 i) {
+void argc::append_int64(StringBuffer* buf, int64 i) {
     string str = std::to_string(i);
     append_str(buf, String{str.c_str(), static_cast<int>(str.size() + 1)});
 }
 
 extern "C"
-void argcrt::clear_buffer(StringBuffer* buf) {
+void argc::clear_buffer(StringBuffer* buf) {
     buf->end = 0;
 }
 

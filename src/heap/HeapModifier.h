@@ -16,17 +16,17 @@ private:
     HeapModifier(int c) { context = c; }
 
 public:
-    int64 loadInt64(int32 offset);
+    int64_t loadInt64(int32_t offset);
 
-    void storeInt64(int64 value, int32 offset);
+    void storeInt64(int64_t value, int32_t offset);
 
-    void loadChunk(short_id_t chunkID);
+    void loadChunk(argc::short_id_t chunkID);
 
-    void openContext(std_id_t appID);
+    void openContext(argc::std_id_t appID);
 
-    void closeContextNormally(std_id_t from, std_id_t to);
+    void closeContextNormally(argc::std_id_t from, argc::std_id_t to);
 
-    void closeContextAbruptly(std_id_t from, std_id_t to);
+    void closeContextAbruptly(argc::std_id_t from, argc::std_id_t to);
 
     void save();
 

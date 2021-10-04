@@ -14,6 +14,7 @@
 
 using std::unique_ptr, std::vector, std::unordered_map;
 using namespace ascee;
+using namespace argc;
 
 static inline
 int64_t calculateExternalGas(int64_t currentGas) {
@@ -21,12 +22,17 @@ int64_t calculateExternalGas(int64_t currentGas) {
     return 2 * currentGas / 3;
 }
 
+static
+int64_t calculateMaxExecTime(int64_t max_cost) {
+    return max_cost * 1000000;
+}
+
 static inline
 void addDefaultResponse(int statusCode) {
     char response[200];
     int n = sprintf(response, "HTTP/1.1 %d %s", statusCode, "OK");
     Executor::getSession()->response.end = 0;
-    argcrt::append_str(&Executor::getSession()->response, String{response, n + 1});
+    argc::append_str(&Executor::getSession()->response, String{response, n + 1});
 }
 
 static inline
@@ -55,19 +61,14 @@ void unBlockSignals() {
     Executor::getSession()->criticalArea = false;
 }
 
-static
-int64_t calculateMaxExecTime(int64_t max_cost) {
-    return max_cost * 1000000;
-}
 
-// todo: small function should be defined as inline
 extern "C"
-string_buffer* argcrt::getResponseBuffer() {
+string_buffer* argc::response_buffer() {
     return &Executor::getSession()->response;
 }
 
 extern "C"
-void argcrt::enter_area() {
+void argc::enter_area() {
     if (Executor::getSession()->currentCall->hasLock) return;
     blockSignals();
     if (Executor::getSession()->isLocked[Executor::getSession()->currentCall->appID]) {
@@ -80,7 +81,7 @@ void argcrt::enter_area() {
 }
 
 extern "C"
-void argcrt::exit_area() {
+void argc::exit_area() {
     blockSignals();
     if (Executor::getSession()->currentCall->hasLock) {
         Executor::getSession()->isLocked[Executor::getSession()->currentCall->appID] = false;
@@ -90,7 +91,7 @@ void argcrt::exit_area() {
 }
 
 extern "C"
-void argcrt::invoke_deferred(byte forwarded_gas, std_id_t app_id, string_t request) {
+void argc::invoke_deferred(byte forwarded_gas, std_id_t app_id, string_t request) {
     Executor::getSession()->currentCall->deferredCalls.push_back(
             std::make_unique<DeferredArgs>(DeferredArgs{
                     .appID = app_id,
@@ -142,13 +143,13 @@ int invoke_dispatcher_impl(byte forwarded_gas, std_id_t app_id, string_t request
     blockSignals();
 
     // as soon as possible we should release the entrance lock of the app (if any) and restore the old env value
-    argcrt::exit_area();
+    argc::exit_area();
     Executor::getSession()->recentEnvPointer = oldEnv;
     Executor::getSession()->cpuTimer.setAlarm(remainingExecTime);
 
     if (ret < BAD_REQUEST) {
         for (const auto& dCall: Executor::getSession()->currentCall->deferredCalls) {
-            int temp = argcrt::invoke_dispatcher(
+            int temp = argc::invoke_dispatcher(
                     dCall->forwardedGas,
                     dCall->appID,
                     // we should NOT use length + 1 here.
@@ -173,7 +174,7 @@ int invoke_dispatcher_impl(byte forwarded_gas, std_id_t app_id, string_t request
 }
 
 extern "C"
-int argcrt::invoke_dispatcher(byte forwarded_gas, std_id_t app_id, string_t request) {
+int argc::invoke_dispatcher(byte forwarded_gas, std_id_t app_id, string_t request) {
     blockSignals();
     int ret = invoke_dispatcher_impl(forwarded_gas, app_id, request);
     if (ret >= 400) addDefaultResponse(ret);
