@@ -27,6 +27,11 @@ void argcrt::append_int64(StringBuffer* buf, int64 i) {
     append_str(buf, String{str.c_str(), static_cast<int>(str.size() + 1)});
 }
 
+extern "C"
+void argcrt::clear_buffer(StringBuffer* buf) {
+    buf->end = 0;
+}
+
 String buf_to_string(const StringBuffer* buf) {
     return String{
             .content = buf->buffer,

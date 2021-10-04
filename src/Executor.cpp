@@ -6,7 +6,7 @@
 #include "Executor.h"
 
 using namespace ascee;
-using std::unique_ptr;
+using std::unique_ptr, std::string_view;
 
 thread_local SessionInfo* Executor::session = nullptr;
 
@@ -63,7 +63,7 @@ void* Executor::registerRecoveryStack() {
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "LocalValueEscapesScope"
 
-int Executor::startSession(const Transaction& t) {
+string_view Executor::startSession(const Transaction& t) {
     void* p = registerRecoveryStack();
     jmp_buf env;
 
@@ -81,18 +81,18 @@ int Executor::startSession(const Transaction& t) {
 
     int ret, jmpRet = sigsetjmp(env, true);
     if (jmpRet == 0) {
-        ret = argcrt::invoke_dispatcher(255, t.calledAppID, String{"Hey!", 5});
+        ret = argcrt::invoke_dispatcher(255, t.calledAppID, t.request);
     } else {
         // critical error
         printf("**critical**\n");
         ret = jmpRet;
     }
 
-    printf("returned:%d\n", ret);
+    printf("returned:%d --> %s\n", ret, threadSession.response.buffer);
 
     session = nullptr;
     free(p);
-    return ret;
+    return {threadSession.response.buffer, static_cast<size_t>(threadSession.response.end)};
 }
 
 #pragma clang diagnostic pop

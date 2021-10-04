@@ -16,7 +16,8 @@ void enter_area();
 void exit_area();
 void append_str(string_buffer*, string_t);
 void append_int64(string_buffer*, int64);
-string_buffer* getResponse();
+string_buffer* getResponseBuffer();
+void clear_buffer(string_buffer* buf);
 
 #ifdef __cplusplus
 }

@@ -52,7 +52,7 @@ dispatcher_ptr_t AppLoader::getDispatcher(std_id_t appID) {
         try {
             loadApp(appID);
         } catch (const runtime_error& rte) {
-            std::cerr << "err:" << rte.what() << '\n';
+            std::cerr << rte.what() << '\n';
             return nullptr;
         }
         return getDispatcher(appID);

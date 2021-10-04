@@ -46,7 +46,7 @@ struct SessionInfo {
 
     struct CallContext {
         std_id_t appID;
-        int remainingExternalGas;
+        int64_t remainingExternalGas;
         bool hasLock = false;
         std::vector<std::unique_ptr<DeferredArgs>> deferredCalls;
     };
@@ -56,7 +56,8 @@ struct SessionInfo {
 
 struct Transaction {
     std_id_t calledAppID;
-    int gas;
+    String request;
+    int64_t gas;
     std::vector<std_id_t> appAccessList;
 };
 
@@ -77,7 +78,7 @@ public:
         return session;
     }
 
-    int startSession(const Transaction& t);
+    std::string_view startSession(const Transaction& t);
 };
 
 } // namespace ascee

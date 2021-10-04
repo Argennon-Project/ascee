@@ -10,15 +10,23 @@
 #include <argc/functions.h>
 #include "heap/HeapModifier.h"
 
+#define MIN_EXEC_TIME_NSEC 10000
 
-#define MIN_EXEC_TIME_NSEC 1000
 using std::unique_ptr, std::vector, std::unordered_map;
 using namespace ascee;
 
 static inline
-int calculateExternalGas(int currentGas) {
+int64_t calculateExternalGas(int64_t currentGas) {
     // the geometric series approaches 1 / (1 - q) so the total amount of externalGas would be 2 * currentGas
-    return int(2 * (int64_t) currentGas / 3);
+    return 2 * currentGas / 3;
+}
+
+static inline
+void addDefaultResponse(int statusCode) {
+    char response[200];
+    int n = sprintf(response, "HTTP/1.1 %d %s", statusCode, "OK");
+    Executor::getSession()->response.end = 0;
+    argcrt::append_str(&Executor::getSession()->response, String{response, n + 1});
 }
 
 static inline
@@ -54,7 +62,7 @@ int64_t calculateMaxExecTime(int64_t max_cost) {
 
 // todo: small function should be defined as inline
 extern "C"
-string_buffer* argcrt::getResponse() {
+string_buffer* argcrt::getResponseBuffer() {
     return &Executor::getSession()->response;
 }
 
@@ -91,8 +99,8 @@ void argcrt::invoke_deferred(byte forwarded_gas, std_id_t app_id, string_t reque
             }));
 }
 
-extern "C"
-int argcrt::invoke_dispatcher(byte forwarded_gas, std_id_t app_id, string_t request) {
+static inline
+int invoke_dispatcher_impl(byte forwarded_gas, std_id_t app_id, string_t request) {
     dispatcher_ptr_t dispatcher;
     try {
         dispatcher = Executor::getSession()->appTable.at(app_id);
@@ -101,11 +109,10 @@ int argcrt::invoke_dispatcher(byte forwarded_gas, std_id_t app_id, string_t requ
     }
     if (dispatcher == nullptr || Executor::getSession()->currentCall->appID == app_id) return NOT_FOUND;
 
-    int maxCurrentGas = (Executor::getSession()->currentCall->remainingExternalGas * forwarded_gas) >> 8;
+    int64_t maxCurrentGas = (Executor::getSession()->currentCall->remainingExternalGas * forwarded_gas) >> 8;
     int64_t execTime = calculateMaxExecTime(maxCurrentGas);
     if (execTime <= MIN_EXEC_TIME_NSEC) return REQUEST_TIMEOUT;
 
-    blockSignals();
     Executor::getSession()->currentCall->remainingExternalGas -= maxCurrentGas;
     auto oldCallInfo = Executor::getSession()->currentCall;
     SessionInfo::CallContext newCall = {
@@ -135,13 +142,13 @@ int argcrt::invoke_dispatcher(byte forwarded_gas, std_id_t app_id, string_t requ
     blockSignals();
 
     // as soon as possible we should release the entrance lock of the app (if any) and restore the old env value
-    exit_area();
+    argcrt::exit_area();
     Executor::getSession()->recentEnvPointer = oldEnv;
     Executor::getSession()->cpuTimer.setAlarm(remainingExecTime);
 
     if (ret < BAD_REQUEST) {
         for (const auto& dCall: Executor::getSession()->currentCall->deferredCalls) {
-            int temp = invoke_dispatcher(
+            int temp = argcrt::invoke_dispatcher(
                     dCall->forwardedGas,
                     dCall->appID,
                     // we should NOT use length + 1 here.
@@ -154,7 +161,7 @@ int argcrt::invoke_dispatcher(byte forwarded_gas, std_id_t app_id, string_t requ
         }
     }
 
-    if (ret >= BAD_REQUEST) {
+    if (ret >= 400) {
         Executor::getSession()->heapModifier->closeContextAbruptly(app_id, oldCallInfo->appID);
     } else {
         Executor::getSession()->heapModifier->closeContextNormally(app_id, oldCallInfo->appID);
@@ -162,6 +169,15 @@ int argcrt::invoke_dispatcher(byte forwarded_gas, std_id_t app_id, string_t requ
 
     // restore previous call info
     Executor::getSession()->currentCall = oldCallInfo;
+    return ret;
+}
+
+extern "C"
+int argcrt::invoke_dispatcher(byte forwarded_gas, std_id_t app_id, string_t request) {
+    blockSignals();
+    int ret = invoke_dispatcher_impl(forwarded_gas, app_id, request);
+    if (ret >= 400) addDefaultResponse(ret);
     unBlockSignals();
     return ret;
 }
+
