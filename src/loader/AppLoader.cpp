@@ -3,18 +3,26 @@
 #include <dlfcn.h>
 #include <thread>
 #include <filesystem>
-#include <utility>
 
 using namespace ascee;
 using namespace std;
 
-unordered_map<std_id_t, dispatcher_ptr_t> AppLoader::dispatchersMap;
-filesystem::path libFilesDir;
+unique_ptr<AppLoader> AppLoader::global;
+
+AppLoader::AppLoader(std::string_view libraryPath) : libraryPath(libraryPath) {}
+
+AppLoader::~AppLoader() {
+    scoped_lock<mutex> lock(mapMutex);
+    for (const auto& app: dispatchersMap) {
+        dlclose(app.second.handle);
+    }
+    printf("closed\n");
+}
 
 void AppLoader::loadApp(std_id_t appID) {
     void* handle;
     char* error;
-    auto appFile = libFilesDir / ("libapp" + std::to_string(appID) + ".so");
+    auto appFile = libraryPath / ("libapp" + std::to_string(appID) + ".so");
 
     printf("loading: %s...\n", appFile.c_str());
 
@@ -24,31 +32,38 @@ void AppLoader::loadApp(std_id_t appID) {
     }
     dlerror(); /* Clear any existing error */
 
-    dispatchersMap[appID] = (dispatcher_ptr_t) dlsym(handle, "dispatcher");
+    auto dispatcher = (dispatcher_ptr_t) dlsym(handle, "dispatcher");
 
     error = dlerror();
     if (error != nullptr) {
         dlclose(handle);
         throw runtime_error(error);
     }
-    //todo: we should close these dll files somewhere.
-    std::cout << "success!!!!\n";
+    scoped_lock<mutex> lock(mapMutex);
+    dispatchersMap[appID] = {handle, dispatcher};
 }
 
 dispatcher_ptr_t AppLoader::getDispatcher(std_id_t appID) {
+    // we should let readers access the map concurrently, but in the current implementation we are not doing so.
     try {
-        return dispatchersMap.at(appID);
+        scoped_lock<mutex> lock(mapMutex);
+        return dispatchersMap.at(appID).dispatcher;
     } catch (const out_of_range& out) {
         try {
             loadApp(appID);
-            return getDispatcher(appID);
         } catch (const runtime_error& rte) {
             std::cerr << "err:" << rte.what() << '\n';
             return nullptr;
         }
+        return getDispatcher(appID);
     }
 }
 
-void AppLoader::init(const filesystem::path& p) {
-    libFilesDir = p;
+unordered_map<std_id_t, dispatcher_ptr_t> AppLoader::createAppTable(const vector<std_id_t>& appList) {
+    unordered_map<std_id_t, dispatcher_ptr_t> table(appList.size());
+    for (const auto& appID: appList) {
+        table[appID] = getDispatcher(appID);
+    }
+    // hopefully a copy will not happen here!
+    return table;
 }

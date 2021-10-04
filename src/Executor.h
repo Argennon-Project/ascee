@@ -30,9 +30,13 @@ struct SessionInfo {
     jmp_buf* recentEnvPointer;
     jmp_buf* rootEnvPointer;
     bool criticalArea = false;
+
     std::unique_ptr<ascee::HeapModifier> heapModifier;
-    ascee::ThreadCpuTimer cpuTimer;
+    std::unordered_map<std_id_t, dispatcher_ptr_t> appTable;
     std::unordered_map<std_id_t, bool> isLocked;
+
+    ascee::ThreadCpuTimer cpuTimer;
+
     char buf[RESPONSE_MAX_SIZE];
     StringBuffer response = {
             .buffer = buf,
@@ -53,7 +57,7 @@ struct SessionInfo {
 struct Transaction {
     std_id_t calledAppID;
     int gas;
-
+    std::vector<std_id_t> appAccessList;
 };
 
 class Executor {

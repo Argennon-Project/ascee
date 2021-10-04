@@ -2,6 +2,7 @@
 #include <csignal>
 #include <heap/Heap.h>
 #include <argc/functions.h>
+#include <loader/AppLoader.h>
 #include "Executor.h"
 
 using namespace ascee;
@@ -73,6 +74,7 @@ int Executor::startSession(const Transaction& t) {
     SessionInfo threadSession{
             .rootEnvPointer = &env,
             .heapModifier = unique_ptr<HeapModifier>(Heap::setupSession(t.calledAppID)),
+            .appTable = AppLoader::global->createAppTable(t.appAccessList),
             .currentCall = &newCall,
     };
     session = &threadSession;
@@ -86,6 +88,9 @@ int Executor::startSession(const Transaction& t) {
         ret = jmpRet;
     }
 
+    printf("returned:%d\n", ret);
+
+    session = nullptr;
     free(p);
     return ret;
 }

@@ -51,7 +51,7 @@ TEST(ArgcStringDeathTest, AppendInt) {
     STRING_BUFFER(strBuf, 30);
 
     append_int64(&strBuf, 123);
-    EXPECT_STREQ(strBuf.buffer, "13");
+    EXPECT_STREQ(strBuf.buffer, "123");
 
     append_str(&strBuf, STRING("  "));
     append_int64(&strBuf, -33);

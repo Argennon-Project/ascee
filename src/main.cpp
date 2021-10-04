@@ -6,11 +6,11 @@
 using namespace ascee;
 
 int main(int argc, char const* argv[]) {
-    AppLoader::init("");
+    AppLoader::global = std::make_unique<AppLoader>("");
 
     Executor e;
-    Transaction tr1{1, 25000};
-    Transaction tr2{2, 25000};
+    Transaction tr1{1, 5000, {1, 2, 3}};
+    Transaction tr2{2, 5000, {2}};
 
     std::thread t1(&Executor::startSession, &e, tr1);
     std::thread t2(&Executor::startSession, &e, tr2);

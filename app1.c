@@ -10,7 +10,7 @@ int fib(int n) {
 int dispatcher(string_t request) {
     STRING_BUFFER(buf, 100);
     int ret = invoke_dispatcher(50, 2, request);
-    printf("fib:%d\n", fib(21));
+    printf("fib:%d and ret:%d\n", fib(21), ret);
     while (1) {
         for (int i = 0; i < 200000000; ++i) {
         }

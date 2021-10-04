@@ -5,6 +5,7 @@
 
 #include <gtest/gtest.h>
 
+using ascee::AppLoader;
 
 class AsceeExecutorTest : public ::testing::Test {
 protected:
@@ -20,7 +21,12 @@ public:
 };
 
 TEST_F(AsceeExecutorTest, SimpleTimeOut) {
-    ascee::AppLoader::init("appfiles/1");
-    int result = executor.startSession(ascee::Transaction{10, 5000});
+    AppLoader::global = std::make_unique<AppLoader>("appfiles/1");
+
+    int result = executor.startSession(ascee::Transaction{
+            .calledAppID = 10,
+            .gas = 2500,
+            .appAccessList = {10}
+    });
     EXPECT_EQ(result, REQUEST_TIMEOUT);
 }

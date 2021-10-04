@@ -39,6 +39,8 @@ struct StringBuffer {
 #define NOT_FOUND 404
 /// The HTTP status code used when an app is out of gas, and its execution time is too long.
 #define REQUEST_TIMEOUT 408
+/// This HTTP status code indicates that the transaction has violated its predeclared resource caps.
+#define PRECONDITION_FAILED 412
 /// The HTTP status code used when a deferred called (spawned invocation) has failed.
 #define FAILED_DEPENDENCY 424
 #define INTERNAL_ERROR 500

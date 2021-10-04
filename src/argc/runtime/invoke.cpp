@@ -1,6 +1,5 @@
 
 #include <csignal>
-#include <cstdlib>
 
 #include <memory>
 #include <unordered_map>
@@ -10,13 +9,19 @@
 #include <Executor.h>
 #include <argc/functions.h>
 #include "heap/HeapModifier.h"
-#include "loader/AppLoader.h"
 
 
+#define MIN_EXEC_TIME_NSEC 1000
 using std::unique_ptr, std::vector, std::unordered_map;
 using namespace ascee;
 
-static
+static inline
+int calculateExternalGas(int currentGas) {
+    // the geometric series approaches 1 / (1 - q) so the total amount of externalGas would be 2 * currentGas
+    return int(2 * (int64_t) currentGas / 3);
+}
+
+static inline
 void maskSignals(int how) {
     sigset_t set;
 
@@ -30,23 +35,21 @@ void maskSignals(int how) {
 
 }
 
-static
+static inline
 void blockSignals() {
     maskSignals(SIG_BLOCK);
     Executor::getSession()->criticalArea = true;
 }
 
-static
+static inline
 void unBlockSignals() {
     maskSignals(SIG_UNBLOCK);
     Executor::getSession()->criticalArea = false;
 }
 
-/// This function must not return zero, and instead of zero it should return a small positive value.
 static
 int64_t calculateMaxExecTime(int64_t max_cost) {
-    int64_t ret = max_cost * 1000000;
-    return (ret == 0) ? 1000 : ret;
+    return max_cost * 1000000;
 }
 
 // todo: small function should be defined as inline
@@ -78,7 +81,6 @@ void argcrt::exit_area() {
     unBlockSignals();
 }
 
-
 extern "C"
 void argcrt::invoke_deferred(byte forwarded_gas, std_id_t app_id, string_t request) {
     Executor::getSession()->currentCall->deferredCalls.push_back(
@@ -91,24 +93,30 @@ void argcrt::invoke_deferred(byte forwarded_gas, std_id_t app_id, string_t reque
 
 extern "C"
 int argcrt::invoke_dispatcher(byte forwarded_gas, std_id_t app_id, string_t request) {
-    auto dispatcher = AppLoader::getDispatcher(app_id);
-    if (dispatcher == nullptr || Executor::getSession()->currentCall->appID == app_id) {
-        return NOT_FOUND;
+    dispatcher_ptr_t dispatcher;
+    try {
+        dispatcher = Executor::getSession()->appTable.at(app_id);
+    } catch (const std::out_of_range&) {
+        return PRECONDITION_FAILED;
     }
-    blockSignals();
-    int maxCurrentGas = (Executor::getSession()->currentCall->remainingExternalGas * forwarded_gas) >> 8;
+    if (dispatcher == nullptr || Executor::getSession()->currentCall->appID == app_id) return NOT_FOUND;
 
+    int maxCurrentGas = (Executor::getSession()->currentCall->remainingExternalGas * forwarded_gas) >> 8;
+    int64_t execTime = calculateMaxExecTime(maxCurrentGas);
+    if (execTime <= MIN_EXEC_TIME_NSEC) return REQUEST_TIMEOUT;
+
+    blockSignals();
     Executor::getSession()->currentCall->remainingExternalGas -= maxCurrentGas;
     auto oldCallInfo = Executor::getSession()->currentCall;
     SessionInfo::CallContext newCall = {
             .appID = app_id,
-            .remainingExternalGas = maxCurrentGas / 2,
+            .remainingExternalGas = calculateExternalGas(maxCurrentGas),
     };
     Executor::getSession()->currentCall = &newCall;
     Executor::getSession()->response.end = 0;
     Executor::getSession()->heapModifier->openContext(app_id);
 
-    int64_t remainingExecTime = Executor::getSession()->cpuTimer.setAlarm(calculateMaxExecTime(maxCurrentGas));
+    int64_t remainingExecTime = Executor::getSession()->cpuTimer.setAlarm(execTime);
 
     jmp_buf* oldEnv = Executor::getSession()->recentEnvPointer;
     jmp_buf env;
