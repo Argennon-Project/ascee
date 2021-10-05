@@ -33,6 +33,7 @@ void argc::clear_buffer(StringBuffer* buf) {
     buf->end = 0;
 }
 
+extern "C"
 String buf_to_string(const StringBuffer* buf) {
     return String{
             .content = buf->buffer,

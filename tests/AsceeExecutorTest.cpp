@@ -5,6 +5,9 @@
 
 #include <gtest/gtest.h>
 
+#define NORMAL_GAS 1500
+#define LOW_GAS 100
+
 using ascee::AppLoader;
 
 class AsceeExecutorTest : public ::testing::Test {
@@ -41,7 +44,7 @@ TEST_F(AsceeExecutorTest, OneLevelCall) {
     auto response = executor.startSession(ascee::Transaction{
             .calledAppID = 11,
             .request = STRING("test request"),
-            .gas = 500,
+            .gas = NORMAL_GAS,
             .appAccessList = {11}
     });
 
@@ -52,7 +55,7 @@ TEST_F(AsceeExecutorTest, TwoLevelCall) {
     auto response = executor.startSession(ascee::Transaction{
             .calledAppID = 15,
             .request = STRING("test request"),
-            .gas = 500,
+            .gas = NORMAL_GAS,
             .appAccessList = {11, 15}
     });
 
@@ -63,7 +66,7 @@ TEST_F(AsceeExecutorTest, AppNotFound) {
     auto response = executor.startSession(ascee::Transaction{
             .calledAppID = 16,
             .request = STRING("test request"),
-            .gas = 500,
+            .gas = NORMAL_GAS,
             .appAccessList = {16, 555}
     });
 
@@ -75,7 +78,7 @@ TEST_F(AsceeExecutorTest, AppNotDeclared) {
     auto response = executor.startSession(ascee::Transaction{
             .calledAppID = 15,
             .request = STRING("test request"),
-            .gas = 500,
+            .gas = NORMAL_GAS,
             .appAccessList = {15}
     });
 
@@ -87,7 +90,7 @@ TEST_F(AsceeExecutorTest, SimpleTimeOut) {
     auto response = executor.startSession(ascee::Transaction{
             .calledAppID = 10,
             .request = STRING("test request"),
-            .gas = 1500,
+            .gas = NORMAL_GAS,
             .appAccessList = {10}
     });
 
@@ -99,7 +102,7 @@ TEST_F(AsceeExecutorTest, CalledTimeOut) {
     auto response = executor.startSession(ascee::Transaction{
             .calledAppID = 12,
             .request = STRING("test request"),
-            .gas = 1500,
+            .gas = NORMAL_GAS,
             .appAccessList = {12, 10}
     });
 
@@ -111,7 +114,7 @@ TEST_F(AsceeExecutorTest, SimpleStackOverflow) {
     auto response = executor.startSession(ascee::Transaction{
             .calledAppID = 13,
             .request = STRING("test request"),
-            .gas = 1500,
+            .gas = NORMAL_GAS,
             .appAccessList = {13}
     });
 
@@ -123,19 +126,19 @@ TEST_F(AsceeExecutorTest, CalledStackOverflow) {
     auto response = executor.startSession(ascee::Transaction{
             .calledAppID = 14,
             .request = STRING("test request"),
-            .gas = 1500,
+            .gas = NORMAL_GAS,
             .appAccessList = {13, 14}
     });
 
     char buf[200];
-    EXPECT_STREQ(response.data(), strcat(getDefaultResponse(buf, INTERNAL_ERROR), " OVER FLOW..."));
+    EXPECT_STREQ(response.data(), strcat(getDefaultResponse(buf, INTERNAL_ERROR), " OVER FLOW... fib: 832040"));
 }
 
 TEST_F(AsceeExecutorTest, CircularCallLowGas) {
     auto response = executor.startSession(ascee::Transaction{
             .calledAppID = 17,
             .request = STRING("test request"),
-            .gas = 100,
+            .gas = LOW_GAS,
             .appAccessList = {17, 18}
     });
 
@@ -155,3 +158,20 @@ TEST_F(AsceeExecutorTest, CircularCallHighGas) {
     EXPECT_STREQ(response.data(), getDefaultResponse(buf, INTERNAL_ERROR));
 }
 
+TEST_F(AsceeExecutorTest, FailedCalls) {
+    auto response = executor.startSession(ascee::Transaction{
+            .calledAppID = 19,
+            .request = STRING("test request"),
+            .gas = NORMAL_GAS,
+            .appAccessList = {20, 21, 10, 19}
+    });
+
+    char expected[1024], buf[200];
+    getDefaultResponse(expected, REQUEST_TIMEOUT);
+    strcat(expected, getDefaultResponse(buf, INTERNAL_ERROR));
+    strcat(expected, getDefaultResponse(buf, NOT_FOUND));
+    strcat(expected, getDefaultResponse(buf, PRECONDITION_FAILED));
+    strcat(expected, getDefaultResponse(buf, INTERNAL_ERROR));
+    strcat(expected, " all called...");
+    EXPECT_STREQ(response.data(), expected);
+}
