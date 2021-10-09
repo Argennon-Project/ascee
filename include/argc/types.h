@@ -51,6 +51,7 @@ struct StringBuffer {
 /// This HTTP status code "usually" indicates that there is an infinite recursive loop in an app which causes an
 /// stack overflow.
 #define LOOP_DETECTED 508
+#define INSUFFICIENT_STORAGE 507
 /// This HTTP status is returned when the entrance lock is activated.
 #define REENTRANCY_DETECTED 513
 

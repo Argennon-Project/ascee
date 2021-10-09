@@ -114,6 +114,13 @@ int invoke_dispatcher_impl(byte forwarded_gas, std_id_t app_id, string_t request
     int64_t execTime = calculateMaxExecTime(maxCurrentGas);
     if (execTime <= MIN_EXEC_TIME_NSEC) return REQUEST_TIMEOUT;
 
+    int16_t savedVersion = -1;
+    try {
+        savedVersion = Executor::getSession()->heapModifier->saveVersion();
+    } catch (const std::out_of_range&) {
+        return INSUFFICIENT_STORAGE;
+    }
+
     Executor::getSession()->currentCall->remainingExternalGas -= maxCurrentGas;
     auto oldCallInfo = Executor::getSession()->currentCall;
     SessionInfo::CallContext newCall = {
@@ -122,7 +129,7 @@ int invoke_dispatcher_impl(byte forwarded_gas, std_id_t app_id, string_t request
     };
     Executor::getSession()->currentCall = &newCall;
     Executor::getSession()->response.end = 0;
-    Executor::getSession()->heapModifier->openContext(app_id);
+    Executor::getSession()->heapModifier->changeContext(app_id);
 
     int64_t remainingExecTime = Executor::getSession()->cpuTimer.setAlarm(execTime);
 
@@ -162,10 +169,10 @@ int invoke_dispatcher_impl(byte forwarded_gas, std_id_t app_id, string_t request
         }
     }
 
+    // restore context
+    Executor::getSession()->heapModifier->changeContext(oldCallInfo->appID);
     if (ret >= 400) {
-        Executor::getSession()->heapModifier->closeContextAbruptly(app_id, oldCallInfo->appID);
-    } else {
-        Executor::getSession()->heapModifier->closeContextNormally(app_id, oldCallInfo->appID);
+        Executor::getSession()->heapModifier->restoreVersion(savedVersion);
     }
 
     // restore previous call info
