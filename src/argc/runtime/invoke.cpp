@@ -8,13 +8,11 @@
 
 #include <Executor.h>
 #include <argc/functions.h>
-#include "heap/HeapModifier.h"
 
 #define MIN_EXEC_TIME_NSEC 10000
 
 using std::unique_ptr, std::vector, std::unordered_map;
 using namespace ascee;
-using namespace argc;
 
 static inline
 int64_t calculateExternalGas(int64_t currentGas) {
@@ -32,7 +30,7 @@ void addDefaultResponse(int statusCode) {
     char response[200];
     int n = sprintf(response, "HTTP/1.1 %d %s", statusCode, "OK");
     Executor::getSession()->response.end = 0;
-    argc::append_str(&Executor::getSession()->response, String{response, n + 1});
+    argcrt::append_str(&Executor::getSession()->response, String{response, n + 1});
 }
 
 static inline
@@ -63,12 +61,12 @@ void unBlockSignals() {
 
 
 extern "C"
-string_buffer* argc::response_buffer() {
+string_buffer* argcrt::response_buffer() {
     return &Executor::getSession()->response;
 }
 
 extern "C"
-void argc::enter_area() {
+void argcrt::enter_area() {
     if (Executor::getSession()->currentCall->hasLock) return;
     blockSignals();
     if (Executor::getSession()->isLocked[Executor::getSession()->currentCall->appID]) {
@@ -81,7 +79,7 @@ void argc::enter_area() {
 }
 
 extern "C"
-void argc::exit_area() {
+void argcrt::exit_area() {
     blockSignals();
     if (Executor::getSession()->currentCall->hasLock) {
         Executor::getSession()->isLocked[Executor::getSession()->currentCall->appID] = false;
@@ -91,7 +89,7 @@ void argc::exit_area() {
 }
 
 extern "C"
-void argc::invoke_deferred(byte forwarded_gas, std_id_t app_id, string_t request) {
+void argcrt::invoke_deferred(byte forwarded_gas, std_id_t app_id, string_t request) {
     Executor::getSession()->currentCall->deferredCalls.push_back(
             std::make_unique<DeferredArgs>(DeferredArgs{
                     .appID = app_id,
@@ -129,7 +127,7 @@ int invoke_dispatcher_impl(byte forwarded_gas, std_id_t app_id, string_t request
     };
     Executor::getSession()->currentCall = &newCall;
     Executor::getSession()->response.end = 0;
-    Executor::getSession()->heapModifier->changeContext(app_id);
+    Executor::getSession()->heapModifier->loadContext(app_id);
 
     int64_t remainingExecTime = Executor::getSession()->cpuTimer.setAlarm(execTime);
 
@@ -150,13 +148,13 @@ int invoke_dispatcher_impl(byte forwarded_gas, std_id_t app_id, string_t request
     blockSignals();
 
     // as soon as possible we should release the entrance lock of the app (if any) and restore the old env value
-    argc::exit_area();
+    argcrt::exit_area();
     Executor::getSession()->recentEnvPointer = oldEnv;
     Executor::getSession()->cpuTimer.setAlarm(remainingExecTime);
 
     if (ret < BAD_REQUEST) {
         for (const auto& dCall: Executor::getSession()->currentCall->deferredCalls) {
-            int temp = argc::invoke_dispatcher(
+            int temp = argcrt::invoke_dispatcher(
                     dCall->forwardedGas,
                     dCall->appID,
                     // we should NOT use length + 1 here.
@@ -170,7 +168,7 @@ int invoke_dispatcher_impl(byte forwarded_gas, std_id_t app_id, string_t request
     }
 
     // restore context
-    Executor::getSession()->heapModifier->changeContext(oldCallInfo->appID);
+    Executor::getSession()->heapModifier->loadContext(oldCallInfo->appID);
     if (ret >= 400) {
         Executor::getSession()->heapModifier->restoreVersion(savedVersion);
     }
@@ -181,7 +179,7 @@ int invoke_dispatcher_impl(byte forwarded_gas, std_id_t app_id, string_t request
 }
 
 extern "C"
-int argc::invoke_dispatcher(byte forwarded_gas, std_id_t app_id, string_t request) {
+int argcrt::invoke_dispatcher(byte forwarded_gas, std_id_t app_id, string_t request) {
     blockSignals();
     int ret = invoke_dispatcher_impl(forwarded_gas, app_id, request);
     if (ret >= 400) addDefaultResponse(ret);

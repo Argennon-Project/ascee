@@ -3,7 +3,6 @@
 #include "argc/types.h"
 
 using namespace ascee;
-using namespace argc;
 
 extern "C"
 int64 loadInt64(int32 offset) {

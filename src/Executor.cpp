@@ -73,7 +73,7 @@ string_view Executor::startSession(const Transaction& t) {
     };
     SessionInfo threadSession{
             .rootEnvPointer = &env,
-            .heapModifier = unique_ptr<HeapModifier>(Heap::setupSession(t.calledAppID)),
+            .heapModifier = unique_ptr<Heap::Modifier>(heap.initSession(t.calledAppID)),
             .appTable = AppLoader::global->createAppTable(t.appAccessList),
             .currentCall = &newCall,
     };
@@ -81,7 +81,7 @@ string_view Executor::startSession(const Transaction& t) {
 
     int ret, jmpRet = sigsetjmp(env, true);
     if (jmpRet == 0) {
-        ret = argc::invoke_dispatcher(255, t.calledAppID, t.request);
+        ret = argcrt::invoke_dispatcher(255, t.calledAppID, t.request);
     } else {
         // critical error
         printf("**critical**\n");

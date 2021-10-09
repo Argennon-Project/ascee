@@ -6,12 +6,13 @@
 using namespace ascee;
 
 int main(int argc, char const* argv[]) {
-    HeapModifier hp(2);
-    argc::short_id_t chunk = 111;
-    hp.changeContext(2);
-    hp.loadChunk(chunk);
-    hp.store(5, 0x1122334455667788);
-    printf("\nread->%lx\n", hp.load<int64_t>(5));
+    Heap heap;
+    auto modifier = heap.initSession(2);
+    short_id_t chunk = 111;
+    modifier->loadContext(2);
+    modifier->loadChunk(chunk);
+    modifier->store(5, 0x1122334455667788);
+    printf("\nread->%lx\n", modifier->load<int64_t>(5));
 
     uint8_t test[256];
     int64_t x = 0x12345678;

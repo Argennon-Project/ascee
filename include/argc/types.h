@@ -4,7 +4,7 @@
 #include <stdint.h> // NOLINT(modernize-deprecated-headers)
 
 #ifdef __cplusplus
-namespace argc {
+namespace ascee {
 
 #endif
 /// int represents a signed integer with the most efficient size for the platform which MUST NOT be smaller than 32 bits.
@@ -23,9 +23,6 @@ typedef struct StringBuffer string_buffer;
 
 typedef int (* dispatcher_ptr_t)(string_t request);
 
-#define STRING(str) {.content = (str), .length = sizeof (str)}
-#define STRING_BUFFER(name, size) char __##name##_buf_[size]; string_buffer name = {__##name##_buf_, size, 0}
-
 struct String {
     const char* content;
     int32 length;
@@ -36,6 +33,9 @@ struct StringBuffer {
     int32 maxSize;
     int32 end;
 };
+
+#define STRING(str) {.content = (str), .length = sizeof (str)}
+#define STRING_BUFFER(name, size) char __##name##_buf_[size]; string_buffer name = {__##name##_buf_, size, 0}
 
 /// HTTP status codes. new costume coded could be defined.
 #define HTTP_OK 200
@@ -57,6 +57,7 @@ struct StringBuffer {
 
 #ifdef __cplusplus
 
-} // namespace argcrt
+} // namespace ascee
 #endif
+
 #endif // ASCEE_ARGC_TYPES_H

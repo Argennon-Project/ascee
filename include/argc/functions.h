@@ -4,7 +4,7 @@
 #include "types.h"
 
 #ifdef __cplusplus
-namespace argc {
+namespace ascee::argcrt {
 
 extern "C" {
 #endif

@@ -8,10 +8,10 @@
 #include "argc/types.h"
 
 using std::string;
-using namespace argc;
+using namespace ascee;
 
 extern "C"
-void argc::append_str(StringBuffer* buf, String str) {
+void argcrt::append_str(string_buffer* buf, string_t str) {
     if (buf->maxSize < buf->end + str.length) {
         raise(SIGSEGV);
     }
@@ -23,19 +23,19 @@ void argc::append_str(StringBuffer* buf, String str) {
 }
 
 extern "C"
-void argc::append_int64(StringBuffer* buf, int64 i) {
+void argcrt::append_int64(string_buffer* buf, int64 i) {
     string str = std::to_string(i);
-    append_str(buf, String{str.c_str(), static_cast<int>(str.size() + 1)});
+    append_str(buf, string_t{str.c_str(), static_cast<int>(str.size() + 1)});
 }
 
 extern "C"
-void argc::clear_buffer(StringBuffer* buf) {
+void argcrt::clear_buffer(string_buffer* buf) {
     buf->end = 0;
 }
 
 extern "C"
-String buf_to_string(const StringBuffer* buf) {
-    return String{
+string_t buf_to_string(const string_buffer* buf) {
+    return string_t{
             .content = buf->buffer,
             .length = buf->end
     };

@@ -15,10 +15,10 @@ class AppLoader {
 private:
     struct AppHandle {
         void* handle;
-        argc::dispatcher_ptr_t dispatcher;
+        dispatcher_ptr_t dispatcher;
     };
     const std::filesystem::path libraryPath;
-    std::unordered_map<argc::std_id_t, AppHandle> dispatchersMap;
+    std::unordered_map<std_id_t, AppHandle> dispatchersMap;
     std::mutex mapMutex;
 
 public:
@@ -26,16 +26,16 @@ public:
 
     virtual ~AppLoader();
 
-    void loadApp(argc::std_id_t);
+    void loadApp(std_id_t);
 
-    void unLoadApp(argc::std_id_t);
+    void unLoadApp(std_id_t);
 
-    void updateApp(argc::std_id_t);
+    void updateApp(std_id_t);
 
-    argc::dispatcher_ptr_t getDispatcher(argc::std_id_t appID);
+    dispatcher_ptr_t getDispatcher(std_id_t appID);
 
-    std::unordered_map<argc::std_id_t, argc::dispatcher_ptr_t>
-    createAppTable(const std::vector<argc::std_id_t>& appList);
+    std::unordered_map<std_id_t, dispatcher_ptr_t>
+    createAppTable(const std::vector<std_id_t>& appList);
 
     static std::unique_ptr<AppLoader> global;
 };

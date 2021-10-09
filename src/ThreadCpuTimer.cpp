@@ -6,6 +6,7 @@
 using namespace ascee;
 
 ThreadCpuTimer::ThreadCpuTimer() {
+    timer = nullptr;
     thread = pthread_self();
 
     // Creating the execution timer

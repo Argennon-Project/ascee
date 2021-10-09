@@ -13,7 +13,7 @@
 #include <vector>
 
 #include "argc/types.h"
-#include "heap/HeapModifier.h"
+#include "heap/Heap.h"
 #include "ThreadCpuTimer.h"
 
 #define RESPONSE_MAX_SIZE 2*1024
@@ -21,8 +21,8 @@
 namespace ascee {
 
 struct DeferredArgs {
-    argc::std_id_t appID;
-    argc::byte forwardedGas;
+    std_id_t appID;
+    byte forwardedGas;
     std::string_view request;
 };
 
@@ -31,21 +31,21 @@ struct SessionInfo {
     jmp_buf* rootEnvPointer;
     bool criticalArea = false;
 
-    std::unique_ptr<ascee::HeapModifier> heapModifier;
-    std::unordered_map<argc::std_id_t, argc::dispatcher_ptr_t> appTable;
-    std::unordered_map<argc::std_id_t, bool> isLocked;
+    std::unique_ptr<ascee::Heap::Modifier> heapModifier;
+    std::unordered_map<std_id_t, dispatcher_ptr_t> appTable;
+    std::unordered_map<std_id_t, bool> isLocked;
 
     ascee::ThreadCpuTimer cpuTimer;
 
     char buf[RESPONSE_MAX_SIZE];
-    argc::StringBuffer response = {
+    string_buffer response = {
             .buffer = buf,
             .maxSize = RESPONSE_MAX_SIZE,
             .end = 0
     };
 
     struct CallContext {
-        argc::std_id_t appID;
+        std_id_t appID;
         int64_t remainingExternalGas;
         bool hasLock = false;
         std::vector<std::unique_ptr<DeferredArgs>> deferredCalls;
@@ -55,15 +55,17 @@ struct SessionInfo {
 };
 
 struct Transaction {
-    argc::std_id_t calledAppID;
-    argc::String request;
+    std_id_t calledAppID;
+    String request;
     int64_t gas;
-    std::vector<argc::std_id_t> appAccessList;
+    std::vector<std_id_t> appAccessList;
 };
 
 class Executor {
 private:
     static thread_local SessionInfo* session;
+
+    Heap heap;
 
     static void sig_handler(int sig, siginfo_t* info, void* ucontext);
 
