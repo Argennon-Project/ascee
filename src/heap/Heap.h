@@ -47,15 +47,18 @@ public:
             int32 size;
 
             struct Snapshot {
-                int16_t version;
-                byte* content;
+                const int16_t version;
+                byte* const content;
 
-                Snapshot(int16_t version, int32 size) : version(version) { content = new byte[size]; }
+                Snapshot(int16_t version, int32 size) : version(version), content(new byte[size]) {}
 
-                ~Snapshot() { delete content; }
+                ~Snapshot() {
+                    printf("deleteeeed\n");
+                    delete[] content;
+                }
             };
 
-            std::vector<Snapshot*> snapshotList;
+            std::vector<Snapshot> snapshotList;
 
         public:
             AccessBlock(Pointer heapLocation, int32 size, bool writable);
@@ -102,7 +105,7 @@ public:
         template<typename T>
         inline
         T load(int32 offset) {
-            auto block = accessTable.at(offset);
+            auto& block = accessTable.at(offset);
             block.syncTo(currentVersion);
             return block.read<T>();
         }
@@ -110,7 +113,7 @@ public:
         template<typename T>
         inline
         void store(int32 offset, T value) {
-            auto block = accessTable.at(offset);
+            auto& block = accessTable.at(offset);
             block.syncTo(currentVersion);
             block.updateTo(currentVersion);
             block.write<T>(value);

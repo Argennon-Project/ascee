@@ -7,12 +7,19 @@ using namespace ascee;
 
 int main(int argc, char const* argv[]) {
     Heap heap;
-    auto modifier = heap.initSession(2);
+    auto* modifier = heap.initSession(2);
     short_id_t chunk = 111;
     modifier->loadContext(2);
     modifier->loadChunk(chunk);
+    modifier->saveVersion();
     modifier->store(5, 0x1122334455667788);
     printf("\nread->%lx\n", modifier->load<int64_t>(5));
+
+    modifier->restoreVersion(0);
+    int64 xyz = modifier->load<int64_t>(5);
+    printf("\nread->%lx\n", xyz);
+
+    // delete modifier;
 
     uint8_t test[256];
     int64_t x = 0x12345678;

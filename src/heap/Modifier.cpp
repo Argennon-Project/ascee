@@ -42,26 +42,26 @@ void Heap::Modifier::defineAccessBlock(Pointer heapLocation,
 }
 
 void Heap::Modifier::AccessBlock::syncTo(int16_t version) {
-    if (snapshotList.empty() || snapshotList.back()->version < version) return;
+    if (!snapshotList.empty()) printf("%d->v:%d\n", snapshotList.back().version, version);
 
-    while (snapshotList.back()->version > version) {
-        delete snapshotList.back();
+    if (snapshotList.empty() || snapshotList.back().version < version) return;
+
+    while (snapshotList.back().version > version) {
         snapshotList.pop_back();
     }
+
+    printf("restore");
 
     // restore the snapshot data
-    heapLocation.writeBlock(snapshotList.back()->content, size);
+    heapLocation.writeBlock(snapshotList.back().content, size);
 
-    if (snapshotList.back()->version == version) {
-        delete snapshotList.back();
-        snapshotList.pop_back();
-    }
+    if (snapshotList.back().version == version) snapshotList.pop_back();
 }
 
 void Heap::Modifier::AccessBlock::updateTo(int16_t version) {
     // checks are ordered for having the best performance on average
     if (!snapshotList.empty()) {
-        auto snapshotVersion = snapshotList.back()->version;
+        auto snapshotVersion = snapshotList.back().version;
         assert(snapshotVersion <= version - 1);
         if (snapshotVersion == version - 1) return;
         if (snapshotVersion == -1) throw std::out_of_range("block is not writable");
@@ -69,14 +69,15 @@ void Heap::Modifier::AccessBlock::updateTo(int16_t version) {
 
     if (version <= 0) return;
 
-    snapshotList.push_back(new Snapshot(int16_t(version - 1), size));
+    printf("created\n");
+    snapshotList.emplace_back(version - 1, size);
     // read heap into the newly created snapshot
-    heapLocation.readBlock(snapshotList.back()->content, size);
+    heapLocation.readBlock(snapshotList.back().content, size);
 }
 
 Heap::Modifier::AccessBlock::AccessBlock(Pointer heapLocation, int32 size, bool writable)
         : heapLocation(heapLocation), size(size) {
     if (!writable) {
-        snapshotList.push_back(new Snapshot(-1, 0));
+        snapshotList.emplace_back(-1, 0);
     }
 }

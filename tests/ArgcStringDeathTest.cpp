@@ -2,7 +2,8 @@
 #include "argc/types.h"
 #include "argc/functions.h"
 
-using namespace argc;
+using namespace ascee;
+using namespace argcrt;
 
 TEST(ArgcStringDeathTest, AppendStr) {
     STRING_BUFFER(strBuf, 10);
