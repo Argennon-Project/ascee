@@ -19,7 +19,7 @@ int main(int argc, char const* argv[]) {
     int64 xyz = modifier->load<int64_t>(5);
     printf("\nread->%lx\n", xyz);
 
-    // delete modifier;
+    delete modifier;
 
     uint8_t test[256];
     int64_t x = 0x12345678;

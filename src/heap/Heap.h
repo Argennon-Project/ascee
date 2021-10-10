@@ -48,9 +48,15 @@ public:
 
             struct Snapshot {
                 const int16_t version;
-                byte* const content;
+                byte* content;
 
                 Snapshot(int16_t version, int32 size) : version(version), content(new byte[size]) {}
+
+                Snapshot(const Snapshot&) = delete;
+
+                Snapshot(Snapshot&& moved) noexcept: version(moved.version), content(moved.content) {
+                    moved.content = nullptr;
+                }
 
                 ~Snapshot() {
                     printf("deleteeeed\n");
@@ -62,6 +68,8 @@ public:
 
         public:
             AccessBlock(Pointer heapLocation, int32 size, bool writable);
+
+            AccessBlock(const AccessBlock&) = delete;
 
             template<typename T>
             inline
@@ -87,12 +95,9 @@ public:
         typedef std::unordered_map<std_id_t, AccessTableMap> ChunkMap64;
         typedef std::unordered_map<std_id_t, std::pair<ChunkMap32, ChunkMap64>> AppMap;
 
-        AccessTableMap dummyTable;
-        ChunkMap32 dummy32;
-        ChunkMap64 dummy64;
-        AccessTableMap& accessTable = dummyTable;
-        ChunkMap64& chunks64 = dummy64;
-        ChunkMap32& chunks32 = dummy32;
+        AccessTableMap* accessTable = nullptr;
+        ChunkMap64* chunks64 = nullptr;
+        ChunkMap32* chunks32 = nullptr;
         AppMap appsAccessMaps;
 
         Modifier() = default;
@@ -101,11 +106,15 @@ public:
                                std_id_t app, short_id_t chunk, int32 offset,
                                int32 size, bool writable);
 
+        void defineAccessBlock(Pointer heapLocation,
+                               std_id_t app, std_id_t chunk, int32 offset,
+                               int32 size, bool writable);
+
     public:
         template<typename T>
         inline
         T load(int32 offset) {
-            auto& block = accessTable.at(offset);
+            auto& block = accessTable->at(offset);
             block.syncTo(currentVersion);
             return block.read<T>();
         }
@@ -113,7 +122,7 @@ public:
         template<typename T>
         inline
         void store(int32 offset, T value) {
-            auto& block = accessTable.at(offset);
+            auto& block = accessTable->at(offset);
             block.syncTo(currentVersion);
             block.updateTo(currentVersion);
             block.write<T>(value);
