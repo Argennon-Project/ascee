@@ -25,11 +25,11 @@ void smartCopy(byte* dst, const byte* src, int32 size) {
             copy<int32>(dst, src);
             break;
         default:
-            throw std::runtime_error("not supported.");
+            throw std::runtime_error("not implemented.");
     }
 }
 
-void Heap::Pointer::readBlock(byte* dst, int32 size) {
+void Heap::Pointer::readBlockTo(byte* dst, int32 size) {
     smartCopy(dst, heapPtr, size);
 }
 

@@ -24,6 +24,9 @@ public:
         modifier.defineAccessBlock(ascee::Heap::Pointer(tempHeap + 50),
                                    1, short_id_t(11), 100,
                                    8, true);
+        modifier.defineAccessBlock(ascee::Heap::Pointer(tempHeap + 58),
+                                   1, short_id_t(11), 120,
+                                   8, true);
         modifier.defineAccessBlock(ascee::Heap::Pointer(tempHeap + 100),
                                    1, std_id_t(10), 100,
                                    8, true);
@@ -44,8 +47,8 @@ public:
     }
 };
 
-
 TEST_F(HeapModifierTest, SimpleReadWrite) {
+    modifier.saveVersion();
     modifier.loadContext(1);
     modifier.loadChunk(short_id_t(10));
     auto got = modifier.load<int64>(100);
@@ -62,7 +65,8 @@ TEST_F(HeapModifierTest, SimpleReadWrite) {
     int128 big = 1;
     big <<= 100;
     modifier.store(108, big);
-    EXPECT_EQ(tempHeap[20], 16);
+    auto gotBig = modifier.load<int128>(108);
+    EXPECT_TRUE(big == gotBig);
 
     modifier.loadContext(2);
 
@@ -82,9 +86,45 @@ TEST_F(HeapModifierTest, SimpleReadWrite) {
     got = modifier.load<int64>(100);
     EXPECT_EQ(got, 123456789);
 
-    memDump();
+    //memDump();
 }
 
 TEST_F(HeapModifierTest, SimpleVersioning) {
-    printf("%d\n", tempHeap[0]);
+    modifier.loadContext(1);
+    modifier.loadChunk(short_id_t(11));
+
+    auto v0 = modifier.saveVersion();
+    modifier.store(100, 1);
+    modifier.store(120, 11);
+
+    auto v1 = modifier.saveVersion();
+    modifier.store(100, 2);
+
+    auto v2 = modifier.saveVersion();
+    modifier.store(120, 22);
+
+    auto v3 = modifier.saveVersion();
+    modifier.store(100, 3);
+    modifier.store(120, 33);
+
+    EXPECT_EQ(modifier.load<int64>(100), 3);
+    EXPECT_EQ(modifier.load<int64>(120), 33);
+
+    modifier.restoreVersion(v3);
+    EXPECT_EQ(modifier.load<int64>(100), 2);
+    EXPECT_EQ(modifier.load<int64>(120), 22);
+
+    modifier.restoreVersion(v2);
+    EXPECT_EQ(modifier.load<int64>(100), 2);
+    EXPECT_EQ(modifier.load<int64>(120), 11);
+
+    EXPECT_THROW(modifier.restoreVersion(v3), std::runtime_error);
+
+    modifier.restoreVersion(v1);
+    EXPECT_EQ(modifier.load<int64>(100), 1);
+    EXPECT_EQ(modifier.load<int64>(120), 11);
+
+    modifier.restoreVersion(v0);
+    EXPECT_EQ(modifier.load<int64>(100), 0);
+    EXPECT_EQ(modifier.load<int64>(120), 0);
 }

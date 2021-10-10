@@ -7,7 +7,7 @@
 #include <vector>
 
 namespace ascee {
-
+//todo Heap must be signal-safe but it does not need to be thread-safe
 class Heap {
 private:
     byte content[64] = {0, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13};
@@ -25,11 +25,7 @@ private:
         inline
         T read() { return *(T*) heapPtr; }
 
-        template<typename T>
-        inline
-        void write(T value) { *(T*) heapPtr = value; }
-
-        void readBlock(byte* dst, int32 size);
+        void readBlockTo(byte* dst, int32 size);
 
         void writeBlock(const byte* src, int32 size);
     };
@@ -39,32 +35,34 @@ public:
         friend class Heap;
 
     private:
-        int16_t currentVersion = 0;
-
         class AccessBlock {
         private:
-            Heap::Pointer heapLocation;
-            int32 size;
-
-            struct Snapshot {
-                const int16_t version;
+            struct Version {
+                const int16_t number;
                 byte* content;
 
-                Snapshot(int16_t version, int32 size) : version(version), content(new byte[size]) {}
+                Version(int16_t version, int32 size) : number(version), content(new byte[size]) {}
 
-                Snapshot(const Snapshot&) = delete;
+                Version(const Version&) = delete;
 
-                Snapshot(Snapshot&& moved) noexcept: version(moved.version), content(moved.content) {
+                Version(Version&& moved) noexcept: number(moved.number), content(moved.content) {
                     moved.content = nullptr;
                 }
 
-                ~Snapshot() {
+                ~Version() {
                     printf("deleteeeed\n");
                     delete[] content;
                 }
             };
 
-            std::vector<Snapshot> snapshotList;
+            Heap::Pointer heapLocation;
+            int32 size;
+            bool writable;
+            std::vector<Version> versionList;
+
+            void syncTo(int16_t version);
+
+            bool add(int16_t version);
 
         public:
             AccessBlock(Pointer heapLocation, int32 size, bool writable);
@@ -73,22 +71,28 @@ public:
 
             template<typename T>
             inline
-            T read() {
+            T read(int16_t version) {
                 if (sizeof(T) > size) throw std::out_of_range("read size");
-                return heapLocation.read<T>();
+                syncTo(version);
+                if (versionList.empty()) return heapLocation.read<T>();
+                return *(T*) versionList.back().content;
             }
 
             template<typename T>
             inline
-            void write(T value) {
+            void write(int16_t version, T value) {
                 if (sizeof(T) > size) throw std::out_of_range("write size");
-                heapLocation.write(value);
+                if (!writable) throw std::out_of_range("block is not writable");
+                syncTo(version);
+                bool versionCreated = add(version);
+                if (versionCreated && sizeof(T) != size) {
+                    heapLocation.readBlockTo(versionList.back().content, size);
+                }
+                *(T*) versionList.back().content = value;
             }
-
-            void syncTo(int16_t version);
-
-            void updateTo(int16_t version);
         };
+
+        int16_t currentVersion = 0;
 
         typedef std::unordered_map<int32, AccessBlock> AccessTableMap;
         typedef std::unordered_map<short_id_t, AccessTableMap> ChunkMap32;
@@ -113,20 +117,11 @@ public:
     public:
         template<typename T>
         inline
-        T load(int32 offset) {
-            auto& block = accessTable->at(offset);
-            block.syncTo(currentVersion);
-            return block.read<T>();
-        }
+        T load(int32 offset) { return accessTable->at(offset).read<T>(currentVersion); }
 
         template<typename T>
         inline
-        void store(int32 offset, T value) {
-            auto& block = accessTable->at(offset);
-            block.syncTo(currentVersion);
-            block.updateTo(currentVersion);
-            block.write<T>(value);
-        }
+        void store(int32 offset, T value) { accessTable->at(offset).write<T>(currentVersion, value); }
 
         void loadChunk(short_id_t chunkID);
 

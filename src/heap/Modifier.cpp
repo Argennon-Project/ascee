@@ -4,7 +4,6 @@
 #include <cassert>
 
 #define MAX_VERSION 30000
-#define DUMMY_VERSION -2        // should be less than -1
 
 using namespace ascee;
 
@@ -56,39 +55,24 @@ void Heap::Modifier::defineAccessBlock(Pointer heapLocation,
 }
 
 void Heap::Modifier::AccessBlock::syncTo(int16_t version) {
-    if (!snapshotList.empty()) printf("%d->v:%d\n", snapshotList.back().version, version);
-
-    if (snapshotList.empty() || snapshotList.back().version < version) return;
-
-    while (snapshotList.back().version > version) {
-        snapshotList.pop_back();
+    while (!versionList.empty() && versionList.back().number > version) {
+        versionList.pop_back();
     }
-
-    // restore the snapshot data
-    heapLocation.writeBlock(snapshotList.back().content, size);
-
-    if (snapshotList.back().version == version) snapshotList.pop_back();
 }
 
-void Heap::Modifier::AccessBlock::updateTo(int16_t version) {
+bool Heap::Modifier::AccessBlock::add(int16_t version) {
+    assert(version >= 1);
     // checks are ordered for having the best performance on average
-    if (!snapshotList.empty()) {
-        auto snapshotVersion = snapshotList.back().version;
-        assert(snapshotVersion <= version - 1);
-        if (snapshotVersion == version - 1) return;
-        if (snapshotVersion == DUMMY_VERSION) throw std::out_of_range("block is not writable");
+    if (!versionList.empty()) {
+        auto latestVersion = versionList.back().number;
+        assert(latestVersion <= version);
+        if (latestVersion == version) return false;
     }
 
-    if (version <= 0) return;
-
-    snapshotList.emplace_back(version - 1, size);
-    // read heap into the newly created snapshot
-    heapLocation.readBlock(snapshotList.back().content, size);
+    versionList.emplace_back(version, size);
+    return true;
 }
 
 Heap::Modifier::AccessBlock::AccessBlock(Pointer heapLocation, int32 size, bool writable) : heapLocation(heapLocation),
-                                                                                            size(size) {
-    if (!writable) {
-        snapshotList.emplace_back(DUMMY_VERSION, 0);
-    }
-}
+                                                                                            size(size),
+                                                                                            writable(writable) {}
