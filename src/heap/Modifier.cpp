@@ -18,7 +18,7 @@ int16_t Heap::Modifier::saveVersion() {
 }
 
 void Heap::Modifier::restoreVersion(int16_t version) {
-    if (version > currentVersion || version < 0) throw std::runtime_error("restoring an invalid version");
+    if (version >= currentVersion || version < 0) throw std::runtime_error("restoring an invalid version");
     currentVersion = version;
 }
 
@@ -54,6 +54,24 @@ void Heap::Modifier::defineAccessBlock(Pointer heapLocation,
                                               std::forward_as_tuple(heapLocation, size, writable));
 }
 
+void Heap::Modifier::writeToHeap() {
+    if (currentVersion == 0) return;
+
+    for (auto& appMap: appsAccessMaps) {
+        for (auto& chunk32Map: appMap.second.first) {
+            for (auto& block: chunk32Map.second) {
+                block.second.toHeap(currentVersion);
+            }
+        }
+
+        for (auto& chunk32Map: appMap.second.second) {
+            for (auto& block: chunk32Map.second) {
+                block.second.toHeap(currentVersion);
+            }
+        }
+    }
+}
+
 void Heap::Modifier::AccessBlock::syncTo(int16_t version) {
     while (!versionList.empty() && versionList.back().number > version) {
         versionList.pop_back();
@@ -71,6 +89,13 @@ bool Heap::Modifier::AccessBlock::add(int16_t version) {
 
     versionList.emplace_back(version, size);
     return true;
+}
+
+void Heap::Modifier::AccessBlock::toHeap(int16_t version) {
+    syncTo(version);
+    if (!versionList.empty()) {
+        heapLocation.writeBlock(versionList.back().content, size);
+    }
 }
 
 Heap::Modifier::AccessBlock::AccessBlock(Pointer heapLocation, int32 size, bool writable) : heapLocation(heapLocation),

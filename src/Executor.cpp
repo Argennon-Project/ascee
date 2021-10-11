@@ -64,7 +64,7 @@ void* Executor::registerRecoveryStack() {
 #pragma ide diagnostic ignored "LocalValueEscapesScope"
 
 string_view Executor::startSession(const Transaction& t) {
-    void* p = registerRecoveryStack();
+    void* recoveryStack = registerRecoveryStack();
     jmp_buf env;
 
     SessionInfo::CallContext newCall = {
@@ -85,13 +85,16 @@ string_view Executor::startSession(const Transaction& t) {
     } else {
         // critical error
         printf("**critical**\n");
+        session->heapModifier->restoreVersion(0);
         ret = jmpRet;
     }
+
+    session->heapModifier->writeToHeap();
 
     printf("returned:%d --> %s\n", ret, threadSession.response.buffer);
 
     session = nullptr;
-    free(p);
+    free(recoveryStack);
     return {threadSession.response.buffer, static_cast<size_t>(threadSession.response.end)};
 }
 

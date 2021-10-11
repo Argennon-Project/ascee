@@ -81,15 +81,14 @@ public:
             template<typename T>
             inline
             void write(int16_t version, T value) {
-                if (sizeof(T) > size) throw std::out_of_range("write size");
+                if (sizeof(T) != size) throw std::out_of_range("write size");
                 if (!writable) throw std::out_of_range("block is not writable");
                 syncTo(version);
-                bool versionCreated = add(version);
-                if (versionCreated && sizeof(T) != size) {
-                    heapLocation.readBlockTo(versionList.back().content, size);
-                }
+                add(version);
                 *(T*) versionList.back().content = value;
             }
+
+            void toHeap(int16_t version);
         };
 
         int16_t currentVersion = 0;
@@ -132,7 +131,11 @@ public:
         void restoreVersion(int16_t version);
 
         int16_t saveVersion();
+
+        void writeToHeap();
     };
+
+    Heap();
 
     Modifier* initSession(std_id_t calledApp);
 };
