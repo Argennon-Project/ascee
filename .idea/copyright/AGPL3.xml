@@ -1,0 +1,6 @@
+<component name="CopyrightManager">
+  <copyright>
+    <option name="notice" value="Copyright (c) &amp;#36;originalComment.match(&quot;Copyright \(c\) (\d+)&quot;, 1, &quot;-&quot;)&amp;#36;today.year aybehrouz &lt;behrouz_ayati@yahoo.com&gt;. All rights reserved. &#10;This file is part of the C++ implementation of the Argennon smart contract&#10;Execution Environment (AscEE).&#10;&#10;This program is free software: you can redistribute it and/or modify it under&#10;the terms of the GNU Affero General Public License as published by the Free&#10;Software Foundation, either version 3 of the License, or (at your option) any&#10;later version.&#10;&#10;This program is distributed in the hope that it will be useful, but WITHOUT&#10;ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or&#10;FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License&#10;for more details.&#10;&#10;You should have received a copy of the GNU Affero General Public License&#10;along with this program. If not, see &lt;https://www.gnu.org/licenses/&gt;." />
+    <option name="myName" value="AGPL3" />
+  </copyright>
+</component>
