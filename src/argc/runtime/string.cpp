@@ -20,6 +20,7 @@
 
 #include <string>
 #include <argc/functions.h>
+#include <stdexcept>
 
 #include "argc/types.h"
 
@@ -46,8 +47,22 @@ void argcrt::clear_buffer(string_buffer* buf) {
     buf->end = 0;
 }
 
-extern "C"
-int64 argcrt::scan_int64(string_t input, string_t pattern, string_t* rest = nullptr) {
+inline static
+int32 parse(const string& str, int64* ret) {
+    size_t pos;
+    *ret = std::stol(str, &pos);
+    return static_cast<int32>(pos);
+}
+
+inline static
+int32 parse(const string& str, float64* ret) {
+    size_t pos;
+    *ret = std::stod(str, &pos);
+    return static_cast<int32>(pos);
+}
+
+template<typename T>
+T scan(string_t input, string_t pattern, string_t* rest = nullptr) {
     int i = 0, j = 0;
     while (i < input.length && j < pattern.length) {
         if (!std::isspace(input.content[i])) {
@@ -61,21 +76,33 @@ int64 argcrt::scan_int64(string_t input, string_t pattern, string_t* rest = null
             else j++;
         } else break;
     }
-    if (j < pattern.length) {
+    T ret{};
+    try {
+        if (j < pattern.length) throw std::invalid_argument("pattern not found");
+
+        string numStr(input.content + i, std::min(64, input.length - i));
+        int32 pos = parse(numStr, &ret);
+        if (rest != nullptr) {
+            rest->content = input.content + i + pos;
+            rest->length = static_cast<int32>(input.length - i - pos);
+        }
+    } catch (const std::invalid_argument&) {
         if (rest != nullptr) {
             rest->content = nullptr;
             rest->length = -1;
         }
-        return 0;
-    }
-    string numStr(input.content + i, std::min(64, input.length - i));
-    size_t pos;
-    int64 ret = std::stoi(numStr, &pos);
-    if (rest != nullptr) {
-        rest->content = input.content + i + pos;
-        rest->length = static_cast<int32>(input.length - i - pos);
     }
     return ret;
+}
+
+extern "C"
+int64 argcrt::scan_int64(string_t input, string_t pattern, string_t* rest) {
+    return scan<int64>(input, pattern, rest);
+}
+
+extern "C"
+float64 argcrt::scan_float64(string_t input, string_t pattern, string_t* rest) {
+    return scan<float64>(input, pattern, rest);
 }
 
 extern "C"

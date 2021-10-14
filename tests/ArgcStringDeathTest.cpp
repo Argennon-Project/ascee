@@ -88,7 +88,7 @@ TEST(ArgcStringDeathTest, AppendInt) {
     );
 }
 
-TEST(ArgcStringDeathTest, ScanInt) {
+TEST(ArgcStringDeathTest, ScanIntAndFloat) {
     string_t rest;
 
     int64 i = scan_int64(STRING("int=789"), STRING("int="), &rest);
@@ -155,14 +155,43 @@ TEST(ArgcStringDeathTest, ScanInt) {
     EXPECT_EQ(i, 789);
     EXPECT_EQ(rest.length, 5);
     EXPECT_STREQ(rest.content, "\nrest");
-
-    i = scan_int64(STRING("int= 789\nrest"), STRING(" \n \n int=\n"), &rest);
-    EXPECT_EQ(i, 789);
+    i = scan_int64(STRING("int= 123456789101112\nrest"), STRING(" \n \n int=\n"), &rest);
+    EXPECT_EQ(i, 123456789101112);
     EXPECT_EQ(rest.length, 5);
     EXPECT_STREQ(rest.content, "\nrest");
 
-    i = scan_int64(STRING("     int =  -789rest\n"), STRING(" int =\n"), &rest);
-    EXPECT_EQ(i, -789);
+    i = scan_int64(STRING("     int =  -1234567891011rest\n"), STRING(" int =\n"), &rest);
+    EXPECT_EQ(i, -1234567891011);
     EXPECT_EQ(rest.length, 5);
     EXPECT_STREQ(rest.content, "rest\n");
+
+    i = scan_int64(STRING("     int =  -a789rest\n"), STRING(" int =\n"), &rest);
+    EXPECT_EQ(i, 0);
+    EXPECT_EQ(rest.length, -1);
+    EXPECT_STREQ(rest.content, nullptr);
+
+    i = scan_int64(STRING("     int =  789rest\n"), STRING(" int \n"), &rest);
+    EXPECT_EQ(i, 0);
+    EXPECT_EQ(rest.length, -1);
+    EXPECT_STREQ(rest.content, nullptr);
+
+    i = scan_int64(STRING("     int =  789rest\n"), STRING("int:\n"), &rest);
+    EXPECT_EQ(i, 0);
+    EXPECT_EQ(rest.length, -1);
+    EXPECT_STREQ(rest.content, nullptr);
+
+    float64 f = scan_float64(STRING("f = 12.598"), STRING("f="), &rest);
+    EXPECT_EQ(f, 0);
+    EXPECT_EQ(rest.length, -1);
+    EXPECT_STREQ(rest.content, nullptr);
+
+    f = scan_float64(STRING("f = 12.598"), STRING(" f ="), &rest);
+    EXPECT_EQ(f, 12.598);
+    EXPECT_EQ(rest.length, 0);
+    EXPECT_STREQ(rest.content, "");
+
+    f = scan_float64(STRING("f = -0.598"), STRING("f   ="), &rest);
+    EXPECT_EQ(f, -0.598);
+    EXPECT_EQ(rest.length, 0);
+    EXPECT_STREQ(rest.content, "");
 }
