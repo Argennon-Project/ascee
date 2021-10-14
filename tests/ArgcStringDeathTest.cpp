@@ -87,3 +87,82 @@ TEST(ArgcStringDeathTest, AppendInt) {
                 ""
     );
 }
+
+TEST(ArgcStringDeathTest, ScanInt) {
+    string_t rest;
+
+    int64 i = scan_int64(STRING("int=789"), STRING("int="), &rest);
+    EXPECT_EQ(i, 789);
+    EXPECT_EQ(rest.length, 0);
+    EXPECT_STREQ(rest.content, "");
+
+    i = scan_int64(STRING("int=   789    "), STRING("int="), &rest);
+    EXPECT_EQ(i, 789);
+    EXPECT_EQ(rest.length, 4);
+    EXPECT_STREQ(rest.content, "    ");
+
+    i = scan_int64(STRING("int=   789rest"), STRING("int="), &rest);
+    EXPECT_EQ(i, 789);
+    EXPECT_EQ(rest.length, 4);
+    EXPECT_STREQ(rest.content, "rest");
+
+    i = scan_int64(STRING("int=      789rest"), STRING("int=  "), &rest);
+    EXPECT_EQ(i, 789);
+    EXPECT_EQ(rest.length, 4);
+    EXPECT_STREQ(rest.content, "rest");
+
+    i = scan_int64(STRING("int=  \n  \n 789  rest"), STRING("int=  "), &rest);
+    EXPECT_EQ(i, 789);
+    EXPECT_EQ(rest.length, 6);
+    EXPECT_STREQ(rest.content, "  rest");
+
+    i = scan_int64(STRING("   \n  int= 789rest"), STRING(" \nint=\n"), &rest);
+    EXPECT_EQ(i, 0);
+    EXPECT_EQ(rest.length, -1);
+    EXPECT_STREQ(rest.content, nullptr);
+
+    i = scan_int64(STRING("   \n  int= 789rest"), STRING("\n int=\n"), &rest);
+    EXPECT_EQ(i, 0);
+    EXPECT_EQ(rest.length, -1);
+    EXPECT_STREQ(rest.content, nullptr);
+
+    i = scan_int64(STRING("   \n  int= 789\nrest"), STRING(" \n int=\n"), &rest);
+    EXPECT_EQ(i, 789);
+    EXPECT_EQ(rest.length, 5);
+    EXPECT_STREQ(rest.content, "\nrest");
+
+    i = scan_int64(STRING("   \n\n  int= 789\nrest"), STRING("  \n  int=\n"), &rest);
+    EXPECT_EQ(i, 789);
+    EXPECT_EQ(rest.length, 5);
+    EXPECT_STREQ(rest.content, "\nrest");
+
+    i = scan_int64(STRING("   \n \n  int= 789\nrest"), STRING("  \n  int=\n"), &rest);
+    EXPECT_EQ(i, 0);
+    EXPECT_EQ(rest.length, -1);
+    EXPECT_STREQ(rest.content, nullptr);
+
+    i = scan_int64(STRING("   \n \n  int= 789\nrest"), STRING("  \n\n  int=\n"), &rest);
+    EXPECT_EQ(i, 0);
+    EXPECT_EQ(rest.length, -1);
+    EXPECT_STREQ(rest.content, nullptr);
+
+    i = scan_int64(STRING("   \n \n  int= 789\nrest"), STRING("\n \n  int=\n"), &rest);
+    EXPECT_EQ(i, 0);
+    EXPECT_EQ(rest.length, -1);
+    EXPECT_STREQ(rest.content, nullptr);
+
+    i = scan_int64(STRING("   \n  \n  int= 789\nrest"), STRING(" \n \n int=\n"), &rest);
+    EXPECT_EQ(i, 789);
+    EXPECT_EQ(rest.length, 5);
+    EXPECT_STREQ(rest.content, "\nrest");
+
+    i = scan_int64(STRING("int= 789\nrest"), STRING(" \n \n int=\n"), &rest);
+    EXPECT_EQ(i, 789);
+    EXPECT_EQ(rest.length, 5);
+    EXPECT_STREQ(rest.content, "\nrest");
+
+    i = scan_int64(STRING("     int =  -789rest\n"), STRING(" int =\n"), &rest);
+    EXPECT_EQ(i, -789);
+    EXPECT_EQ(rest.length, 5);
+    EXPECT_STREQ(rest.content, "rest\n");
+}

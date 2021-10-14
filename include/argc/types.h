@@ -40,6 +40,8 @@ typedef struct StringBuffer string_buffer;
 
 typedef int (* dispatcher_ptr_t)(string_t request);
 
+/// argc strings are not null-terminated. However, usually there is a null at the end. `length` is the number of
+/// bytes without considering any null bytes at the end.
 struct String {
     const char* content;
     int32 length;
@@ -51,7 +53,7 @@ struct StringBuffer {
     int32 end;
 };
 
-#define STRING(str) {.content = (str), .length = sizeof (str)}
+#define STRING(str) {.content = (str), .length = (sizeof (str) - 1)}
 #define STRING_BUFFER(name, size) char __##name##_buf_[size]; string_buffer name = {__##name##_buf_, size, 0}
 
 /// HTTP status codes. new costume coded could be defined.

@@ -36,6 +36,7 @@ void append_int64(string_buffer*, int64);
 string_buffer* response_buffer();
 void clear_buffer(string_buffer* buf);
 string_t buf_to_string(const string_buffer* buf);
+int64 scan_int64(string_t input, string_t pattern, string_t* rest);
 
 #ifdef __cplusplus
 }

@@ -43,10 +43,10 @@ int64_t calculateMaxExecTime(int64_t max_cost) {
 
 static inline
 void addDefaultResponse(int statusCode) {
-    char response[200];
+    char response[256];
     int n = sprintf(response, "HTTP/1.1 %d %s", statusCode, "OK");
     Executor::getSession()->response.end = 0;
-    argcrt::append_str(&Executor::getSession()->response, String{response, n + 1});
+    argcrt::append_str(&Executor::getSession()->response, string_t{response, n});
 }
 
 static inline
@@ -106,12 +106,11 @@ void argcrt::exit_area() {
 
 extern "C"
 void argcrt::invoke_deferred(byte forwarded_gas, std_id_t app_id, string_t request) {
-    Executor::getSession()->currentCall->deferredCalls.push_back(
-            std::make_unique<DeferredArgs>(DeferredArgs{
-                    .appID = app_id,
-                    .forwardedGas = forwarded_gas,
-                    .request = std::string_view(request.content, request.length),
-            }));
+    Executor::getSession()->currentCall->deferredCalls.emplace_back(DeferredArgs{
+            .appID = app_id,
+            .forwardedGas = forwarded_gas,
+            .request = std::string_view(request.content, request.length),
+    });
 }
 
 static inline
@@ -168,13 +167,13 @@ int invoke_dispatcher_impl(byte forwarded_gas, std_id_t app_id, string_t request
     Executor::getSession()->recentEnvPointer = oldEnv;
     Executor::getSession()->cpuTimer.setAlarm(remainingExecTime);
 
-    if (ret < BAD_REQUEST) {
+    if (ret < 400) {
         for (const auto& dCall: Executor::getSession()->currentCall->deferredCalls) {
             int temp = argcrt::invoke_dispatcher(
-                    dCall->forwardedGas,
-                    dCall->appID,
+                    dCall.forwardedGas,
+                    dCall.appID,
                     // we should NOT use length + 1 here.
-                    string_t{dCall->request.data(), static_cast<int>(dCall->request.size())}
+                    string_t{dCall.request.data(), static_cast<int>(dCall.request.size())}
             );
             if (temp >= BAD_REQUEST) {
                 ret = FAILED_DEPENDENCY;

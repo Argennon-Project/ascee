@@ -23,30 +23,59 @@
 
 #include "argc/types.h"
 
-using std::string;
+using std::string, std::string_view;
 using namespace ascee;
 
 extern "C"
 void argcrt::append_str(string_buffer* buf, string_t str) {
-    if (buf->maxSize < buf->end + str.length) {
-        raise(SIGSEGV);
-    }
-    strncpy(buf->buffer + buf->end, str.content, str.length);
-    if (str.content[str.length - 1] == '\0')
-        buf->end += str.length - 1;
-    else
-        buf->end += str.length;
+    // we require the size to be one byte more than the actual required amount
+    if (buf->maxSize <= buf->end + str.length) raise(SIGSEGV);
+    memcpy(buf->buffer + buf->end, str.content, str.length);
+    buf->end += str.length;
+    buf->buffer[buf->end] = '\0';
 }
 
 extern "C"
 void argcrt::append_int64(string_buffer* buf, int64 i) {
     string str = std::to_string(i);
-    append_str(buf, string_t{str.c_str(), static_cast<int>(str.size() + 1)});
+    append_str(buf, string_t{str.c_str(), static_cast<int32>(str.size())});
 }
 
 extern "C"
 void argcrt::clear_buffer(string_buffer* buf) {
     buf->end = 0;
+}
+
+extern "C"
+int64 argcrt::scan_int64(string_t input, string_t pattern, string_t* rest = nullptr) {
+    int i = 0, j = 0;
+    while (i < input.length && j < pattern.length) {
+        if (!std::isspace(input.content[i])) {
+            if (std::isspace(pattern.content[j])) j++;
+            else if (input.content[i] == pattern.content[j]) {
+                i++;
+                j++;
+            } else break;
+        } else if (std::isspace(pattern.content[j])) {
+            if (input.content[i] == pattern.content[j]) i++;
+            else j++;
+        } else break;
+    }
+    if (j < pattern.length) {
+        if (rest != nullptr) {
+            rest->content = nullptr;
+            rest->length = -1;
+        }
+        return 0;
+    }
+    string numStr(input.content + i, std::min(64, input.length - i));
+    size_t pos;
+    int64 ret = std::stoi(numStr, &pos);
+    if (rest != nullptr) {
+        rest->content = input.content + i + pos;
+        rest->length = static_cast<int32>(input.length - i - pos);
+    }
+    return ret;
 }
 
 extern "C"

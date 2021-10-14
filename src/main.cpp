@@ -21,8 +21,10 @@
 #include "Executor.h"
 
 using namespace ascee;
+using namespace std;
 
 int main(int argc, char const* argv[]) {
+    cout << sizeof "abc" << endl;
     Heap heap;
     auto* modifier = heap.initSession(2);
     short_id_t chunk = 111;

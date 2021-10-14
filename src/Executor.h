@@ -44,7 +44,7 @@ struct DeferredArgs {
 
 struct SessionInfo {
     jmp_buf* recentEnvPointer;
-    jmp_buf* rootEnvPointer;
+    jmp_buf* const rootEnvPointer;
     bool criticalArea = false;
 
     std::unique_ptr<ascee::Heap::Modifier> heapModifier;
@@ -61,13 +61,15 @@ struct SessionInfo {
     };
 
     struct CallContext {
-        std_id_t appID;
+        const std_id_t appID;
         int64_t remainingExternalGas;
         bool hasLock = false;
-        std::vector<std::unique_ptr<DeferredArgs>> deferredCalls;
+        std::vector<DeferredArgs> deferredCalls;
     };
 
     CallContext* currentCall;
+
+    SessionInfo(const SessionInfo&) = delete;
 };
 
 struct Transaction {

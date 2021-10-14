@@ -85,7 +85,6 @@ TEST_F(AsceeExecutorTest, AppNotFound) {
             .gas = NORMAL_GAS,
             .appAccessList = {16, 555}
     });
-
     char buf[200];
     EXPECT_STREQ(response.data(), strcat(getDefaultResponse(buf, NOT_FOUND), " wrong app!"));
 }
