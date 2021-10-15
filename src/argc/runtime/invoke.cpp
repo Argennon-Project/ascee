@@ -27,7 +27,7 @@
 
 #define MIN_EXEC_TIME_NSEC 10000
 
-using std::unique_ptr, std::vector, std::unordered_map;
+using std::unique_ptr, std::vector, std::unordered_map, std::string;
 using namespace ascee;
 
 static inline
@@ -84,14 +84,15 @@ string_buffer* argcrt::response_buffer() {
 extern "C"
 void argcrt::enter_area() {
     if (Executor::getSession()->currentCall->hasLock) return;
-    blockSignals();
+
     if (Executor::getSession()->isLocked[Executor::getSession()->currentCall->appID]) {
         raise(SIGUSR2);
     } else {
+        blockSignals();
         Executor::getSession()->isLocked[Executor::getSession()->currentCall->appID] = true;
         Executor::getSession()->currentCall->hasLock = true;
+        unBlockSignals();
     }
-    unBlockSignals();
 }
 
 extern "C"
@@ -169,18 +170,25 @@ int invoke_dispatcher_impl(byte forwarded_gas, std_id_t app_id, string_t request
     Executor::getSession()->cpuTimer.setAlarm(remainingExecTime);
 
     if (ret < 400) {
+        string mainResponse = string(argcrt::response_buffer()->buffer, argcrt::response_buffer()->end);
+
         for (const auto& dCall: Executor::getSession()->currentCall->deferredCalls) {
             int temp = argcrt::invoke_dispatcher(
                     dCall.forwardedGas,
                     dCall.appID,
                     // we should NOT use length + 1 here.
-                    string_t{dCall.request.data(), static_cast<int>(dCall.request.size())}
+                    string_t{dCall.request.c_str(), static_cast<int>(dCall.request.length())}
             );
+            printf("** deferred call return: %d\n", temp);
             if (temp >= BAD_REQUEST) {
                 ret = FAILED_DEPENDENCY;
                 break;
             }
         }
+
+        argcrt::response_buffer()->end = 0;
+        argcrt::append_str(argcrt::response_buffer(),
+                           string_t{mainResponse.c_str(), static_cast<int32>(mainResponse.length())});
     }
 
     // restore context

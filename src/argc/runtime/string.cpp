@@ -24,7 +24,7 @@
 
 #include "argc/types.h"
 
-#define MAX_64BIT_STR_LENGTH 32
+#define MAX_NUM64_LENGTH 32
 
 using std::string, std::string_view;
 using namespace ascee;
@@ -53,19 +53,20 @@ inline static
 int32 parse(string_view str, int64* ret) {
     size_t pos;
     // string constructor copies its input, therefore we truncate the input str to make the copy less costly.
-    *ret = std::stol(string(str.substr(0, MAX_64BIT_STR_LENGTH)), &pos);
+    *ret = std::stol(string(str.substr(0, MAX_NUM64_LENGTH)), &pos);
     return static_cast<int32>(pos);
 }
 
 inline static
 int32 parse(string_view str, float64* ret) {
     size_t pos;
-    *ret = std::stod(string(str.substr(0, MAX_64BIT_STR_LENGTH)), &pos);
+    *ret = std::stod(string(str.substr(0, MAX_NUM64_LENGTH)), &pos);
     return static_cast<int32>(pos);
 }
 
 template<typename T>
-T scan(string_t input, string_t pattern, string_t* rest = nullptr) {
+static
+T scan(string_t input, string_t pattern, string_t* rest) {
     int i = 0, j = 0;
     while (i < input.length && j < pattern.length) {
         if (!std::isspace(input.content[i])) {
@@ -86,15 +87,11 @@ T scan(string_t input, string_t pattern, string_t* rest = nullptr) {
         // string_view constructor DOES NOT make a copy of its input.
         string_view targetStr(input.content + i, input.length - i);
         int32 pos = parse(targetStr, &ret);
-        if (rest != nullptr) {
-            rest->content = input.content + i + pos;
-            rest->length = static_cast<int32>(input.length - i - pos);
-        }
+        rest->content = input.content + i + pos;
+        rest->length = static_cast<int32>(input.length - i - pos);
     } catch (const std::invalid_argument&) {
-        if (rest != nullptr) {
-            rest->content = nullptr;
-            rest->length = -1;
-        }
+        rest->content = nullptr;
+        rest->length = -1;
     }
     return ret;
 }

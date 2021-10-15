@@ -190,3 +190,29 @@ TEST_F(AsceeExecutorTest, FailedCalls) {
     strcat(expected, " all called...");
     EXPECT_STREQ(response.data(), expected);
 }
+
+TEST_F(AsceeExecutorTest, SimpleReentancy) {
+    auto response = executor.startSession(ascee::Transaction{
+            .calledAppID = 22,
+            .request = STRING("choice: 1"),
+            .gas = NORMAL_GAS,
+            .appAccessList = {22, 23}
+    });
+
+    char buf[200];
+    sprintf(buf, "%d %d %d %d done: 1", REENTRANCY_DETECTED + 1, HTTP_OK + 1, REENTRANCY_DETECTED + 1,
+            REENTRANCY_DETECTED + 1);
+    EXPECT_STREQ(response.data(), buf);
+}
+
+TEST_F(AsceeExecutorTest, SimpleDeferredCall) {
+    auto response = executor.startSession(ascee::Transaction{
+            .calledAppID = 22,
+            .request = STRING("choice: 4"),
+            .gas = NORMAL_GAS,
+            .appAccessList = {22, 23}
+    });
+
+    char buf[200];
+    EXPECT_STREQ(response.data(), getDefaultResponse(buf, FAILED_DEPENDENCY));
+}

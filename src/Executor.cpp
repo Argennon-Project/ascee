@@ -22,7 +22,7 @@
 #include "Executor.h"
 
 using namespace ascee;
-using std::unique_ptr, std::string_view;
+using std::unique_ptr, std::string;
 
 thread_local SessionInfo* Executor::session = nullptr;
 
@@ -79,7 +79,7 @@ void* Executor::registerRecoveryStack() {
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "LocalValueEscapesScope"
 
-string_view Executor::startSession(const Transaction& t) {
+string Executor::startSession(const Transaction& t) {
     void* recoveryStack = registerRecoveryStack();
     jmp_buf env;
 
@@ -111,7 +111,8 @@ string_view Executor::startSession(const Transaction& t) {
 
     session = nullptr;
     free(recoveryStack);
-    return {threadSession.response.buffer, static_cast<size_t>(threadSession.response.end)};
+    // here, string constructor makes a copy of the buffer.
+    return {threadSession.response.buffer, static_cast<std::size_t>(threadSession.response.end)};
 }
 
 #pragma clang diagnostic pop

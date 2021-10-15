@@ -98,7 +98,7 @@ public:
         return session;
     }
 
-    std::string_view startSession(const Transaction& t);
+    std::string startSession(const Transaction& t);
 };
 
 } // namespace ascee

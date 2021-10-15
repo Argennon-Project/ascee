@@ -22,8 +22,11 @@ add_library(app19 SHARED appfiles/single-thread/failed-call/app19.c)
 add_library(app20 SHARED appfiles/single-thread/failed-call/app20.c)
 add_library(app21 SHARED appfiles/single-thread/failed-call/app21.c)
 
+add_library(app22 SHARED appfiles/single-thread/reentrancy/app22.c)
+add_library(app23 SHARED appfiles/single-thread/reentrancy/app23.c)
 
-set_target_properties(app10 app11 app12 app13 app14 app15 app16 app17 app18 app19 app20 app21 PROPERTIES LIBRARY_OUTPUT_DIRECTORY appfiles/compiled)
+
+set_target_properties(app10 app11 app12 app13 app14 app15 app16 app17 app18 app19 app20 app21 app22 app23 PROPERTIES LIBRARY_OUTPUT_DIRECTORY appfiles/compiled)
 
 
 # adding the Google_Tests_run target
@@ -32,4 +35,4 @@ add_executable(Google_Tests_run ../src/argc/runtime/string.cpp ../src/Executor.c
 # linking Google_Tests_run with DateConverter_lib which will be tested
 # target_link_libraries(Google_Tests_run DateConverter_lib)
 
-target_link_libraries(Google_Tests_run gtest gtest_main stdc++ m argcrt dl argcrt app10 app11 app12 app13 app14 app15 app16 app17 app18 app19 app20 app21)
+target_link_libraries(Google_Tests_run gtest gtest_main stdc++ m argcrt dl argcrt app10 app11 app12 app13 app14 app15 app16 app17 app18 app19 app20 app21 app22 app23)
