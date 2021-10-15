@@ -109,7 +109,8 @@ void argcrt::invoke_deferred(byte forwarded_gas, std_id_t app_id, string_t reque
     Executor::getSession()->currentCall->deferredCalls.emplace_back(DeferredArgs{
             .appID = app_id,
             .forwardedGas = forwarded_gas,
-            .request = std::string_view(request.content, request.length),
+            // string constructor makes a copy of its input, so we should be safe here.
+            .request = std::string(request.content, request.length),
     });
 }
 

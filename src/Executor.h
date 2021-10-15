@@ -39,7 +39,7 @@ namespace ascee {
 struct DeferredArgs {
     std_id_t appID;
     byte forwardedGas;
-    std::string_view request;
+    std::string request;
 };
 
 struct SessionInfo {

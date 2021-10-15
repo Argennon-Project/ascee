@@ -24,6 +24,13 @@ using namespace ascee;
 using namespace std;
 
 int main(int argc, char const* argv[]) {
+    char cStr[20] = "abcdefgh";
+    string str = string(cStr, 4);
+    cout << "this->" << str << endl;
+    cStr[0] = 'z';
+    cout << "that->" << cStr << endl;
+    cout << "this->" << str << endl;
+    return 0;
     cout << sizeof "abc" << endl;
     Heap heap;
     auto* modifier = heap.initSession(2);
