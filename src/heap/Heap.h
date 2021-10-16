@@ -104,7 +104,7 @@ public:
                 *(T*) versionList.back().content = value;
             }
 
-            void toHeap(int16_t version);
+            void wrToHeap(int16_t version);
         };
 
         int16_t currentVersion = 0;

@@ -17,12 +17,11 @@
 
 #include <csignal>
 #include <cstring>
-
 #include <string>
-#include <argc/functions.h>
 #include <stdexcept>
 
-#include "argc/types.h"
+#include <argc/types.h>
+#include <argc/functions.h>
 
 #define MAX_NUM64_LENGTH 32
 

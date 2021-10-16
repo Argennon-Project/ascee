@@ -76,9 +76,6 @@ void* Executor::registerRecoveryStack() {
     return sig_stack.ss_sp;
 }
 
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "LocalValueEscapesScope"
-
 string Executor::startSession(const Transaction& t) {
     void* recoveryStack = registerRecoveryStack();
     jmp_buf env;
@@ -114,8 +111,6 @@ string Executor::startSession(const Transaction& t) {
     // here, string constructor makes a copy of the buffer.
     return {threadSession.response.buffer, static_cast<std::size_t>(threadSession.response.end)};
 }
-
-#pragma clang diagnostic pop
 
 Executor::Executor() {
     initHandlers();

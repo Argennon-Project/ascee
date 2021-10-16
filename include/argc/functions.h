@@ -38,6 +38,8 @@ void clear_buffer(string_buffer* buf);
 string_t buf_to_string(const string_buffer* buf);
 int64 scan_int64(string_t input, string_t pattern, string_t* rest);
 float64 scan_float64(string_t input, string_t pattern, string_t* rest);
+float64 safe_addf64(float64 a, float64 b);
+float64 truncate_float64(float64 f, int n);
 
 #ifdef __cplusplus
 }

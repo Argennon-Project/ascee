@@ -76,13 +76,13 @@ void Heap::Modifier::writeToHeap() {
     for (auto& appMap: appsAccessMaps) {
         for (auto& chunk32Map: appMap.second.first) {
             for (auto& block: chunk32Map.second) {
-                block.second.toHeap(currentVersion);
+                block.second.wrToHeap(currentVersion);
             }
         }
 
         for (auto& chunk32Map: appMap.second.second) {
             for (auto& block: chunk32Map.second) {
-                block.second.toHeap(currentVersion);
+                block.second.wrToHeap(currentVersion);
             }
         }
     }
@@ -107,7 +107,7 @@ bool Heap::Modifier::AccessBlock::add(int16_t version) {
     return true;
 }
 
-void Heap::Modifier::AccessBlock::toHeap(int16_t version) {
+void Heap::Modifier::AccessBlock::wrToHeap(int16_t version) {
     syncTo(version);
     if (!versionList.empty()) {
         heapLocation.writeBlock(versionList.back().content, size);

@@ -94,9 +94,8 @@ private:
 public:
     Executor();
 
-    static SessionInfo* getSession() {
-        return session;
-    }
+    inline
+    static SessionInfo* getSession() { return session; }
 
     std::string startSession(const Transaction& t);
 };
