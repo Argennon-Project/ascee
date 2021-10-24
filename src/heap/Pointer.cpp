@@ -51,4 +51,3 @@ void Heap::Pointer::readBlockTo(byte* dst, int32 size) {
 void Heap::Pointer::writeBlock(const byte* src, int32 size) {
     smartCopy(heapPtr, src, size);
 }
-

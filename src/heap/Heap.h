@@ -18,15 +18,37 @@
 #ifndef ASCEE_HEAP_H
 #define ASCEE_HEAP_H
 
+
 #include <argc/types.h>
 #include <unordered_map>
 #include <vector>
 
 namespace ascee {
+
+struct AppMemAccess {
+    struct Block {
+        int32 offset;
+        int32 size;
+        bool writable;
+    };
+
+    struct Chunk {
+        std_id_t id;
+        int32 maxNewSize;
+        std::vector<Block> accessBlocks;
+    };
+
+    std_id_t appID;
+    std::vector<Chunk> chunks;
+};
+
 //TODO: Heap must be signal-safe but it does not need to be thread-safe
 class Heap {
 private:
-    byte content[64] = {0, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13};
+    byte zero32[4] = {0};
+    byte page[128 * 1024] = {0};
+    byte* freeArea = page;
+    std::unordered_map<std_id_t, byte*> chunkIndex;
 
     class Pointer {
         friend class Heap;
@@ -41,12 +63,26 @@ private:
         inline
         T read() { return *(T*) heapPtr; }
 
+        inline bool isNull() { return heapPtr == nullptr; }
+
         void readBlockTo(byte* dst, int32 size);
 
         void writeBlock(const byte* src, int32 size);
     };
 
+    Pointer getSizePointer(std_id_t appID, std_id_t chunkID);
+
+    Pointer newChunk(std_id_t appID, std_id_t id, int32 size);
+
+    Pointer newTransientChunk();
+
+    void saveChunk(Pointer sizePtr);
+
+    void freeChunk(Pointer sizePtr);
+
 public:
+
+
     class Modifier {
         friend class Heap;
 
@@ -71,8 +107,11 @@ public:
                 }
             };
 
+
             Heap::Pointer heapLocation;
             int32 size;
+
+        private:
             bool writable;
             std::vector<Version> versionList;
 
@@ -84,6 +123,10 @@ public:
             AccessBlock(Pointer heapLocation, int32 size, bool writable);
 
             AccessBlock(const AccessBlock&) = delete;
+
+            [[nodiscard]] int32 getSize() const { return size; }
+
+            Pointer getHeapPointer() { return heapLocation; }
 
             template<typename T>
             inline
@@ -107,6 +150,9 @@ public:
             void wrToHeap(int16_t version);
         };
 
+        Heap* parent;
+
+    private:
         int16_t currentVersion = 0;
 
         typedef std::unordered_map<int32, AccessBlock> AccessTableMap;
@@ -119,7 +165,7 @@ public:
         ChunkMap32* chunks32 = nullptr;
         AppMap appsAccessMaps;
 
-        Modifier() = default;
+        Modifier(Heap* parent) : parent(parent) {}
 
         void defineAccessBlock(Pointer heapLocation,
                                std_id_t app, short_id_t chunk, int32 offset,
@@ -129,7 +175,12 @@ public:
                                std_id_t app, std_id_t chunk, int32 offset,
                                int32 size, bool writable);
 
+        void writeTable(AccessTableMap& table);
+
     public:
+        static const int sizeCell = -4;
+        static const int maxNewSizeCell = -5;
+
         template<typename T>
         inline
         T load(int32 offset) { return accessTable->at(offset).read<T>(currentVersion); }
@@ -149,11 +200,17 @@ public:
         int16_t saveVersion();
 
         void writeToHeap();
+
+        int32 getChunkSize();
+
+        void updateChunkSize(int32 newSize);
     };
 
     Heap();
 
     Modifier* initSession(std_id_t calledApp);
+
+    Modifier* initSession(const std::vector<AppMemAccess>& memAccessList);
 };
 
 } // namespace ascee

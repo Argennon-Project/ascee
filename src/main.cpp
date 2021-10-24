@@ -30,9 +30,9 @@ int main(int argc, char const* argv[]) {
     cStr[0] = 'z';
     cout << "that->" << cStr << endl;
     cout << "this->" << str << endl;
-    return 0;
     cout << sizeof "abc" << endl;
     Heap heap;
+    return 0;
     auto* modifier = heap.initSession(2);
     short_id_t chunk = 111;
     modifier->loadContext(2);

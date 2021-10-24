@@ -75,17 +75,46 @@ void Heap::Modifier::writeToHeap() {
 
     for (auto& appMap: appsAccessMaps) {
         for (auto& chunk32Map: appMap.second.first) {
-            for (auto& block: chunk32Map.second) {
-                block.second.wrToHeap(currentVersion);
-            }
+            writeTable(chunk32Map.second);
         }
 
-        for (auto& chunk32Map: appMap.second.second) {
-            for (auto& block: chunk32Map.second) {
-                block.second.wrToHeap(currentVersion);
-            }
+        for (auto& chunk64Map: appMap.second.second) {
+            writeTable(chunk64Map.second);
         }
     }
+    parent = nullptr;
+}
+
+void Heap::Modifier::writeTable(AccessTableMap& table) {
+    auto size = table.at(sizeCell).read<int32>(currentVersion);
+
+    try {
+        auto maxNewSize = table.at(maxNewSizeCell).getSize();
+        size = std::min(size, maxNewSize);
+        table.at(sizeCell).write(currentVersion, size);
+        if (size > 0) {
+            parent->saveChunk(table.at(sizeCell).getHeapPointer());
+        } else {
+            parent->freeChunk(table.at(sizeCell).getHeapPointer());
+        }
+    } catch (const std::out_of_range&) {}
+
+    if (size > 0) {
+        for (auto& block: table) {
+            block.second.wrToHeap(currentVersion);
+        }
+    }
+}
+
+void Heap::Modifier::updateChunkSize(int32 newSize) {
+    // We don't need to check the new size here. The size will be corrected based on the maximum size defined
+    // at maxSizeReservedOffset later. If the chunk is not resizable this location is not writable and no
+    // checks are needed the call will fail itself.
+    accessTable->at(sizeCell).write<int32>(currentVersion, newSize);
+}
+
+int32 Heap::Modifier::getChunkSize() {
+    return accessTable->at(sizeCell).read<int32>(currentVersion);
 }
 
 void Heap::Modifier::AccessBlock::syncTo(int16_t version) {

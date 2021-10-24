@@ -69,7 +69,7 @@ struct SessionInfo {
 
     CallContext* currentCall;
 
-    SessionInfo(const SessionInfo&) = delete;
+    //SessionInfo(const SessionInfo&) = delete;
 };
 
 struct Transaction {

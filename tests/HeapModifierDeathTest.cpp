@@ -26,8 +26,9 @@ using namespace ascee;
 
 class HeapModifierDeathTest : public ::testing::Test {
 protected:
-    ascee::byte tempHeap[256] = {2, 2, 2, 1, 2, 2, 2, 1};
-    ascee::Heap::Modifier modifier;
+    byte tempHeap[256] = {2, 2, 2, 1, 2, 2, 2, 1};
+    Heap::Modifier modifier = Heap::Modifier(nullptr);
+
 public:
     HeapModifierDeathTest() {
         // appID = 1
@@ -104,15 +105,6 @@ TEST_F(HeapModifierDeathTest, SimpleReadWrite) {
     modifier.loadChunk(std_id_t(10));
     got = modifier.load<int64>(100);
     EXPECT_EQ(got, 123456789);
-
-    modifier.writeToHeap();
-
-    EXPECT_EQ(tempHeap[3], 1);
-    EXPECT_EQ(tempHeap[20], 16);
-    EXPECT_EQ(tempHeap[150], 0x20);
-    EXPECT_EQ(tempHeap[100], 0x15);
-
-    memDump();
 }
 
 TEST_F(HeapModifierDeathTest, VersionZero) {

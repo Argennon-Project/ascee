@@ -98,6 +98,7 @@ string Executor::startSession(const Transaction& t) {
     } else {
         // critical error
         printf("**critical**\n");
+        session->cpuTimer.setAlarm(0);
         session->heapModifier->restoreVersion(0);
         ret = jmpRet;
     }
