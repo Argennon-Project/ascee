@@ -27,10 +27,10 @@
 #include <unordered_map>
 #include <memory>
 #include <vector>
-#include <loader/FailureManager.h>
 
-#include "argc/types.h"
-#include "heap/Heap.h"
+#include <executor/FailureManager.h>
+#include <argc/types.h>
+#include <heap/Heap.h>
 #include "ThreadCpuTimer.h"
 
 #define RESPONSE_MAX_SIZE 2*1024

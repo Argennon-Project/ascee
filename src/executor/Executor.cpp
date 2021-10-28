@@ -22,7 +22,7 @@
 #include "Executor.h"
 
 using namespace ascee;
-using std::unique_ptr, std::string;
+using std::unique_ptr, std::string, std::to_string;
 
 thread_local SessionInfo* Executor::session = nullptr;
 
@@ -71,7 +71,7 @@ void* Executor::registerRecoveryStack() {
     sig_stack.ss_size = SIGSTKSZ;
     sig_stack.ss_flags = 0;
     if (sigaltstack(&sig_stack, nullptr) == -1) {
-        throw std::runtime_error("sigaltstack could not register the recovery stack");
+        throw std::runtime_error("error in registering the recovery stack");
     }
     return sig_stack.ss_sp;
 }
@@ -116,7 +116,6 @@ Executor::Executor() {
     initHandlers();
 }
 
-
 struct InvocationArgs {
     int (* invoker)(byte, std_id_t, string_t);
 
@@ -145,8 +144,11 @@ int Executor::controlledExec(int (* invoker)(byte, std_id_t, string_t),
     pthread_t threadID;
     pthread_attr_t threadAttr;
 
-    pthread_attr_init(&threadAttr);
-    pthread_attr_setstacksize(&threadAttr, stackSize);
+    int err = pthread_attr_init(&threadAttr);
+    if (err) throw std::runtime_error(to_string(errno) + ": failed to init thread attributes");
+
+    err = pthread_attr_setstacksize(&threadAttr, stackSize);
+    if (err) throw std::runtime_error(to_string(errno) + ": can't set stack size");
 
     InvocationArgs args = {
             .invoker = invoker,
@@ -156,11 +158,16 @@ int Executor::controlledExec(int (* invoker)(byte, std_id_t, string_t),
             .session = Executor::getSession()
     };
 
-    pthread_create(&threadID, &threadAttr, threadStart, &args);
+    err = pthread_create(&threadID, &threadAttr, threadStart, &args);
+    if (err) throw std::runtime_error(to_string(errno) + ": thread creation failed");
+
     pthread_attr_destroy(&threadAttr);
+    // We ignore errors here
 
     void* retPtr;
-    pthread_join(threadID, &retPtr);
+    err = pthread_join(threadID, &retPtr);
+    if (err) throw std::runtime_error(to_string(errno) + ": pthread_join failed");
+
     int ret = *(int*) retPtr;
     free(retPtr);
     return ret;
