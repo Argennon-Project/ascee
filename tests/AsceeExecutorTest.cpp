@@ -170,7 +170,7 @@ TEST_F(AsceeExecutorTest, CircularCallHighGas) {
     });
 
     char buf[200];
-    EXPECT_STREQ(response.data(), getDefaultResponse(buf, INTERNAL_ERROR));
+    EXPECT_STREQ(response.data(), getDefaultResponse(buf, MAX_CALL_DEPTH_REACHED));
 }
 
 TEST_F(AsceeExecutorTest, FailedCalls) {

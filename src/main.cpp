@@ -32,6 +32,7 @@ int main(int argc, char const* argv[]) {
     cout << "this->" << str << endl;
     cout << sizeof "abc" << endl;
     Heap heap;
+    Executor e;
     return 0;
     auto* modifier = heap.initSession(2);
     short_id_t chunk = 111;

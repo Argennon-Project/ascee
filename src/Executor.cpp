@@ -98,7 +98,6 @@ string Executor::startSession(const Transaction& t) {
     } else {
         // critical error
         printf("**critical**\n");
-        session->cpuTimer.setAlarm(0);
         session->heapModifier->restoreVersion(0);
         ret = jmpRet;
     }
@@ -115,5 +114,55 @@ string Executor::startSession(const Transaction& t) {
 
 Executor::Executor() {
     initHandlers();
+}
+
+
+struct InvocationArgs {
+    int (* invoker)(byte, std_id_t, string_t);
+
+    byte forwarded_gas;
+    std_id_t app_id;
+    string_t request;
+    SessionInfo* session;
+};
+
+static
+void* threadStart(void* voidArgs) {
+    auto* args = (InvocationArgs*) voidArgs;
+
+    void* recoveryStack = Executor::registerRecoveryStack();
+    Executor::session = args->session;
+
+    int* ret = (int*) malloc(sizeof(int));
+    *ret = args->invoker(args->forwarded_gas, args->app_id, args->request);
+
+    free(recoveryStack);
+    return ret;
+}
+
+int Executor::controlledExec(int (* invoker)(byte, std_id_t, string_t),
+                             byte forwarded_gas, std_id_t app_id, string_t request, size_t stackSize) {
+    pthread_t threadID;
+    pthread_attr_t threadAttr;
+
+    pthread_attr_init(&threadAttr);
+    pthread_attr_setstacksize(&threadAttr, stackSize);
+
+    InvocationArgs args = {
+            .invoker = invoker,
+            .forwarded_gas = forwarded_gas,
+            .app_id = app_id,
+            .request = request,
+            .session = Executor::getSession()
+    };
+
+    pthread_create(&threadID, &threadAttr, threadStart, &args);
+    pthread_attr_destroy(&threadAttr);
+
+    void* retPtr;
+    pthread_join(threadID, &retPtr);
+    int ret = *(int*) retPtr;
+    free(retPtr);
+    return ret;
 }
 

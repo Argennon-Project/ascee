@@ -24,7 +24,7 @@
 #include <Executor.h>
 #include <argc/functions.h>
 
-#define MIN_EXEC_TIME_NSEC 10000
+#define MIN_GAS 1
 
 using std::unique_ptr, std::vector, std::unordered_map, std::string;
 using namespace ascee;
@@ -33,11 +33,6 @@ static inline
 int64_t calculateExternalGas(int64_t currentGas) {
     // the geometric series approaches 1 / (1 - q) so the total amount of externalGas would be 2 * currentGas
     return 2 * currentGas / 3;
-}
-
-static
-int64_t calculateMaxExecTime(int64_t max_cost) {
-    return max_cost * 1000000;
 }
 
 static inline
@@ -55,7 +50,7 @@ void maskSignals(int how) {
 // Block timer's signal
     sigemptyset(&set);
     sigaddset(&set, SIGUSR1);
-    sigaddset(&set, SIGABRT);
+    sigaddset(&set, SIGKILL);
     sigaddset(&set, SIGBUS);
     int s = pthread_sigmask(how, &set, nullptr);
     if (s != 0) throw std::runtime_error("error in masking signals");
@@ -125,10 +120,11 @@ int invoke_dispatcher_impl(byte forwarded_gas, std_id_t app_id, string_t request
     if (dispatcher == nullptr || Executor::getSession()->currentCall->appID == app_id) return NOT_FOUND;
 
     int64_t maxCurrentGas = (Executor::getSession()->currentCall->remainingExternalGas * forwarded_gas) >> 8;
-    int64_t execTime = calculateMaxExecTime(maxCurrentGas);
-    if (execTime <= MIN_EXEC_TIME_NSEC) return REQUEST_TIMEOUT;
+    if (maxCurrentGas <= MIN_GAS) return REQUEST_TIMEOUT;
 
-    int16_t savedVersion = -1;
+    int64_t execTime = Executor::getSession()->failureManager.getExecTime(maxCurrentGas);
+
+    int16_t savedVersion;
     try {
         savedVersion = Executor::getSession()->heapModifier->saveVersion();
     } catch (const std::out_of_range&) {
@@ -145,7 +141,8 @@ int invoke_dispatcher_impl(byte forwarded_gas, std_id_t app_id, string_t request
     Executor::getSession()->response.end = 0;
     Executor::getSession()->heapModifier->loadContext(app_id);
 
-    int64_t remainingExecTime = Executor::getSession()->cpuTimer.setAlarm(execTime);
+    ascee::ThreadCpuTimer cpuTimer;
+    cpuTimer.setAlarm(execTime);
 
     jmp_buf* oldEnv = Executor::getSession()->recentEnvPointer;
     jmp_buf env;
@@ -163,10 +160,9 @@ int invoke_dispatcher_impl(byte forwarded_gas, std_id_t app_id, string_t request
     // an infinite loop.
     blockSignals();
 
-    // as soon as possible we should release the entrance lock of the app (if any) and restore the old env value
-    argcrt::exit_area();
+    // as soon as possible we should restore the old env value and release the entrance lock (if any)
     Executor::getSession()->recentEnvPointer = oldEnv;
-    Executor::getSession()->cpuTimer.setAlarm(remainingExecTime);
+    argcrt::exit_area();
 
     if (ret < 400) {
         string mainResponse = string(argcrt::response_buffer()->buffer, argcrt::response_buffer()->end);
@@ -201,11 +197,24 @@ int invoke_dispatcher_impl(byte forwarded_gas, std_id_t app_id, string_t request
     return ret;
 }
 
+
 extern "C"
 int argcrt::invoke_dispatcher(byte forwarded_gas, std_id_t app_id, string_t request) {
     blockSignals();
-    int ret = invoke_dispatcher_impl(forwarded_gas, app_id, request);
+
+    Executor::getSession()->failureManager.nextInvocation();
+    int ret;
+    try {
+        auto stackSize = Executor::getSession()->failureManager.getStackSize();
+        ret = Executor::controlledExec(invoke_dispatcher_impl, forwarded_gas, app_id, request, stackSize);
+    } catch (const std::overflow_error&) {
+        ret = MAX_CALL_DEPTH_REACHED;
+    }
+
     if (ret >= 400) addDefaultResponse(ret);
+
+    Executor::getSession()->failureManager.completeInvocation();
+
     unBlockSignals();
     return ret;
 }

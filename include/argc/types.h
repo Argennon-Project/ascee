@@ -73,6 +73,7 @@ struct StringBuffer {
 #define INSUFFICIENT_STORAGE 507
 /// This HTTP status is returned when the entrance lock is activated.
 #define REENTRANCY_DETECTED 513
+#define MAX_CALL_DEPTH_REACHED 514
 
 #ifdef __cplusplus
 

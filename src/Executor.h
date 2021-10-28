@@ -27,6 +27,7 @@
 #include <unordered_map>
 #include <memory>
 #include <vector>
+#include <loader/FailureManager.h>
 
 #include "argc/types.h"
 #include "heap/Heap.h"
@@ -50,8 +51,7 @@ struct SessionInfo {
     std::unique_ptr<ascee::Heap::Modifier> heapModifier;
     std::unordered_map<std_id_t, dispatcher_ptr_t> appTable;
     std::unordered_map<std_id_t, bool> isLocked;
-
-    ascee::ThreadCpuTimer cpuTimer;
+    FailureManager failureManager;
 
     char buf[RESPONSE_MAX_SIZE];
     string_buffer response = {
@@ -80,24 +80,28 @@ struct Transaction {
 };
 
 class Executor {
-private:
+public:
     static thread_local SessionInfo* session;
+private:
 
     Heap heap;
 
     static void sig_handler(int sig, siginfo_t* info, void* ucontext);
-
-    void* registerRecoveryStack();
 
     void initHandlers();
 
 public:
     Executor();
 
+    static void* registerRecoveryStack();
+
     inline
     static SessionInfo* getSession() { return session; }
 
     std::string startSession(const Transaction& t);
+
+    static int controlledExec(int (* invoker)(byte, std_id_t, string_t),
+                              byte forwarded_gas, std_id_t appID, string_t request, size_t size);
 };
 
 } // namespace ascee
