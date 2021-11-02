@@ -22,6 +22,8 @@
 #include <argc/types.h>
 #include <unordered_map>
 #include <vector>
+#include "Chunk.h"
+#include "Page.h"
 
 namespace ascee {
 
@@ -45,40 +47,13 @@ struct AppMemAccess {
 //TODO: Heap must be signal-safe but it does not need to be thread-safe
 class Heap {
 private:
-    byte zero32[4] = {0};
-    byte page[128 * 1024] = {0};
-    byte* freeArea = page;
-    std::unordered_map<std_id_t, byte*> chunkIndex;
+    std::unordered_map<int128, std::unique_ptr<Chunk>> tempArea;
+    std::unordered_map<int128, Chunk*> chunkIndex;
+    std::unordered_map<int128, Page> pageCache;
 
-    class Pointer {
-        friend class Heap;
+    Chunk* getChunk(std_id_t appID, std_id_t chunkID);
 
-    private:
-        byte* heapPtr;
-
-        explicit Pointer(byte* heapPtr) : heapPtr(heapPtr) {}
-
-    public:
-        template<typename T>
-        inline
-        T read() { return *(T*) heapPtr; }
-
-        inline bool isNull() { return heapPtr == nullptr; }
-
-        void readBlockTo(byte* dst, int32 size);
-
-        void writeBlock(const byte* src, int32 size);
-    };
-
-    Pointer getSizePointer(std_id_t appID, std_id_t chunkID);
-
-    Pointer newChunk(std_id_t appID, std_id_t id, int32 size);
-
-    Pointer newTransientChunk();
-
-    void saveChunk(Pointer sizePtr);
-
-    void freeChunk(Pointer sizePtr);
+    Chunk* newChunk(std_id_t appID, std_id_t id, int32 size);
 
 public:
 
@@ -108,7 +83,7 @@ public:
             };
 
 
-            Heap::Pointer heapLocation;
+            Chunk::Pointer heapLocation;
             int32 size;
 
         private:
@@ -120,13 +95,11 @@ public:
             bool add(int16_t version);
 
         public:
-            AccessBlock(Pointer heapLocation, int32 size, bool writable);
+            AccessBlock(Chunk::Pointer heapLocation, int32 size, bool writable);
 
             AccessBlock(const AccessBlock&) = delete;
 
             [[nodiscard]] int32 getSize() const { return size; }
-
-            Pointer getHeapPointer() { return heapLocation; }
 
             template<typename T>
             inline
@@ -156,26 +129,18 @@ public:
         int16_t currentVersion = 0;
 
         typedef std::unordered_map<int32, AccessBlock> AccessTableMap;
-        typedef std::unordered_map<short_id_t, AccessTableMap> ChunkMap32;
         typedef std::unordered_map<std_id_t, AccessTableMap> ChunkMap64;
-        typedef std::unordered_map<std_id_t, std::pair<ChunkMap32, ChunkMap64>> AppMap;
+        typedef std::unordered_map<std_id_t, ChunkMap64> AppMap;
 
         AccessTableMap* accessTable = nullptr;
-        ChunkMap64* chunks64 = nullptr;
-        ChunkMap32* chunks32 = nullptr;
+        ChunkMap64* chunks = nullptr;
         AppMap appsAccessMaps;
 
-        Modifier(Heap* parent) : parent(parent) {}
+        explicit Modifier(Heap* parent) : parent(parent) {}
 
-        void defineAccessBlock(Pointer heapLocation,
-                               std_id_t app, short_id_t chunk, int32 offset,
-                               int32 size, bool writable);
-
-        void defineAccessBlock(Pointer heapLocation,
+        void defineAccessBlock(Chunk::Pointer heapLocation,
                                std_id_t app, std_id_t chunk, int32 offset,
                                int32 size, bool writable);
-
-        void writeTable(AccessTableMap& table);
 
     public:
         static const int sizeCell = -4;
@@ -211,6 +176,10 @@ public:
     Modifier* initSession(std_id_t calledApp);
 
     Modifier* initSession(const std::vector<AppMemAccess>& memAccessList);
+
+    void saveChunk(std_id_t appID, std_id_t id);
+
+    void freeChunk(std_id_t appID, std_id_t id);
 };
 
 } // namespace ascee

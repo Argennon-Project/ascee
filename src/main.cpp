@@ -16,9 +16,8 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include <thread>
-#include "loader/AppLoader.h"
-
-#include "Executor.h"
+#include <loader/AppLoader.h>
+#include <executor/Executor.h>
 
 using namespace ascee;
 using namespace std;

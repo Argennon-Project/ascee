@@ -34,11 +34,25 @@ typedef double float64;
 typedef __float128 float128;
 typedef uint32_t short_id_t;
 typedef uint64_t std_id_t;
-typedef __uint128_t full_id_t;
+typedef struct FullID full_id_t;
 typedef struct String string_t;
 typedef struct StringBuffer string_buffer;
 
 typedef int (* dispatcher_ptr_t)(string_t request);
+
+struct FullID {
+    __int128_t id;
+
+#ifdef __cplusplus
+
+    FullID(__int128_t id) : id(id) {} // NOLINT(google-explicit-constructor)
+
+    FullID(std_id_t high, std_id_t low) { id = __int128_t(high) << 64 | low; }
+
+    operator __int128_t() const { return id; } // NOLINT(google-explicit-constructor)
+
+#endif
+};
 
 /// argc strings are not null-terminated. However, usually there is a null at the end. `length` is the number of
 /// bytes without considering any null bytes at the end.

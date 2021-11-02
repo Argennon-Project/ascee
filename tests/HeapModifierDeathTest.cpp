@@ -23,6 +23,8 @@
 #include "heap/Heap.h"
 
 using namespace ascee;
+using Pointer = ascee::Chunk::Pointer;
+
 
 class HeapModifierDeathTest : public ::testing::Test {
 protected:
@@ -31,27 +33,28 @@ protected:
 
 public:
     HeapModifierDeathTest() {
+
         // appID = 1
-        modifier.defineAccessBlock(ascee::Heap::Pointer(tempHeap),
+        modifier.defineAccessBlock(Pointer(tempHeap),
                                    1, short_id_t(10), 100,
                                    8, false);
-        modifier.defineAccessBlock(ascee::Heap::Pointer(tempHeap + 8),
+        modifier.defineAccessBlock(Pointer(tempHeap + 8),
                                    1, short_id_t(10), 108,
                                    16, true);
-        modifier.defineAccessBlock(ascee::Heap::Pointer(tempHeap + 50),
+        modifier.defineAccessBlock(Pointer(tempHeap + 50),
                                    1, short_id_t(11), 100,
                                    8, true);
-        modifier.defineAccessBlock(ascee::Heap::Pointer(tempHeap + 58),
+        modifier.defineAccessBlock(Pointer(tempHeap + 58),
                                    1, short_id_t(11), 120,
                                    8, true);
-        modifier.defineAccessBlock(ascee::Heap::Pointer(tempHeap + 100),
-                                   1, std_id_t(10), 100,
+        modifier.defineAccessBlock(Pointer(tempHeap + 100),
+                                   1, std_id_t(100), 100,
                                    8, true);
         // appID = 2
-        modifier.defineAccessBlock(ascee::Heap::Pointer(tempHeap + 150),
+        modifier.defineAccessBlock(Pointer(tempHeap + 150),
                                    2, short_id_t(10), 100,
                                    8, true);
-        modifier.defineAccessBlock(ascee::Heap::Pointer(tempHeap + 158),
+        modifier.defineAccessBlock(Pointer(tempHeap + 158),
                                    2, short_id_t(11), 100,
                                    8, true);
 
@@ -74,7 +77,7 @@ TEST_F(HeapModifierDeathTest, SimpleReadWrite) {
     auto got = modifier.load<int64>(100);
     EXPECT_EQ(got, 0x102020201020202) << "got: 0x" << std::hex << got;
 
-    modifier.loadChunk(std_id_t(10));
+    modifier.loadChunk(std_id_t(100));
     modifier.store<int64>(100, 123456789);
     got = modifier.load<int64>(100);
     EXPECT_EQ(got, 123456789);
@@ -102,7 +105,7 @@ TEST_F(HeapModifierDeathTest, SimpleReadWrite) {
     EXPECT_EQ(got, 444555666777888);
 
     modifier.loadContext(1);
-    modifier.loadChunk(std_id_t(10));
+    modifier.loadChunk(std_id_t(100));
     got = modifier.load<int64>(100);
     EXPECT_EQ(got, 123456789);
 }

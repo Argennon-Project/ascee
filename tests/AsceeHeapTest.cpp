@@ -18,6 +18,8 @@
 #include <gtest/gtest.h>
 #include <argc/types.h>
 
+#define private public
+
 #include "heap/Heap.h"
 
 using namespace ascee;
@@ -26,7 +28,10 @@ class AsceeHeapTest : public ::testing::Test {
 protected:
     Heap heap;
 public:
-
+    AsceeHeapTest() {
+        heap.chunkIndex = {{full_id_t(1, 10), nullptr},
+                           {full_id_t(1, 15), nullptr}};
+    }
 };
 
 TEST_F(AsceeHeapTest, SimpleReadWrite) {

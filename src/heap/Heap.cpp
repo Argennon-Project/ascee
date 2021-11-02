@@ -17,9 +17,12 @@
 
 #include <cassert>
 #include "Heap.h"
+#include "Chunk.h"
+#include "Page.h"
 
 #define MAX_TRANSIENT_CHUNK_SIZE 8*1024
 
+#define TRANSIENT_ID 0
 const int ascee::Heap::Modifier::sizeCell;
 const int ascee::Heap::Modifier::maxNewSizeCell;
 
@@ -30,7 +33,7 @@ bool isLittleEndian() {
     byte buf[16] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
 
     int128 x = *(int128*) buf;
-    auto xl = (int64) x;
+    auto xl = int64(x);
     auto xh = int64(x >> 64);
     if (xl != 0x706050403020100) return false;
     if (xh != 0xf0e0d0c0b0a0908) return false;
@@ -47,31 +50,34 @@ Heap::Modifier* Heap::initSession(std_id_t calledApp) {
 
 Heap::Modifier* Heap::initSession(const std::vector<AppMemAccess>& memAccessList) {
     auto* ret = new Modifier(this);
+    tempArea.clear();
 
     for (const auto& appAccessList: memAccessList) {
-        std_id_t app = appAccessList.appID;
+        std_id_t appID = appAccessList.appID;
         for (const auto& chunkAccessList: appAccessList.chunks) {
-            std_id_t chunk = chunkAccessList.id;
+            std_id_t chunkID = chunkAccessList.id;
 
             // chunkID[->positive integer]
             // maxNewSize == -1 means that no positive integer was provided
             int32 maxNewSize = chunkAccessList.maxNewSize;
 
-            Pointer chunkSizePtr = getSizePointer(app, chunk);
+            Chunk* chunk = getChunk(appID, chunkID);
 
             int32 chunkSize;
-            if (chunkSizePtr.isNull()) {
+            if (chunk == nullptr) {
                 if (maxNewSize > 0) {
-                    chunkSizePtr = newChunk(app, chunk, maxNewSize);
-                } else {
-                    chunkSizePtr = newTransientChunk();
+                    chunk = newChunk(appID, chunkID, maxNewSize);
+                } else if (maxNewSize == 0) {
+                    chunk = Chunk::transient;
                     // We make sure that a transient chunk is not resizable.
                     // maxNewSize == -2 means that the chunk is transient
                     maxNewSize = -2;
+                } else {
+                    throw std::runtime_error("chunk not found");
                 }
-                chunkSize = chunkSizePtr.read<int32>();
+                chunkSize = chunk->getsize();
             } else {
-                chunkSize = chunkSizePtr.read<int32>();
+                chunkSize = chunk->getsize();
                 assert(chunkSize > 0);
                 // Currently, we don't allow expanding chunks.
                 if (maxNewSize > chunkSize) maxNewSize = chunkSize;
@@ -79,10 +85,14 @@ Heap::Modifier* Heap::initSession(const std::vector<AppMemAccess>& memAccessList
 
             // maxNewSize == 0 means that the chunk will be deleted (likely)
             if (maxNewSize >= 0) {
-                ret->defineAccessBlock(chunkSizePtr, app, chunk, Modifier::sizeCell, 4, true);
-                ret->defineAccessBlock(Pointer(nullptr), app, chunk, Modifier::maxNewSizeCell, maxNewSize, false);
+                // resizable chunk
+                ret->defineAccessBlock(chunk->getSizePointer(), appID, chunkID, Modifier::sizeCell, sizeof(chunkSize),
+                                       true);
+                ret->defineAccessBlock(Chunk::null, appID, chunkID, Modifier::maxNewSizeCell, maxNewSize, false);
             } else {
-                ret->defineAccessBlock(chunkSizePtr, app, chunk, Modifier::sizeCell, 4, false);
+                // non-resizable chunk
+                ret->defineAccessBlock(chunk->getSizePointer(), appID, chunkID, Modifier::sizeCell, sizeof(chunkSize),
+                                       false);
             }
 
             for (const auto& blockAccessList: chunkAccessList.accessBlocks) {
@@ -90,21 +100,19 @@ Heap::Modifier* Heap::initSession(const std::vector<AppMemAccess>& memAccessList
                 bool isWritable = blockAccessList.writable;
 
                 int32 bound;
-                Pointer startPtr(nullptr);
                 if (chunkSize == 0) {
-                    if (maxNewSize == -2) {
+                    if (chunk->isTransient()) {
                         bound = MAX_TRANSIENT_CHUNK_SIZE;
                     } else {
                         bound = maxNewSize;
-                        startPtr = Pointer(chunkSizePtr.heapPtr + 4 + offset);
                     }
                 } else {
                     bound = chunkSize;
-                    startPtr = Pointer(chunkSizePtr.heapPtr + 4 + offset);
                 }
 
                 if (offset + accessBlockSize > bound) throw std::out_of_range("out of chunk");
-                ret->defineAccessBlock(startPtr, app, chunk, offset, accessBlockSize, isWritable);
+                ret->defineAccessBlock(chunk->getContentPointer(offset), appID, chunkID, offset, accessBlockSize,
+                                       isWritable);
             }
         }
     }
@@ -112,45 +120,28 @@ Heap::Modifier* Heap::initSession(const std::vector<AppMemAccess>& memAccessList
     return ret;
 }
 
-
-Heap::Pointer Heap::getSizePointer(std_id_t appID, std_id_t chunkID) {
-    byte* chunkStart;
+Chunk* Heap::getChunk(std_id_t appID, std_id_t chunkID) {
     try {
-        chunkStart = chunkIndex.at(chunkID);
+        return chunkIndex.at(full_id_t(appID, chunkID));
     } catch (const std::out_of_range&) {
-        chunkStart = nullptr;
+        throw std::runtime_error("missing proof of non-existence");
     }
-    if (chunkStart == nullptr) {
-        // verify the chunk really is absent
-    }
-    return Heap::Pointer(chunkStart);
 }
 
-Heap::Pointer Heap::newTransientChunk() {
-    return Heap::Pointer(zero32);
+Chunk* Heap::newChunk(std_id_t appID, std_id_t id, int32 size) {
+    auto* result = new Chunk(size);
+    tempArea.emplace(full_id_t(appID, id), result);
+    return result;
 }
 
-Heap::Pointer Heap::newChunk(std_id_t appID, std_id_t id, int32 size) {
-    // memory should be zeroed;
-    *(std_id_t*) freeArea = appID;
-    freeArea += sizeof(std_id_t);
-
-    *(std_id_t*) freeArea = id;
-    freeArea += sizeof(std_id_t);
-    auto start = freeArea;
-
-    // size of a new chunk should be initialized to zero.
-    *(int32*) freeArea = 0;
-    freeArea += sizeof(int32) + size;
-
-    return Heap::Pointer(start);
+void Heap::saveChunk(std_id_t appID, std_id_t id) {
+    auto newID = full_id_t(appID, id);
+    Chunk* newChunk = tempArea.at(full_id_t(appID, id)).release();
+    pageCache[newID].addNewChunk(appID, id, newChunk);
+    chunkIndex[newID] = newChunk;
 }
 
-void ascee::Heap::saveChunk(Heap::Pointer sizePtr) {
-    chunkIndex[*(sizePtr.heapPtr - 8)] = sizePtr.heapPtr;
-}
-
-void ascee::Heap::freeChunk(Heap::Pointer sizePtr) {
-    chunkIndex.erase(*(sizePtr.heapPtr - 8));
+void Heap::freeChunk(std_id_t appID, std_id_t id) {
+    chunkIndex[full_id_t(appID, id)] = nullptr;
 }
 

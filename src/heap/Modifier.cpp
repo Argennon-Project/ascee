@@ -39,71 +39,54 @@ void Heap::Modifier::restoreVersion(int16_t version) {
 }
 
 void Heap::Modifier::loadChunk(short_id_t chunkID) {
-    accessTable = &chunks32->at(chunkID);
+    loadChunk(std_id_t(chunkID));
 }
 
 void Heap::Modifier::loadChunk(std_id_t chunkID) {
-    accessTable = &chunks64->at(chunkID);
+    accessTable = &chunks->at(chunkID);
 }
 
 void Heap::Modifier::loadContext(std_id_t appID) {
     // When `appID` does not exist in the map, this function should not throw an exception. Smart contracts do not
     // call this function directly and failing can be problematic for `invoke_dispatcher` function.
-    chunks32 = &appsAccessMaps[appID].first;
-    chunks64 = &appsAccessMaps[appID].second;
+    chunks = &appsAccessMaps[appID];
     accessTable = nullptr;
 }
 
-void Heap::Modifier::defineAccessBlock(Pointer heapLocation,
-                                       std_id_t app, short_id_t chunk, int32 offset,
-                                       int32 size, bool writable) {
-    appsAccessMaps[app].first[chunk].emplace(std::piecewise_construct,
-                                             std::forward_as_tuple(offset),
-                                             std::forward_as_tuple(heapLocation, size, writable));
-}
-
-void Heap::Modifier::defineAccessBlock(Pointer heapLocation,
+void Heap::Modifier::defineAccessBlock(Chunk::Pointer heapLocation,
                                        std_id_t app, std_id_t chunk, int32 offset,
                                        int32 size, bool writable) {
-    appsAccessMaps[app].second[chunk].emplace(std::piecewise_construct,
-                                              std::forward_as_tuple(offset),
-                                              std::forward_as_tuple(heapLocation, size, writable));
+    appsAccessMaps[app][chunk].emplace(std::piecewise_construct,
+                                       std::forward_as_tuple(offset),
+                                       std::forward_as_tuple(heapLocation, size, writable));
 }
 
 void Heap::Modifier::writeToHeap() {
     if (currentVersion == 0) return;
 
     for (auto& appMap: appsAccessMaps) {
-        for (auto& chunk32Map: appMap.second.first) {
-            writeTable(chunk32Map.second);
-        }
+        for (auto& chunk64Map: appMap.second) {
+            auto& table = chunk64Map.second;
+            auto size = table.at(sizeCell).read<int32>(currentVersion);
+            try {
+                auto maxNewSize = table.at(maxNewSizeCell).getSize();
+                size = std::min(size, maxNewSize);
+                table.at(sizeCell).write(currentVersion, size);
+                if (size > 0) {
+                    parent->saveChunk(appMap.first, chunk64Map.first);
+                } else {
+                    parent->freeChunk(appMap.first, chunk64Map.first);
+                }
+            } catch (const std::out_of_range&) {}
 
-        for (auto& chunk64Map: appMap.second.second) {
-            writeTable(chunk64Map.second);
+            if (size > 0) {
+                for (auto& block: table) {
+                    block.second.wrToHeap(currentVersion);
+                }
+            }
         }
     }
     parent = nullptr;
-}
-
-void Heap::Modifier::writeTable(AccessTableMap& table) {
-    auto size = table.at(sizeCell).read<int32>(currentVersion);
-
-    try {
-        auto maxNewSize = table.at(maxNewSizeCell).getSize();
-        size = std::min(size, maxNewSize);
-        table.at(sizeCell).write(currentVersion, size);
-        if (size > 0) {
-            parent->saveChunk(table.at(sizeCell).getHeapPointer());
-        } else {
-            parent->freeChunk(table.at(sizeCell).getHeapPointer());
-        }
-    } catch (const std::out_of_range&) {}
-
-    if (size > 0) {
-        for (auto& block: table) {
-            block.second.wrToHeap(currentVersion);
-        }
-    }
 }
 
 void Heap::Modifier::updateChunkSize(int32 newSize) {
@@ -143,6 +126,7 @@ void Heap::Modifier::AccessBlock::wrToHeap(int16_t version) {
     }
 }
 
-Heap::Modifier::AccessBlock::AccessBlock(Pointer heapLocation, int32 size, bool writable) : heapLocation(heapLocation),
-                                                                                            size(size),
-                                                                                            writable(writable) {}
+Heap::Modifier::AccessBlock::AccessBlock(Chunk::Pointer heapLocation, int32 size, bool writable) : heapLocation(
+        heapLocation),
+                                                                                                   size(size),
+                                                                                                   writable(writable) {}
