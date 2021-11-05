@@ -69,14 +69,14 @@ T scan(string_t input, string_t pattern, string_t* rest) {
     int i = 0, j = 0;
     while (i < input.length && j < pattern.length) {
         if (!std::isspace(input.content[i])) {
-            if (std::isspace(pattern.content[j])) j++;
+            if (std::isspace(pattern.content[j])) ++j;
             else if (input.content[i] == pattern.content[j]) {
-                i++;
-                j++;
+                ++i;
+                ++j;
             } else break;
         } else if (std::isspace(pattern.content[j])) {
             if (input.content[i] == pattern.content[j]) i++;
-            else j++;
+            else ++j;
         } else break;
     }
     T ret{};

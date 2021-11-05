@@ -11,7 +11,7 @@ add_subdirectory(tests)
 add_library(app1 SHARED app1.c)
 add_library(app2 SHARED app2.c)
 
-add_library(argcrt SHARED src/argc/runtime/string.cpp src/argc/runtime/invoke.cpp src/heap/Pointer.cpp src/heap/Heap.h src/heap/Modifier.cpp src/argc/runtime/heapAccess.cpp src/heap/Heap.cpp src/argc/runtime/float.cpp src/executor/FailureManager.cpp src/executor/FailureManager.h src/heap/Chunk.cpp src/heap/Chunk.h src/heap/Page.cpp src/heap/Page.h)
+add_library(argcrt SHARED src/argc/runtime/string.cpp src/argc/runtime/invoke.cpp src/heap/Pointer.cpp src/heap/Heap.h src/heap/Modifier.cpp src/argc/runtime/heapAccess.cpp src/heap/Heap.cpp src/argc/runtime/float.cpp src/executor/FailureManager.cpp src/executor/FailureManager.h src/heap/Chunk.cpp src/heap/Chunk.h src/heap/Page.cpp src/heap/Page.h src/heap/IdentifierTrie.cpp src/heap/IdentifierTrie.h)
 target_link_libraries(argcrt pthread rt stdc++)
 
 add_executable(ascee src/main.cpp src/loader/AppLoader.cpp src/loader/AppLoader.h include/argc/types.h src/executor/ThreadCpuTimer.cpp src/executor/ThreadCpuTimer.h src/executor/Executor.cpp src/executor/Executor.h)
