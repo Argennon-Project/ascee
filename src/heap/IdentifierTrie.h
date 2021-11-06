@@ -28,8 +28,9 @@ namespace ascee {
 
 template<typename T, int height = sizeof(T)>
 class IdentifierTrie {
-private:
     static_assert(height <= sizeof(T));
+    static_assert(std::is_unsigned<T>::value);
+private:
     T boundary[height] = {};
 
 public:
@@ -40,28 +41,33 @@ public:
         }
     }
 
-    int readIdentifier(T& id, const byte* binary, int maxLength = height) {
+    int readIdentifier(const byte* binary, T& id, int maxLength = height) {
         id = 0;
-        maxLength = maxLength < height ? maxLength : height;
+        if (maxLength > height) maxLength = height;
         for (int i = 0; i < maxLength; ++i) {
             id |= T(binary[i]) << ((sizeof(T) - i - 1) << 3);
-            printf("%lx <> %lx\n", id, boundary[i]);
             if (id < boundary[i]) return i + 1;
         }
         id = 0;
-        throw std::out_of_range("invalid identifier");
+        throw std::out_of_range("readIdentifier: invalid identifier");
     }
 
-    int parseIdentifier(std::string symbolicRep, T& id) {
-        // returned array by data is null-terminated after C++11
+    void parseIdentifier(std::string symbolicRep, T& id) {
         byte buffer[height];
+        // returned array by data() is null-terminated after C++11
         char* token = strtok(symbolicRep.data(), ".");
         int i = 0;
-        while (i < height && token != nullptr) {
-            buffer[i++] = std::stoi(token, nullptr, 0);
+        while (token != nullptr) {
+            if (i == height) throw std::invalid_argument("parseIdentifier: input too long");
+
+            auto component = std::stoul(token, nullptr, 0);
+            if (component > 255) throw std::overflow_error("identifier component is larger than 255");
+
+            buffer[i++] = component;
             token = strtok(nullptr, ".");
         }
-        return readIdentifier(id, buffer, i);
+        int n = readIdentifier(buffer, id, i);
+        if (n != i) throw std::invalid_argument("parseIdentifier: input too long");
     }
 };
 
