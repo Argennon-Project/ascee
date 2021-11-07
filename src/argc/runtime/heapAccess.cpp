@@ -26,6 +26,7 @@ int64 loadInt64(int32 offset) {
         return Executor::getSession()->heapModifier->load<int64>(offset);
     } catch (const std::out_of_range&) {
         raise(SIGSEGV);
+        throw std::runtime_error("control reached unexpected area");
     }
 }
 

@@ -20,7 +20,7 @@
 
 using namespace ascee;
 
-TEST(AsceeIdentifierTest, SimpleTrie) {
+TEST(AsceeIdentifiersTest, SimpleTrie) {
     IdentifierTrie<uint64_t, 4> t({0x25, 0x25aa, 0x300000, 0xa1234560});
 
     uint64_t id;
@@ -94,7 +94,7 @@ TEST(AsceeIdentifierTest, SimpleTrie) {
     EXPECT_THROW(t.readIdentifier(a2, id, 0), std::out_of_range);
 }
 
-TEST(AsceeIdentifierTest, DifferentTries) {
+TEST(AsceeIdentifiersTest, DifferentTries) {
     IdentifierTrie<uint32_t, 0> t({});
     uint32_t id, n;
     byte b1[] = {0x0};;
@@ -127,7 +127,7 @@ TEST(AsceeIdentifierTest, DifferentTries) {
     EXPECT_EQ(n, 3);
 }
 
-TEST(AsceeIdentifierTest, ParseSymbolic) {
+TEST(AsceeIdentifiersTest, ParseSymbolic) {
     IdentifierTrie<uint8_t, 1> t({0x10});
 
     uint8_t id;
@@ -165,8 +165,8 @@ TEST(AsceeIdentifierTest, ParseSymbolic) {
     t2.parseIdentifier("16  .   17", id2);
     EXPECT_EQ(id2, 0x10110000);
 
-    t2.parseIdentifier("0x11...0x0", id2);
-    EXPECT_EQ(id2, 0x11000000);
+    t2.parseIdentifier("0x11...0x2", id2);
+    EXPECT_EQ(id2, 0x11020000);
 
     EXPECT_THROW(t2.parseIdentifier("420", id2), std::overflow_error);
 

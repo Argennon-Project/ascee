@@ -21,8 +21,8 @@
 #include "Page.h"
 
 #define MAX_TRANSIENT_CHUNK_SIZE 8*1024
+#define MAX_CHUNK_SIZE 32*1024
 
-#define TRANSIENT_ID 0
 const int ascee::Heap::Modifier::sizeCell;
 const int ascee::Heap::Modifier::maxNewSizeCell;
 
@@ -31,7 +31,6 @@ using namespace ascee;
 static
 bool isLittleEndian() {
     byte buf[16] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
-
     int128 x = *(int128*) buf;
     auto xl = int64(x);
     auto xh = int64(x >> 64);
@@ -60,59 +59,55 @@ Heap::Modifier* Heap::initSession(const std::vector<AppMemAccess>& memAccessList
             // chunkID[->positive integer]
             // maxNewSize == -1 means that no positive integer was provided
             int32 maxNewSize = chunkAccessList.maxNewSize;
+            if (maxNewSize > MAX_CHUNK_SIZE) throw std::invalid_argument("max chunk size exceeded");
 
             Chunk* chunk = getChunk(appID, chunkID);
 
             int32 chunkSize;
             if (chunk == nullptr) {
                 if (maxNewSize > 0) {
-                    chunk = newChunk(appID, chunkID, maxNewSize);
+                    chunk = newTempChunk(appID, chunkID, maxNewSize);
                 } else if (maxNewSize == 0) {
                     chunk = Chunk::transient;
                     // We make sure that a transient chunk is not resizable.
                     // maxNewSize == -2 means that the chunk is transient
                     maxNewSize = -2;
                 } else {
-                    throw std::runtime_error("chunk not found");
+                    throw std::out_of_range("chunk not found");
                 }
                 chunkSize = chunk->getsize();
             } else {
                 chunkSize = chunk->getsize();
                 assert(chunkSize > 0);
-                // Currently, we don't allow expanding chunks.
-                if (maxNewSize > chunkSize) maxNewSize = chunkSize;
+                // We inform the chunk to allocate more space
+                if (maxNewSize > chunkSize) {
+                    chunk->expandSpace(maxNewSize - chunkSize);
+                }
             }
 
             // maxNewSize == 0 means that the chunk will be deleted (likely)
             if (maxNewSize >= 0) {
                 // resizable chunk
-                ret->defineAccessBlock(chunk->getSizePointer(), appID, chunkID, Modifier::sizeCell, sizeof(chunkSize),
-                                       true);
-                ret->defineAccessBlock(Chunk::null, appID, chunkID, Modifier::maxNewSizeCell, maxNewSize, false);
+                ret->defineAccessBlock(chunk->getSizePointer(), appID, chunkID, Modifier::sizeCell,
+                                       sizeof(chunkSize), true);
+                ret->defineAccessBlock(Chunk::null, appID, chunkID, Modifier::maxNewSizeCell,
+                                       maxNewSize, false);
             } else {
                 // non-resizable chunk
-                ret->defineAccessBlock(chunk->getSizePointer(), appID, chunkID, Modifier::sizeCell, sizeof(chunkSize),
-                                       false);
+                ret->defineAccessBlock(chunk->getSizePointer(), appID, chunkID, Modifier::sizeCell,
+                                       sizeof(chunkSize), false);
             }
 
             for (const auto& blockAccessList: chunkAccessList.accessBlocks) {
                 int32 offset = blockAccessList.offset, accessBlockSize = blockAccessList.size;
                 bool isWritable = blockAccessList.writable;
 
-                int32 bound;
-                if (chunkSize == 0) {
-                    if (chunk->isTransient()) {
-                        bound = MAX_TRANSIENT_CHUNK_SIZE;
-                    } else {
-                        bound = maxNewSize;
-                    }
-                } else {
-                    bound = chunkSize;
-                }
+                int32 bound = std::max(chunkSize, maxNewSize);;
+                if (maxNewSize == -2) bound = MAX_TRANSIENT_CHUNK_SIZE;
 
                 if (offset + accessBlockSize > bound) throw std::out_of_range("out of chunk");
-                ret->defineAccessBlock(chunk->getContentPointer(offset), appID, chunkID, offset, accessBlockSize,
-                                       isWritable);
+                ret->defineAccessBlock(chunk->getContentPointer(offset), appID, chunkID, offset,
+                                       accessBlockSize, isWritable);
             }
         }
     }
@@ -128,7 +123,7 @@ Chunk* Heap::getChunk(std_id_t appID, std_id_t chunkID) {
     }
 }
 
-Chunk* Heap::newChunk(std_id_t appID, std_id_t id, int32 size) {
+Chunk* Heap::newTempChunk(std_id_t appID, std_id_t id, int32 size) {
     auto* result = new Chunk(size);
     tempArea.emplace(full_id_t(appID, id), result);
     return result;
@@ -137,7 +132,7 @@ Chunk* Heap::newChunk(std_id_t appID, std_id_t id, int32 size) {
 void Heap::saveChunk(std_id_t appID, std_id_t id) {
     auto newID = full_id_t(appID, id);
     Chunk* newChunk = tempArea.at(full_id_t(appID, id)).release();
-    pageCache[newID].addNewChunk(appID, id, newChunk);
+    pageCache.emplace(newID, newChunk);
     chunkIndex[newID] = newChunk;
 }
 

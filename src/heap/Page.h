@@ -24,8 +24,12 @@
 namespace ascee {
 
 class Page {
+private:
+    std::unique_ptr<Chunk> native;
 public:
-    void addNewChunk(std_id_t appID, std_id_t chunkID, Chunk* pChunk) {};
+    explicit Page(Chunk* nativeChunk) : native(nativeChunk) {};
+
+    void addNewChunk(std_id_t appID, std_id_t chunkID, Chunk* migrant) {};
 
     byte* getDigest();
 

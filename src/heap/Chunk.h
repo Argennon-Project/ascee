@@ -61,6 +61,8 @@ public:
 
     int32 getsize() const;
 
+    void expandSpace(int extra);
+
     bool isTransient() const;
 
     Pointer getSizePointer();

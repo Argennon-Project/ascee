@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+#include <cstring>
 #include "Chunk.h"
 
 using namespace ascee;
@@ -22,7 +23,11 @@ using namespace ascee;
 const Chunk::Pointer Chunk::null = Chunk::Pointer(nullptr);
 Chunk* const Chunk::transient = new Chunk();
 
-Chunk::Chunk(int size) : content(new byte[size]) {}
+/// mew chunks always have a size of zero. Their size usually should be changed through the pointer obtainable by
+/// getSizePointer function.
+/// The chunk will be zero initialized. This is important to make sure that smart contracts
+/// behave deterministically and validators will agree on the result of executing a smart contact.
+Chunk::Chunk(int size) : content(new byte[size]()) {}
 
 int32 Chunk::getsize() const {
     return chunkSize;
@@ -38,4 +43,11 @@ Chunk::Pointer Chunk::getContentPointer(int32 offset) {
 
 Chunk::Pointer Chunk::getSizePointer() {
     return Pointer(reinterpret_cast<byte*>(&chunkSize));
+}
+
+void Chunk::expandSpace(int extra) {
+    // check new size
+    auto* newContent = new byte[chunkSize + extra];
+    memcpy(newContent, content.get(), chunkSize);
+    content = std::unique_ptr<byte[]>(newContent);
 }

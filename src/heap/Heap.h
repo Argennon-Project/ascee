@@ -53,11 +53,9 @@ private:
 
     Chunk* getChunk(std_id_t appID, std_id_t chunkID);
 
-    Chunk* newChunk(std_id_t appID, std_id_t id, int32 size);
+    Chunk* newTempChunk(std_id_t appID, std_id_t id, int32 size);
 
 public:
-
-
     class Modifier {
         friend class Heap;
 
@@ -77,7 +75,7 @@ public:
                 }
 
                 ~Version() {
-                    printf("deleteeeed\n");
+                    printf("deleted\n");
                     delete[] content;
                 }
             };
