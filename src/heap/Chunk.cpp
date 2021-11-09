@@ -18,16 +18,17 @@
 #include <cstring>
 #include "Chunk.h"
 
+#define MAX_CHUNK_SIZE 32*1024
+
 using namespace ascee;
 
-const Chunk::Pointer Chunk::null = Chunk::Pointer(nullptr);
-Chunk* const Chunk::transient = new Chunk();
-
-/// mew chunks always have a size of zero. Their size usually should be changed through the pointer obtainable by
+/// new chunks always have a size of zero. Their size usually should be changed through the pointer obtainable by
 /// getSizePointer function.
 /// The chunk will be zero initialized. This is important to make sure that smart contracts
 /// behave deterministically and validators will agree on the result of executing a smart contact.
-Chunk::Chunk(int size) : content(new byte[size]()) {}
+Chunk::Chunk(int size) : capacity(size), content(new byte[size]()) {
+    if (size > MAX_CHUNK_SIZE) throw std::out_of_range("max chunk size exceeded");
+}
 
 int32 Chunk::getsize() const {
     return chunkSize;
@@ -46,8 +47,14 @@ Chunk::Pointer Chunk::getSizePointer() {
 }
 
 void Chunk::expandSpace(int extra) {
-    // check new size
-    auto* newContent = new byte[chunkSize + extra];
+    if (chunkSize + extra <= capacity) return;
+
+    if (chunkSize + extra > MAX_CHUNK_SIZE) throw std::out_of_range("can't expand beyond max chunk size");
+
+    auto newCapacity = std::min(MAX_CHUNK_SIZE, 2 * (chunkSize + extra));
+
+    auto* newContent = new byte[newCapacity];
     memcpy(newContent, content.get(), chunkSize);
     content = std::unique_ptr<byte[]>(newContent);
+    capacity = newCapacity;
 }

@@ -18,9 +18,6 @@
 #include <cassert>
 #include "Heap.h"
 #include "Chunk.h"
-#include "Page.h"
-
-#define MAX_CHUNK_SIZE 32*1024
 
 using namespace ascee;
 
@@ -55,7 +52,6 @@ Heap::Modifier* Heap::initSession(const std::vector<AppMemAccess>& memAccessList
             // chunkID[->positive integer]
             // maxNewSize == -1 means that no positive integer was provided
             int32 maxNewSize = chunkAccessList.maxNewSize;
-            if (maxNewSize > MAX_CHUNK_SIZE) throw std::invalid_argument("max chunk size exceeded");
 
             Chunk* chunk = getChunk(appID, chunkID);
 

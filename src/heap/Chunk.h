@@ -49,12 +49,9 @@ public:
 private:
     std::unique_ptr<byte[]> content;
     int32 chunkSize = 0;
+    int32 capacity = 0;
 
 public:
-    static Chunk* const transient;
-
-    static const Pointer null;
-
     Chunk() noexcept = default;
 
     explicit Chunk(int32 size);

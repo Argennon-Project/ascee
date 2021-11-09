@@ -136,8 +136,8 @@ TEST_F(AsceeHeapDeathTest, SimpleChunkCreation) {
     resetHeap();
 
     EXPECT_THROW(
-            heap.initSession({{2, {{10, 2 * 1024 * 1024, {{1, 10, false}}},}},}),
-            std::invalid_argument
+    heap.initSession({{2, {{10, 2 * 1024 * 1024, {{1, 10, false}}},}},}),
+    std::out_of_range
     );
     resetHeap();
 
