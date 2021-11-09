@@ -53,7 +53,7 @@ private:
 
     Chunk* getChunk(std_id_t appID, std_id_t chunkID);
 
-    Chunk* newTempChunk(std_id_t appID, std_id_t id, int32 size);
+    Chunk* newChunk(std_id_t appID, std_id_t id, int32 size);
 
 public:
     class Modifier {
@@ -127,23 +127,34 @@ public:
         int16_t currentVersion = 0;
 
         typedef std::unordered_map<int32, AccessBlock> AccessTableMap;
-        typedef std::unordered_map<std_id_t, AccessTableMap> ChunkMap64;
+
+        struct ChunkInfo {
+            AccessTableMap accessTable;
+            AccessBlock size;
+            const int32 maxSize;
+
+            explicit ChunkInfo(Chunk::Pointer sizePtr, const int32 maxSize = -1) :
+                    size(sizePtr, sizeof(int32), maxSize >= 0),
+                    maxSize(maxSize) {}
+        };
+
+        typedef std::unordered_map<std_id_t, ChunkInfo> ChunkMap64;
         typedef std::unordered_map<std_id_t, ChunkMap64> AppMap;
 
         AccessTableMap* accessTable = nullptr;
+        ChunkInfo* currentChunk = nullptr;
         ChunkMap64* chunks = nullptr;
         AppMap appsAccessMaps;
 
         explicit Modifier(Heap* parent) : parent(parent) {}
+
+        void defineChunk(std_id_t ownerApp, std_id_t chunkID, Chunk::Pointer sizePtr, int32 maxSize = -1);
 
         void defineAccessBlock(Chunk::Pointer heapLocation,
                                std_id_t app, std_id_t chunk, int32 offset,
                                int32 size, bool writable);
 
     public:
-        static const int sizeCell = -4;
-        static const int maxNewSizeCell = -5;
-
         template<typename T>
         inline
         T load(int32 offset) { return accessTable->at(offset).read<T>(currentVersion); }
@@ -174,8 +185,6 @@ public:
     Modifier* initSession(std_id_t calledApp);
 
     Modifier* initSession(const std::vector<AppMemAccess>& memAccessList);
-
-    void saveChunk(std_id_t appID, std_id_t id);
 
     void freeChunk(std_id_t appID, std_id_t id);
 };

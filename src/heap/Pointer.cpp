@@ -18,6 +18,7 @@
 #include "Heap.h"
 #include <argc/types.h>
 #include <stdexcept>
+#include <cstring>
 
 using namespace ascee;
 
@@ -29,19 +30,7 @@ void copy(byte* dst, const byte* src) {
 
 static
 void smartCopy(byte* dst, const byte* src, int32 size) {
-    switch (size) {
-        case 8:
-            copy<int64>(dst, src);
-            break;
-        case 16:
-            copy<int128>(dst, src);
-            break;
-        case 4:
-            copy<int32>(dst, src);
-            break;
-        default:
-            throw std::runtime_error("not implemented.");
-    }
+    memcpy(dst, src, size);
 }
 
 void Chunk::Pointer::readBlockTo(byte* dst, int32 size) {
