@@ -41,57 +41,64 @@ Heap::Modifier* Heap::initSession(std_id_t calledApp) {
 }
 
 Heap::Modifier* Heap::initSession(const std::vector<AppMemAccess>& memAccessList) {
-    auto* ret = new Modifier(this);
-    tempArea.clear();
+    auto* result = new Modifier(this);
+    std::vector<std::pair<std_id_t, std_id_t>> newChunks;
 
-    for (const auto& appAccessList: memAccessList) {
-        std_id_t appID = appAccessList.appID;
-        for (const auto& chunkAccessList: appAccessList.chunks) {
-            std_id_t chunkID = chunkAccessList.id;
+    try {
+        for (const auto& appAccessList: memAccessList) {
+            std_id_t appID = appAccessList.appID;
+            for (const auto& chunkAccessList: appAccessList.chunks) {
+                std_id_t chunkID = chunkAccessList.id;
 
-            // chunkID[->positive integer]
-            // maxNewSize == -1 means that no positive integer was provided
-            int32 maxNewSize = chunkAccessList.maxNewSize;
+                // chunkID[->positive integer]
+                // maxNewSize == -1 means that no positive integer was provided
+                int32 maxNewSize = chunkAccessList.maxNewSize;
 
-            Chunk* chunk = getChunk(appID, chunkID);
+                Chunk* chunk = getChunk(appID, chunkID);
 
-            int32 chunkSize;
-            if (chunk == nullptr) {
-                if (maxNewSize >= 0) {
-                    chunk = newChunk(appID, chunkID, maxNewSize);
-                    chunkSize = 0;
+                int32 chunkSize;
+                if (chunk == nullptr) {
+                    if (maxNewSize > 0) {
+                        chunk = newChunk(appID, chunkID, maxNewSize);
+                        newChunks.emplace_back(appID, chunkID);
+                        chunkSize = 0;
+                    } else {
+                        throw std::out_of_range("chunk not found");
+                    }
                 } else {
-                    throw std::out_of_range("chunk not found");
+                    chunkSize = chunk->getsize();
+                    assert(chunkSize > 0);
+                    // We inform the chunk to allocate more space
+                    if (maxNewSize > chunkSize) {
+                        chunk->expandSpace(maxNewSize - chunkSize);
+                    }
                 }
-            } else {
-                chunkSize = chunk->getsize();
-                assert(chunkSize > 0);
-                // We inform the chunk to allocate more space
-                if (maxNewSize > chunkSize) {
-                    chunk->expandSpace(maxNewSize - chunkSize);
+
+                // maxNewSize == 0 means that the chunk will be deleted (likely)
+                // maxNewSize >= 0 means that chunk is resizable
+                // maxNewSize == -1 means that chunk is NOT resizable
+                // maxNewSize < -1 doesn't happen
+                result->defineChunk(appID, chunkID, chunk->getSizePointer(), maxNewSize);
+
+                for (const auto& blockAccessList: chunkAccessList.accessBlocks) {
+                    int32 offset = blockAccessList.offset, accessBlockSize = blockAccessList.size;
+                    bool isWritable = blockAccessList.writable;
+
+                    int32 bound = std::max(chunkSize, maxNewSize);;
+
+                    if (offset + accessBlockSize > bound) throw std::out_of_range("out of chunk");
+                    result->defineAccessBlock(chunk->getContentPointer(offset), appID, chunkID, offset,
+                                              accessBlockSize, isWritable);
                 }
-            }
-
-            // maxNewSize == 0 means that the chunk will be deleted (likely)
-            // maxNewSize >= 0 means that chunk is resizable
-            // maxNewSize == -1 means that chunk is NOT resizable
-            // maxNewSize < -1 doesn't happen
-            ret->defineChunk(appID, chunkID, chunk->getSizePointer(), maxNewSize);
-
-            for (const auto& blockAccessList: chunkAccessList.accessBlocks) {
-                int32 offset = blockAccessList.offset, accessBlockSize = blockAccessList.size;
-                bool isWritable = blockAccessList.writable;
-
-                int32 bound = std::max(chunkSize, maxNewSize);;
-
-                if (offset + accessBlockSize > bound) throw std::out_of_range("out of chunk");
-                ret->defineAccessBlock(chunk->getContentPointer(offset), appID, chunkID, offset,
-                                       accessBlockSize, isWritable);
             }
         }
+    } catch (...) {
+        for (const auto& idPair: newChunks) {
+            freeChunk(idPair.first, idPair.second);
+        }
+        throw;
     }
-
-    return ret;
+    return result;
 }
 
 Chunk* Heap::getChunk(std_id_t appID, std_id_t chunkID) {
@@ -105,12 +112,16 @@ Chunk* Heap::getChunk(std_id_t appID, std_id_t chunkID) {
 Chunk* Heap::newChunk(std_id_t appID, std_id_t id, int32 size) {
     auto* newChunk = new Chunk(size);
     auto newID = full_id_t(appID, id);
-    pageCache.emplace(newID, newChunk);
+    pageCache[newID].setNative(newChunk);
     chunkIndex[newID] = newChunk;
     return newChunk;
 }
 
 void Heap::freeChunk(std_id_t appID, std_id_t id) {
-    chunkIndex[full_id_t(appID, id)] = nullptr;
+    full_id_t fullID = full_id_t(appID, id);
+    chunkIndex[fullID] = nullptr;
+    // We remove the chunk from its native page. This reduces the amount of garbage. However, in case the chunk is
+    // migrated, its memory will only be deleted after the garbage collection of the block is done.
+    pageCache[fullID].setNative(nullptr);
 }
 

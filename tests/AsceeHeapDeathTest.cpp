@@ -28,7 +28,7 @@ class AsceeHeapDeathTest : public ::testing::Test {
 protected:
     Heap heap;
 public:
-    void resetHeap() {
+    AsceeHeapDeathTest() {
         heap = Heap();
 
         heap.chunkIndex = {
@@ -71,10 +71,6 @@ public:
         modifier->updateChunkSize(4);
 
         modifier->writeToHeap();
-    }
-
-    AsceeHeapDeathTest() {
-        resetHeap();
     }
 };
 
@@ -128,30 +124,25 @@ TEST_F(AsceeHeapDeathTest, SimpleRead) {
 }
 
 TEST_F(AsceeHeapDeathTest, SimpleChunkCreation) {
-    printf("start\n");
     EXPECT_THROW(
             heap.initSession({{2, {{10, 10, {{1, 10, false}}},}},}),
             std::out_of_range
     );
-    resetHeap();
 
     EXPECT_THROW(
-    heap.initSession({{2, {{10, 2 * 1024 * 1024, {{1, 10, false}}},}},}),
-    std::out_of_range
+            heap.initSession({{2, {{10, 2 * 1024 * 1024, {{1, 10, false}}},}},}),
+            std::out_of_range
     );
-    resetHeap();
 
     EXPECT_THROW(
             heap.initSession({{2, {{10, -1, {{1, 10, false}}},}},}),
             std::out_of_range
     );
-    resetHeap();
 
     EXPECT_THROW(
             heap.initSession({{2, {{10, 0, {{8 * 1024, 1, false}}},}},}),
             std::out_of_range
     );
-    resetHeap();
 
     auto modifier = heap.initSession(
             {{
@@ -270,5 +261,47 @@ TEST_F(AsceeHeapDeathTest, ChunkResizing) {
                              {15, 16, {{8,  8, true}}},
                      }},
             });
+
+    modifier->saveVersion();
+    modifier->loadContext(1);
+
+    modifier->loadChunk(std_id_t(10));
+    EXPECT_EQ(modifier->load<int32>(12), 18);
+    modifier->store<int32>(12, 55555);
+    EXPECT_EQ(modifier->load<int32>(12), 55555);
+
+    modifier->updateChunkSize(6);
+
+    modifier->loadChunk(std_id_t(15));
+    EXPECT_EQ(modifier->load<int64>(8), 0);
+    modifier->store<int64>(8, 1515151515);
+
+    EXPECT_THROW(modifier->updateChunkSize(17), std::out_of_range);
+    modifier->updateChunkSize(16);
+
+    modifier->writeToHeap();
+
+    EXPECT_THROW(
+            heap.initSession({{.appID = 1, .chunks = {{10, -1, {{6, 1, false}}},}},}),
+            std::out_of_range
+    );
+
+    EXPECT_THROW(
+            heap.initSession({{.appID = 1, .chunks = {{15, -1, {{14, 3, false}}},}},}),
+            std::out_of_range
+    );
+
+    modifier = heap.initSession(
+            {{
+                     .appID = 1,
+                     .chunks = {
+                             {15, -1, {{8, 8, true}}},
+                     }},
+            });
+
+    modifier->saveVersion();
+    modifier->loadContext(1);
+    modifier->loadChunk(std_id_t(15));
+    EXPECT_EQ(modifier->load<int64>(8), 1515151515);
 }
 

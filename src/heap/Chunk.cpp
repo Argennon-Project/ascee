@@ -53,7 +53,8 @@ void Chunk::expandSpace(int extra) {
 
     auto newCapacity = std::min(MAX_CHUNK_SIZE, 2 * (chunkSize + extra));
 
-    auto* newContent = new byte[newCapacity];
+    // memory must be zero initialized.
+    auto* newContent = new byte[newCapacity]();
     memcpy(newContent, content.get(), chunkSize);
     content = std::unique_ptr<byte[]>(newContent);
     capacity = newCapacity;

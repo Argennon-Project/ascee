@@ -27,9 +27,11 @@ class Page {
 private:
     std::unique_ptr<Chunk> native;
 public:
-    explicit Page(Chunk* nativeChunk) : native(nativeChunk) {};
+    void setNative(Chunk* newNative) {
+        native.reset(newNative);
+    }
 
-    void addNewChunk(std_id_t appID, std_id_t chunkID, Chunk* migrant) {};
+    void addMigrant(std_id_t appID, std_id_t chunkID, Chunk* migrant) {};
 
     byte* getDigest();
 
