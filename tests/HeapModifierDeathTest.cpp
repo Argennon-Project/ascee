@@ -33,6 +33,11 @@ protected:
 
 public:
     HeapModifierDeathTest() {
+        modifier.defineChunk(1, 10, Pointer(nullptr));
+        modifier.defineChunk(1, 11, Pointer(nullptr));
+        modifier.defineChunk(1, 100, Pointer(nullptr));
+        modifier.defineChunk(2, 10, Pointer(nullptr));
+        modifier.defineChunk(2, 11, Pointer(nullptr));
 
         // appID = 1
         modifier.defineAccessBlock(Pointer(tempHeap),

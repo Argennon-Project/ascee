@@ -67,8 +67,11 @@ Heap::Modifier* Heap::initSession(const std::vector<AppMemAccess>& memAccessList
                     }
                 } else {
                     chunkSize = chunk->getsize();
+                    if (chunkSize == 0) throw std::invalid_argument("probably duplicate chunk");
                     assert(chunkSize > 0);
-                    // We inform the chunk to allocate more space
+
+                    // We inform the chunk to allocate more space. If the transaction fails in the initialization
+                    // faze this expansion will not be reverted.
                     if (maxNewSize > chunkSize) {
                         chunk->expandSpace(maxNewSize - chunkSize);
                     }
@@ -96,6 +99,7 @@ Heap::Modifier* Heap::initSession(const std::vector<AppMemAccess>& memAccessList
         for (const auto& idPair: newChunks) {
             freeChunk(idPair.first, idPair.second);
         }
+        delete result;
         throw;
     }
     return result;

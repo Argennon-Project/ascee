@@ -123,7 +123,7 @@ TEST_F(AsceeHeapDeathTest, SimpleRead) {
     );
 }
 
-TEST_F(AsceeHeapDeathTest, SimpleChunkCreation) {
+TEST_F(AsceeHeapDeathTest, ChunkCreation) {
     EXPECT_THROW(
             heap.initSession({{2, {{10, 10, {{1, 10, false}}},}},}),
             std::out_of_range
@@ -141,7 +141,31 @@ TEST_F(AsceeHeapDeathTest, SimpleChunkCreation) {
 
     EXPECT_THROW(
             heap.initSession({{2, {{10, 0, {{8 * 1024, 1, false}}},}},}),
-            std::out_of_range
+            std::out_of_range // chunk not found
+    );
+
+    EXPECT_THROW(
+            heap.initSession({{2, {{10, 10, {{0, 1, false}}}, {10, 12, {{0, 12, false}}}}},}),
+            std::invalid_argument // duplicate chunk
+    );
+
+    EXPECT_THROW(
+            heap.initSession({
+                                     {2, {{10, 12, {{1, 10, false}}}}},
+                                     {1, {{10, -1, {{0, 1,  false}}}, {10, 12, {{0, 1, false}}}}},}),
+            std::invalid_argument // chunk already exist
+    );
+
+    EXPECT_THROW(
+            heap.initSession({
+                                     {2, {{10, 12, {{1, 10, false}}}}},
+                                     {1, {{10, -1, {{0, 1,  false}, {0, 2, true}}}}}}),
+            std::invalid_argument // block already exist
+    );
+
+    EXPECT_THROW(
+            heap.initSession({{1, {{10, -1, {{0, 1, false}}}, {10, -1, {{1, 1, false}}}}},}),
+            std::invalid_argument // chunk already exist
     );
 
     auto modifier = heap.initSession(
@@ -295,7 +319,10 @@ TEST_F(AsceeHeapDeathTest, ChunkResizing) {
             {{
                      .appID = 1,
                      .chunks = {
-                             {15, -1, {{8, 8, true}}},
+                             {15, -1, {
+                                     {0, 4, false},
+                                     {8, 8, true}
+                             }},
                      }},
             });
 
@@ -303,5 +330,6 @@ TEST_F(AsceeHeapDeathTest, ChunkResizing) {
     modifier->loadContext(1);
     modifier->loadChunk(std_id_t(15));
     EXPECT_EQ(modifier->load<int64>(8), 1515151515);
+    EXPECT_EQ(modifier->load<int32>(0), 0x33333333);
 }
 

@@ -56,17 +56,20 @@ void Heap::Modifier::loadContext(std_id_t appID) {
 }
 
 void Heap::Modifier::defineChunk(std_id_t ownerApp, std_id_t chunkID, Chunk::Pointer sizePtr, int32 maxSize) {
-    appsAccessMaps[ownerApp].emplace(std::piecewise_construct,
-                                     std::forward_as_tuple(chunkID),
-                                     std::forward_as_tuple(sizePtr, maxSize));
+    bool inserted = appsAccessMaps[ownerApp].emplace(std::piecewise_construct,
+                                                     std::forward_as_tuple(chunkID),
+                                                     std::forward_as_tuple(sizePtr, maxSize)).second;
+    if (!inserted) throw std::invalid_argument("chunk already exists");
 }
 
 void Heap::Modifier::defineAccessBlock(Chunk::Pointer heapLocation,
                                        std_id_t app, std_id_t chunk, int32 offset,
                                        int32 size, bool writable) {
-    appsAccessMaps.at(app).at(chunk).accessTable.emplace(std::piecewise_construct,
-                                                         std::forward_as_tuple(offset),
-                                                         std::forward_as_tuple(heapLocation, size, writable));
+    bool inserted = appsAccessMaps.at(app).at(chunk).accessTable.emplace(std::piecewise_construct,
+                                                                         std::forward_as_tuple(offset),
+                                                                         std::forward_as_tuple(heapLocation, size,
+                                                                                               writable)).second;
+    if (!inserted) throw std::invalid_argument("block already exists");
 }
 
 void Heap::Modifier::writeToHeap() {
@@ -92,7 +95,9 @@ void Heap::Modifier::writeToHeap() {
 }
 
 void Heap::Modifier::updateChunkSize(int32 newSize) {
-    if (newSize > currentChunk->maxSize || newSize < 0) throw std::out_of_range("invalid chunk size");
+    if (newSize > currentChunk->maxSize || newSize < 0) {
+        throw std::out_of_range("invalid chunk size");
+    }
     currentChunk->size.write(currentVersion, newSize);
 }
 
@@ -126,7 +131,8 @@ void Heap::Modifier::AccessBlock::wrToHeap(int16_t version) {
     }
 }
 
-Heap::Modifier::AccessBlock::AccessBlock(Chunk::Pointer heapLocation, int32 size, bool writable) : heapLocation(
-        heapLocation),
-                                                                                                   size(size),
-                                                                                                   writable(writable) {}
+Heap::Modifier::AccessBlock::AccessBlock(Chunk::Pointer heapLocation,
+                                         int32 size,
+                                         bool writable) : heapLocation(heapLocation),
+                                                          size(size),
+                                                          writable(writable) {}

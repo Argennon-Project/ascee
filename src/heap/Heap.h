@@ -47,7 +47,6 @@ struct AppMemAccess {
 //TODO: Heap must be signal-safe but it does not need to be thread-safe
 class Heap {
 private:
-    std::unordered_map<int128, std::unique_ptr<Chunk>> tempArea;
     std::unordered_map<int128, Chunk*> chunkIndex;
     std::unordered_map<int128, Page> pageCache;
 
