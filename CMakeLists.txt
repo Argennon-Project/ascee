@@ -4,7 +4,7 @@ project(ascee)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_C_STANDARD 99)
 
-include_directories(include src)
+include_directories(include src ~/pbc-0.5.14/include)
 
 add_subdirectory(tests)
 
@@ -15,4 +15,4 @@ add_library(argcrt SHARED src/argc/runtime/string.cpp src/argc/runtime/invoke.cp
 target_link_libraries(argcrt pthread rt stdc++)
 
 add_executable(ascee src/main.cpp src/loader/AppLoader.cpp src/loader/AppLoader.h include/argc/types.h src/executor/ThreadCpuTimer.cpp src/executor/ThreadCpuTimer.h src/executor/Executor.cpp src/executor/Executor.h)
-target_link_libraries(ascee dl stdc++ argcrt app1 app2)
+target_link_libraries(ascee pbc gmp dl stdc++ argcrt app1 app2)
