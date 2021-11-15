@@ -15,4 +15,4 @@ add_library(argcrt SHARED src/argc/runtime/string.cpp src/argc/runtime/invoke.cp
 target_link_libraries(argcrt pthread rt stdc++)
 
 add_executable(ascee src/main.cpp src/loader/AppLoader.cpp src/loader/AppLoader.h include/argc/types.h src/executor/ThreadCpuTimer.cpp src/executor/ThreadCpuTimer.h src/executor/Executor.cpp src/executor/Executor.h)
-target_link_libraries(ascee pbc gmp dl stdc++ argcrt app1 app2)
+target_link_libraries(ascee pbc gmp crypto dl stdc++ argcrt app1 app2)

@@ -31,12 +31,12 @@ void Executor::sig_handler(int sig, siginfo_t* info, void* ucontext) {
     // important: session is not valid when sig == SIGALRM
     if (sig != SIGALRM) {
         if (session->criticalArea) {
-            siglongjmp(*session->rootEnvPointer, LOOP_DETECTED);
+            throw execution_error(LOOP_DETECTED);
         }
         int ret = INTERNAL_ERROR;
         if (sig == SIGUSR1) ret = REQUEST_TIMEOUT;
         if (sig == SIGUSR2) ret = REENTRANCY_DETECTED;
-        siglongjmp(*session->recentEnvPointer, ret);
+        throw execution_error(ret);
     } else {
         pthread_t thread_id = *static_cast<pthread_t*>(info->si_value.sival_ptr);
         printf("Caught signal %d for app %ld\n", sig, thread_id);
@@ -78,28 +78,26 @@ void* Executor::registerRecoveryStack() {
 
 string Executor::startSession(const Transaction& t) {
     void* recoveryStack = registerRecoveryStack();
-    jmp_buf env;
 
     SessionInfo::CallContext newCall = {
             .appID = 0,
             .remainingExternalGas = t.gas,
     };
     SessionInfo threadSession{
-            .rootEnvPointer = &env,
             .heapModifier = unique_ptr<Heap::Modifier>(heap.initSession(t.calledAppID)),
             .appTable = AppLoader::global->createAppTable(t.appAccessList),
             .currentCall = &newCall,
     };
     session = &threadSession;
 
-    int ret, jmpRet = sigsetjmp(env, true);
-    if (jmpRet == 0) {
+    int ret;
+    try {
         ret = argcrt::invoke_dispatcher(255, t.calledAppID, t.request);
-    } else {
+    } catch (const execution_error& e) {
         // critical error
         printf("**critical**\n");
         session->heapModifier->restoreVersion(0);
-        ret = jmpRet;
+        ret = e.statusCode();
     }
 
     session->heapModifier->writeToHeap();

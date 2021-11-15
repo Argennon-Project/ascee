@@ -16,9 +16,10 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include <pbc.h>
+#include <openssl/evp.h>
 
 int main(int argc, char const* argv[]) {
-    // initialize a pairing:
+    // initialize a pairing, Any file in the param subdirectory will suffice:
     pairing_t pairing;
     char param[1024];
     FILE* params = fopen("/home/aybehrouz/pbc-0.5.14/param/a.param", "r");
@@ -30,11 +31,6 @@ int main(int argc, char const* argv[]) {
     fclose(params);
     if (!count) pbc_die("input error");
     pairing_init_set_buf(pairing, param, count);
-
-    // Later we give pairing parameters to our program on standard input. Any file in the param subdirectory will
-    // suffice, for example:
-
-    // $ bls < param/a.param
 
     // We shall need several element_t variables to hold the system parameters, keys and other quantities.
     // We declare them and initialize them:
@@ -64,7 +60,12 @@ int main(int argc, char const* argv[]) {
     // can do this, and this operation does not involve pairings, so PBC does not provide functions for this step.
     // For this example, and our message has already been hashed, possibly using another library. Say the message
     // hash is "ABCDEF" (a 48-bit hash). We map these bytes to an element h of G1:
-    element_from_hash(h, (void*) "ABCDEF", 6);
+
+    unsigned char digest[EVP_MAX_MD_SIZE];
+    int digestLen;
+    EVP_Digest((void*) "testData", 8, digest, reinterpret_cast<unsigned int*>(&digestLen), nullptr, nullptr);
+
+    element_from_hash(h, digest, digestLen);
 
     // then sign it:
     element_pow_zn(sig, h, secret_key);

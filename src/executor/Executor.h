@@ -37,6 +37,16 @@
 
 namespace ascee {
 
+class execution_error : std::exception {
+public:
+    explicit execution_error(int code) : code(code) {}
+
+    [[nodiscard]] int statusCode() const { return code; }
+
+private:
+    const int code;
+};
+
 struct DeferredArgs {
     std_id_t appID;
     byte forwardedGas;
@@ -44,8 +54,6 @@ struct DeferredArgs {
 };
 
 struct SessionInfo {
-    jmp_buf* recentEnvPointer;
-    jmp_buf* const rootEnvPointer;
     bool criticalArea = false;
 
     std::unique_ptr<ascee::Heap::Modifier> heapModifier;

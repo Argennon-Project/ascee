@@ -16,7 +16,6 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include <csignal>
-#include <csetjmp>
 #include <memory>
 #include <unordered_map>
 #include <vector>
@@ -144,24 +143,18 @@ int invoke_dispatcher_impl(byte forwarded_gas, std_id_t app_id, string_t request
     ascee::ThreadCpuTimer cpuTimer;
     cpuTimer.setAlarm(execTime);
 
-    jmp_buf* oldEnv = Executor::getSession()->recentEnvPointer;
-    jmp_buf env;
-    Executor::getSession()->recentEnvPointer = &env;
-
-    int ret, jmpRet = sigsetjmp(env, 1);
-    if (jmpRet == 0) {
-        unBlockSignals();
+    int ret;
+    unBlockSignals();
+    try {
         ret = dispatcher(request);
-    } else {
-        // because we have used sigsetjmp and saved the signal mask, we don't need to call blockSignals() here.
-        ret = jmpRet;
+    } catch (const execution_error& e) {
+        ret = e.statusCode();
     }
     // blockSignals() activates the criticalArea flag. That way if we raise another signal here, we won't get stuck in
     // an infinite loop.
     blockSignals();
 
-    // as soon as possible we should restore the old env value and release the entrance lock (if any)
-    Executor::getSession()->recentEnvPointer = oldEnv;
+    // as soon as possible we should release the entrance lock (if any)
     argcrt::exit_area();
 
     if (ret < 400) {
