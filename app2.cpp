@@ -1,8 +1,11 @@
 #include <argc/functions.h>
-#include "argc/types.h"
+#include <argc/types.h>
 
 
 #include "stdio.h"
+
+using namespace ascee;
+using namespace argc;
 
 void foo() {
     foo();

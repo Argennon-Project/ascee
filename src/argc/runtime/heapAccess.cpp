@@ -19,6 +19,7 @@
 #include <argc/types.h>
 
 using namespace ascee;
+using namespace ascee::runtime;
 
 extern "C"
 int64 loadInt64(int32 offset) {

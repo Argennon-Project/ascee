@@ -17,6 +17,12 @@
 
 #include <pbc.h>
 #include <openssl/evp.h>
+#include <executor/Executor.h>
+#include <iostream>
+#include <loader/AppLoader.h>
+
+using namespace ascee;
+using namespace ascee::runtime;
 
 int main(int argc, char const* argv[]) {
     // initialize a pairing, Any file in the param subdirectory will suffice:
@@ -81,6 +87,19 @@ int main(int argc, char const* argv[]) {
         printf("signature does not verify\n");
     }
 
+
+    AppLoader::global = std::make_unique<AppLoader>("");
+    Executor executor;
+    auto response = executor.startSession(ascee::Transaction{
+            .calledAppID = 1,
+            .request = ascee::string_t("test request"),
+            .gas = 1000,
+            .appAccessList = {1}
+    });
+
+    printf("hereeeee@@\n");
+
+    printf("%s \n", response.data());
 /*
     char cStr[20] = "abcdefgh";
     string str = string(cStr, 4);

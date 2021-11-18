@@ -20,6 +20,7 @@
 #include "Chunk.h"
 
 using namespace ascee;
+using namespace ascee::runtime;
 
 static
 bool isLittleEndian() {

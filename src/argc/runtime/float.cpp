@@ -22,6 +22,7 @@
 #define MAX_ADDITION_LOSS 0x100000
 
 using namespace ascee;
+using namespace ascee::runtime;
 
 static
 int extractExp(float64 f) {
@@ -35,14 +36,17 @@ int extractExp(float64 f) {
  * @param b
  * @return
  */
-extern "C"
-float64 argcrt::safe_addf64(float64 a, float64 b) {
+float64 argc::safe_addf64(float64 a, float64 b) {
     auto expDiff = extractExp(a) - extractExp(b);
 
     if (expDiff > 0) {
-        if ((~(UINT64_MAX << expDiff) & *(uint64_t*) &b) > MAX_ADDITION_LOSS) raise(SIGFPE);
+        if ((~(UINT64_MAX << expDiff) & *(uint64_t*) &b) > MAX_ADDITION_LOSS) {
+            throw std::underflow_error("safe_add64: precision loss is too large");
+        }
     } else if (expDiff < 0) {
-        if ((~(UINT64_MAX << -expDiff) & *(uint64_t*) &a) > MAX_ADDITION_LOSS) raise(SIGFPE);
+        if ((~(UINT64_MAX << -expDiff) & *(uint64_t*) &a) > MAX_ADDITION_LOSS) {
+            throw std::underflow_error("safe_add64: precision loss is too large");
+        }
     }
     return a + b;
 }
@@ -55,8 +59,7 @@ float64 argcrt::safe_addf64(float64 a, float64 b) {
  * @param n
  * @return
  */
-extern "C"
-float64 argcrt::truncate_float64(float64 f, int n) {
+float64 argc::truncate_float64(float64 f, int n) {
     auto shift = (52 - n) - (extractExp(f) - 1023);
     //auto shift = (52 + 1023) - (extractExp(f) + n);
     if (shift <= 0) return f;

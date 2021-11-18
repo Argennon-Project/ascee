@@ -15,100 +15,50 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#include <csignal>
-#include <cstring>
 #include <string>
-#include <stdexcept>
 
 #include <argc/types.h>
 #include <argc/functions.h>
 
-#define MAX_NUM64_LENGTH 32
-
 using std::string, std::string_view;
 using namespace ascee;
+using namespace ascee::runtime;
 
-extern "C"
-void argcrt::append_str(string_buffer* buf, string_t str) {
-    // we require the size to be one byte more than the actual required amount
-    if (buf->maxSize <= buf->end + str.length) raise(SIGSEGV);
-    memcpy(buf->buffer + buf->end, str.content, str.length);
-    buf->end += str.length;
-    buf->buffer[buf->end] = '\0';
+/*
+template<int maxSize>
+void argcrt::append_str(string_buffer2<maxSize>& buf, const string_t& str) {
+    buf.append(str);
 }
 
-extern "C"
-void argcrt::append_int64(string_buffer* buf, int64 i) {
-    string str = std::to_string(i);
-    append_str(buf, string_t{str.c_str(), static_cast<int32>(str.size())});
+template<int maxSize>
+void argcrt::append_int64(string_buffer2<maxSize>& buf, int64 i) {
+    buf.append(string_t(std::to_string(i)));
 }
 
-extern "C"
-void argcrt::clear_buffer(string_buffer* buf) {
-    buf->end = 0;
+template<int maxSize>
+void argcrt::append_float64(string_buffer2<maxSize>& buf, float64 f) {
+    buf.append(string_t(std::to_string(f)));
 }
 
-inline static
-int32 parse(string_view str, int64* ret) {
-    size_t pos;
-    // string constructor copies its input, therefore we truncate the input str to make the copy less costly.
-    *ret = std::stol(string(str.substr(0, MAX_NUM64_LENGTH)), &pos);
-    return static_cast<int32>(pos);
+template<int maxSize>
+void argcrt::clear_buffer(string_buffer2<maxSize>& buf) {
+    buf.clear();
 }
 
-inline static
-int32 parse(string_view str, float64* ret) {
-    size_t pos;
-    *ret = std::stod(string(str.substr(0, MAX_NUM64_LENGTH)), &pos);
-    return static_cast<int32>(pos);
+void buf_to_string(const string_buffer& buf, string_t &str) {
+    str = string_t(buf);
 }
+*/
 
-template<typename T>
-static
-T scan(string_t input, string_t pattern, string_t* rest) {
-    int i = 0, j = 0;
-    while (i < input.length && j < pattern.length) {
-        if (!std::isspace(input.content[i])) {
-            if (std::isspace(pattern.content[j])) ++j;
-            else if (input.content[i] == pattern.content[j]) {
-                ++i;
-                ++j;
-            } else break;
-        } else if (std::isspace(pattern.content[j])) {
-            if (input.content[i] == pattern.content[j]) i++;
-            else ++j;
-        } else break;
-    }
-    T ret{};
-    try {
-        if (i == input.length || j < pattern.length) throw std::invalid_argument("pattern not found");
-
-        // string_view constructor DOES NOT make a copy of its input.
-        string_view targetStr(input.content + i, input.length - i);
-        int32 pos = parse(targetStr, &ret);
-        rest->content = input.content + i + pos;
-        rest->length = static_cast<int32>(input.length - i - pos);
-    } catch (const std::invalid_argument&) {
-        rest->content = nullptr;
-        rest->length = -1;
-    }
+int64 argc::scan_int64(const string_t& input, const string_t& pattern, string_t& rest) {
+    int64 ret;
+    rest = input.scan(pattern, ret);
     return ret;
 }
 
-extern "C"
-int64 argcrt::scan_int64(string_t input, string_t pattern, string_t* rest) {
-    return scan<int64>(input, pattern, rest);
+float64 argc::scan_float64(const string_t& input, const string_t& pattern, string_t& rest) {
+    float64 ret;
+    rest = input.scan(pattern, ret);
+    return ret;
 }
 
-extern "C"
-float64 argcrt::scan_float64(string_t input, string_t pattern, string_t* rest) {
-    return scan<float64>(input, pattern, rest);
-}
-
-extern "C"
-string_t buf_to_string(const string_buffer* buf) {
-    return string_t{
-            .content = buf->buffer,
-            .length = buf->end
-    };
-}

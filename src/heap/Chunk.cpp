@@ -21,6 +21,7 @@
 #define MAX_CHUNK_SIZE 32*1024
 
 using namespace ascee;
+using namespace ascee::runtime;
 
 /// new chunks always have a size of zero. Their size usually should be changed through the pointer obtainable by
 /// getSizePointer function.

@@ -25,8 +25,14 @@
 
 #define MIN_GAS 1
 
-using std::unique_ptr, std::vector, std::unordered_map, std::string;
 using namespace ascee;
+using namespace ascee;
+using namespace ascee::runtime;
+using std::unique_ptr, std::vector, std::unordered_map, std::string, std::string_view;
+
+string_buffer<RESPONSE_MAX_SIZE>& argc::response_buffer() {
+    return Executor::getSession()->response;
+}
 
 static inline
 int64_t calculateExternalGas(int64_t currentGas) {
@@ -38,8 +44,8 @@ static inline
 void addDefaultResponse(int statusCode) {
     char response[256];
     int n = sprintf(response, "HTTP/1.1 %d %s", statusCode, "OK");
-    Executor::getSession()->response.end = 0;
-    argcrt::append_str(&Executor::getSession()->response, string_t{response, n});
+    Executor::getSession()->response.clear();
+    Executor::getSession()->response.append(string_t(string_view(response, n)));
 }
 
 static inline
@@ -68,14 +74,7 @@ void unBlockSignals() {
     Executor::getSession()->criticalArea = false;
 }
 
-
-extern "C"
-string_buffer* argcrt::response_buffer() {
-    return &Executor::getSession()->response;
-}
-
-extern "C"
-void argcrt::enter_area() {
+void argc::enter_area() {
     if (Executor::getSession()->currentCall->hasLock) return;
 
     if (Executor::getSession()->isLocked[Executor::getSession()->currentCall->appID]) {
@@ -88,8 +87,7 @@ void argcrt::enter_area() {
     }
 }
 
-extern "C"
-void argcrt::exit_area() {
+void argc::exit_area() {
     blockSignals();
     if (Executor::getSession()->currentCall->hasLock) {
         Executor::getSession()->isLocked[Executor::getSession()->currentCall->appID] = false;
@@ -98,13 +96,12 @@ void argcrt::exit_area() {
     unBlockSignals();
 }
 
-extern "C"
-void argcrt::invoke_deferred(byte forwarded_gas, std_id_t app_id, string_t request) {
+void argc::invoke_deferred(byte forwarded_gas, std_id_t app_id, string_t request) {
     Executor::getSession()->currentCall->deferredCalls.emplace_back(DeferredArgs{
             .appID = app_id,
             .forwardedGas = forwarded_gas,
             // string constructor makes a copy of its input, so we should be safe here.
-            .request = std::string(request.content, request.length),
+            .request = std::string(request),
     });
 }
 
@@ -137,10 +134,10 @@ int invoke_dispatcher_impl(byte forwarded_gas, std_id_t app_id, string_t request
             .remainingExternalGas = calculateExternalGas(maxCurrentGas),
     };
     Executor::getSession()->currentCall = &newCall;
-    Executor::getSession()->response.end = 0;
+    Executor::getSession()->response.clear();
     Executor::getSession()->heapModifier->loadContext(app_id);
 
-    ascee::ThreadCpuTimer cpuTimer;
+    ThreadCpuTimer cpuTimer;
     cpuTimer.setAlarm(execTime);
 
     int ret;
@@ -149,34 +146,35 @@ int invoke_dispatcher_impl(byte forwarded_gas, std_id_t app_id, string_t request
         ret = dispatcher(request);
     } catch (const execution_error& e) {
         ret = e.statusCode();
+    } catch (const std::out_of_range&) {
+        ret = INTERNAL_ERROR;
     }
     // blockSignals() activates the criticalArea flag. That way if we raise another signal here, we won't get stuck in
     // an infinite loop.
     blockSignals();
 
     // as soon as possible we should release the entrance lock (if any)
-    argcrt::exit_area();
+    argc::exit_area();
 
     if (ret < 400) {
-        string mainResponse = string(argcrt::response_buffer()->buffer, argcrt::response_buffer()->end);
+        string mainResponse(string_t(Executor::getSession()->response));
 
         for (const auto& dCall: Executor::getSession()->currentCall->deferredCalls) {
-            int temp = argcrt::invoke_dispatcher(
+            int temp = argc::invoke_dispatcher(
                     dCall.forwardedGas,
                     dCall.appID,
                     // we should NOT use length + 1 here.
-                    string_t{dCall.request.c_str(), static_cast<int>(dCall.request.length())}
+                    string_t(dCall.request)
             );
-            printf("** deferred call return: %d\n", temp);
+            printf("** deferred call returns: %d\n", temp);
             if (temp >= BAD_REQUEST) {
                 ret = FAILED_DEPENDENCY;
                 break;
             }
         }
 
-        argcrt::response_buffer()->end = 0;
-        argcrt::append_str(argcrt::response_buffer(),
-                           string_t{mainResponse.c_str(), static_cast<int32>(mainResponse.length())});
+        Executor::getSession()->response.clear();
+        Executor::getSession()->response.append(string_t(mainResponse));
     }
 
     // restore context
@@ -191,8 +189,7 @@ int invoke_dispatcher_impl(byte forwarded_gas, std_id_t app_id, string_t request
 }
 
 
-extern "C"
-int argcrt::invoke_dispatcher(byte forwarded_gas, std_id_t app_id, string_t request) {
+int argc::invoke_dispatcher(byte forwarded_gas, std_id_t app_id, string_t request) {
     blockSignals();
 
     Executor::getSession()->failureManager.nextInvocation();

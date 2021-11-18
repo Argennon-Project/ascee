@@ -6,8 +6,8 @@
       <file path="$PROJECT_DIR$/include" />
       <file path="$PROJECT_DIR$/src" />
     </sourceRoots>
-    <libraryRoots>
+    <excludeRoots>
       <file path="$PROJECT_DIR$/tests/lib" />
-    </libraryRoots>
+    </excludeRoots>
   </component>
 </project>

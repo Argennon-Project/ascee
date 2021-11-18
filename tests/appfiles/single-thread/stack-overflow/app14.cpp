@@ -2,11 +2,15 @@
 #include "argc/types.h"
 #include "argc/functions.h"
 
+using namespace ascee;
+using namespace ascee::argc;
+
 int64 fib(int64 n) {
     if (n <= 1) return n;
     return fib(n - 1) + fib(n - 2);
 }
 
+extern "C"
 int dispatcher(string_t request) {
     append_str(response_buffer(), request);
     invoke_dispatcher(85, 13, request);

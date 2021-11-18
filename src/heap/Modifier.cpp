@@ -22,6 +22,7 @@
 #define MAX_VERSION 30000
 
 using namespace ascee;
+using namespace ascee::runtime;
 
 /*
 uint8_t HeapModifier::loadByte(int32_t offset) {

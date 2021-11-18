@@ -15,15 +15,14 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef ASCEE_ARGC_TYPES_H
-#define ASCEE_ARGC_TYPES_H
+#ifndef ASCEE_ARGC_TYPES_INC
+#define ASCEE_ARGC_TYPES_INC
 
-#include <stdint.h> // NOLINT(modernize-deprecated-headers)
+#include <cstdint>
+#include <util/StringBuffer.h>
 
-#ifdef __cplusplus
 namespace ascee {
 
-#endif
 /// int represents a signed integer with the most efficient size for the platform which MUST NOT be smaller than 32 bits.
 typedef uint8_t byte;
 typedef uint16_t uint16;
@@ -35,40 +34,30 @@ typedef __float128 float128;
 typedef uint32_t short_id_t;
 typedef uint64_t std_id_t;
 typedef struct FullID full_id_t;
-typedef struct String string_t;
-typedef struct StringBuffer string_buffer;
 
-typedef int (* dispatcher_ptr_t)(string_t request);
 
 struct FullID {
     __int128_t id;
-
-#ifdef __cplusplus
 
     FullID(__int128_t id) : id(id) {} // NOLINT(google-explicit-constructor)
 
     FullID(std_id_t high, std_id_t low) { id = __int128_t(high) << 64 | low; }
 
     operator __int128_t() const { return id; } // NOLINT(google-explicit-constructor)
-
-#endif
 };
 
 /// argc strings are not null-terminated. However, usually there is a null at the end. `length` is the number of
 /// bytes without considering any null bytes at the end.
-struct String {
-    const char* content;
-    int32 length;
-};
+using string_t = runtime::StringView;
+template<int max_size>
+using string_buffer = runtime::StringBuffer<max_size>;
 
-struct StringBuffer {
-    char* buffer;
-    int32 maxSize;
-    int32 end;
-};
+typedef int (* dispatcher_ptr_t)(string_t request);
 
-#define STRING(str) {.content = (str), .length = (sizeof (str) - 1)}
-#define STRING_BUFFER(name, size) char __##name##_buf_[size]; string_buffer name = {__##name##_buf_, size, 0}
+#define STRING(str) string_t(str)
+#define STRING_BUFFER(name, size) string_buffer<size> name
+
+#define RESPONSE_MAX_SIZE (2*1024)
 
 /// HTTP status codes. new costume coded could be defined.
 #define HTTP_OK 200
@@ -89,9 +78,6 @@ struct StringBuffer {
 #define REENTRANCY_DETECTED 513
 #define MAX_CALL_DEPTH_REACHED 514
 
-#ifdef __cplusplus
-
 } // namespace ascee
-#endif
 
-#endif // ASCEE_ARGC_TYPES_H
+#endif // ASCEE_ARGC_TYPES_INC

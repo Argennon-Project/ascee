@@ -26,7 +26,7 @@
 
 #include "../../include/argc/types.h"
 
-namespace ascee {
+namespace ascee::runtime {
 
 class AppLoader {
 private:
@@ -57,6 +57,6 @@ public:
     static std::unique_ptr<AppLoader> global;
 };
 
-} // namespace ascee
+} // namespace ascee::runtime
 
 #endif // ASCEE_APP_LOADER_H

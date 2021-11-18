@@ -19,6 +19,7 @@
 #include "gtest/gtest.h"
 
 using namespace ascee;
+using namespace runtime;
 
 TEST(AsceeIdentifiersTest, SimpleTrie) {
     IdentifierTrie<uint64_t, 4> t({0x25, 0x25aa, 0x300000, 0xa1234560});

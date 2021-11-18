@@ -21,6 +21,8 @@
 #include <cstring>
 
 using namespace ascee;
+using namespace ascee;
+using namespace ascee::runtime;
 
 template<typename T>
 inline static

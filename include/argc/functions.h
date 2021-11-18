@@ -15,35 +15,58 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef ASCEE_ARGC_FUNCTIONS_H
-#define ASCEE_ARGC_FUNCTIONS_H
+#ifndef ASCEE_ARGC_FUNCTIONS_INC
+#define ASCEE_ARGC_FUNCTIONS_INC
 
-#include "types.h"
+#include <argc/types.h>
 
-#ifdef __cplusplus
-namespace ascee::argcrt {
-
-extern "C" {
-#endif
+namespace ascee::argc {
 
 int64 loadInt64(int32 offset);
+
 int invoke_dispatcher(byte forwarded_gas, std_id_t app_id, string_t request);
+
 void invoke_deferred(byte forwarded_gas, std_id_t app_id, string_t request);
+
 void enter_area();
+
 void exit_area();
-void append_str(string_buffer*, string_t);
-void append_int64(string_buffer*, int64);
-string_buffer* response_buffer();
-void clear_buffer(string_buffer* buf);
-string_t buf_to_string(const string_buffer* buf);
-int64 scan_int64(string_t input, string_t pattern, string_t* rest);
-float64 scan_float64(string_t input, string_t pattern, string_t* rest);
+
 float64 safe_addf64(float64 a, float64 b);
+
 float64 truncate_float64(float64 f, int n);
 
-#ifdef __cplusplus
+template<int maxSize>
+void append_str(string_buffer<maxSize>& buf, const string_t& str) {
+    buf.append(str);
 }
 
-} // namespace argcrt
-#endif
-#endif // ASCEE_ARGC_FUNCTIONS_H
+template<int maxSize>
+void append_int64(string_buffer<maxSize>& buf, int64 i) {
+    buf.append(string_t(std::to_string(i)));
+}
+
+template<int maxSize>
+void append_float64(string_buffer<maxSize>& buf, float64 f) {
+    buf.append(string_t(std::to_string(f)));
+}
+
+template<int maxSize>
+void clear_buffer(string_buffer<maxSize>& buf) {
+    buf.clear();
+}
+
+template<int maxSize>
+string_t buf_to_string(const string_buffer<maxSize>& buf) {
+    return string_t(buf);
+}
+
+int64 scan_int64(const string_t& input, const string_t& pattern, string_t& rest);
+
+float64 scan_float64(const string_t& input, const string_t& pattern, string_t& rest);
+
+string_buffer<RESPONSE_MAX_SIZE>& response_buffer();
+
+} // namespace argc
+
+#endif // ASCEE_ARGC_FUNCTIONS_INC

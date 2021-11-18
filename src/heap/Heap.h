@@ -25,7 +25,7 @@
 #include "Chunk.h"
 #include "Page.h"
 
-namespace ascee {
+namespace ascee::runtime {
 
 struct AppMemAccess {
     struct Block {
@@ -188,6 +188,6 @@ public:
     void freeChunk(std_id_t appID, std_id_t id);
 };
 
-} // namespace ascee
+} // namespace ascee::runtime
 
 #endif // ASCEE_HEAP_H

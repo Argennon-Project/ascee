@@ -3,6 +3,9 @@
 #include "argc/types.h"
 #include "argc/functions.h"
 
+using namespace ascee;
+using namespace ascee::argc;
+
 void f(int deferred_call) {
     enter_area();
 
@@ -51,11 +54,12 @@ int h() {
     return 777;
 }
 
+
+extern "C"
 int dispatcher(string_t request) {
-    printf("called--->%s\n", request.content);
     string_t pattern = STRING("choice: ");
     string_t rest;
-    int64 choice = scan_int64(request, pattern, &rest);
+    int64 choice = scan_int64(request, pattern, rest);
 
     if (choice == 1) f(0);
     else if (choice == 2) g();

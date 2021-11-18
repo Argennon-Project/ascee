@@ -21,6 +21,7 @@
 #include <filesystem>
 
 using namespace ascee;
+using namespace ascee::runtime;
 using namespace std;
 
 unique_ptr<AppLoader> AppLoader::global;

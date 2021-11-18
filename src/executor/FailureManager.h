@@ -21,7 +21,7 @@
 #include <unordered_map>
 #include <argc/types.h>
 
-namespace ascee {
+namespace ascee::runtime {
 
 class FailureManager {
 public:
@@ -47,5 +47,5 @@ private:
     int32_t invocationID = 0;
 };
 
-} // namespace ascee
+} // namespace ascee::runtime
 #endif // ASCEE_FAILURE_MANAGER_H

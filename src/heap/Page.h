@@ -21,7 +21,7 @@
 #include <argc/types.h>
 #include "Chunk.h"
 
-namespace ascee {
+namespace ascee::runtime {
 
 class Page {
 private:
@@ -37,5 +37,5 @@ public:
 
 };
 
-} // namespace ascee
+} // namespace ascee::runtime
 #endif // ASCEE_PAGE_H

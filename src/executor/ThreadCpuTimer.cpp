@@ -20,6 +20,7 @@
 #include "ThreadCpuTimer.h"
 
 using namespace ascee;
+using namespace ascee::runtime;
 
 ThreadCpuTimer::ThreadCpuTimer() {
     timer = nullptr;

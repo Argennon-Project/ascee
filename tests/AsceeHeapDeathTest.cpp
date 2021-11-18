@@ -23,6 +23,7 @@
 #include "heap/Heap.h"
 
 using namespace ascee;
+using namespace runtime;
 
 class AsceeHeapDeathTest : public ::testing::Test {
 protected:

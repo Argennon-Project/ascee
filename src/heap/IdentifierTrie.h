@@ -24,7 +24,7 @@
 #include <array>
 #include <cstring>
 
-namespace ascee {
+namespace ascee::runtime {
 
 template<typename T, int height = sizeof(T)>
 class IdentifierTrie {
@@ -71,5 +71,5 @@ public:
     }
 };
 
-} // namespace ascee
+} // namespace ascee::runtime
 #endif // ASCEE_IDENTIFIER_TRIE_H

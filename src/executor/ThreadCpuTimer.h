@@ -21,7 +21,7 @@
 #include <ctime>
 #include <pthread.h>
 
-namespace ascee {
+namespace ascee::runtime {
 
 class ThreadCpuTimer {
 private:
@@ -35,6 +35,6 @@ public:
     int64_t setAlarm(int64_t nsec);
 };
 
-} // namespace ascee
+} // namespace ascee::runtime
 
 #endif // ASCEE_THREADCPUTIMER_H

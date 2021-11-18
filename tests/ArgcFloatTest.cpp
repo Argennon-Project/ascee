@@ -20,7 +20,7 @@
 #include "argc/functions.h"
 
 using namespace ascee;
-using namespace argcrt;
+using namespace argc;
 
 
 TEST(ArgcFloatDeathTest, Truncate) {
@@ -65,11 +65,11 @@ TEST(ArgcFloatDeathTest, Truncate) {
 TEST(ArgcFloatDeathTest, SafeAdd) {
     EXPECT_DOUBLE_EQ(safe_addf64(1000000, 1.3756), 1000001.3756);
 
-    EXPECT_EXIT(safe_addf64(10000000, 1.3756), testing::KilledBySignal(SIGFPE), "");
+    EXPECT_THROW(safe_addf64(10000000, 1.3756), std::underflow_error);
 
     EXPECT_DOUBLE_EQ(safe_addf64(1000000, -1.37), 999998.63);
 
-    EXPECT_EXIT(safe_addf64(10000000, -1.37), testing::KilledBySignal(SIGFPE), "");
+    EXPECT_THROW(safe_addf64(10000000, -1.37), std::underflow_error);
 
     EXPECT_DOUBLE_EQ(safe_addf64(1000000000000, truncate_float64(1.375, 12)), 1000000000001.375);
 }

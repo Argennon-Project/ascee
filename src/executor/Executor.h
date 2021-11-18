@@ -33,9 +33,7 @@
 #include <heap/Heap.h>
 #include "ThreadCpuTimer.h"
 
-#define RESPONSE_MAX_SIZE 2*1024
-
-namespace ascee {
+namespace ascee::runtime {
 
 class execution_error : std::exception {
 public:
@@ -56,17 +54,12 @@ struct DeferredArgs {
 struct SessionInfo {
     bool criticalArea = false;
 
-    std::unique_ptr<ascee::Heap::Modifier> heapModifier;
+    std::unique_ptr<Heap::Modifier> heapModifier;
     std::unordered_map<std_id_t, dispatcher_ptr_t> appTable;
     std::unordered_map<std_id_t, bool> isLocked;
     FailureManager failureManager;
 
-    char buf[RESPONSE_MAX_SIZE];
-    string_buffer response = {
-            .buffer = buf,
-            .maxSize = RESPONSE_MAX_SIZE,
-            .end = 0
-    };
+    string_buffer<RESPONSE_MAX_SIZE> response;
 
     struct CallContext {
         const std_id_t appID;
@@ -82,7 +75,7 @@ struct SessionInfo {
 
 struct Transaction {
     std_id_t calledAppID;
-    String request;
+    string_t request;
     int64_t gas;
     std::vector<std_id_t> appAccessList;
 };
@@ -112,5 +105,5 @@ public:
                               byte forwarded_gas, std_id_t appID, string_t request, size_t size);
 };
 
-} // namespace ascee
+} // namespace ascee::runtime
 #endif // ASCEE_EXECUTOR_H

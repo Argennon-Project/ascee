@@ -17,12 +17,15 @@
 
 #include <csignal>
 #include <heap/Heap.h>
-#include <argc/functions.h>
 #include <loader/AppLoader.h>
+#include <argc/functions.h>
 #include "Executor.h"
 
 using namespace ascee;
+using namespace ascee::runtime;
 using std::unique_ptr, std::string, std::to_string;
+
+int invoke_dispatcher();
 
 thread_local SessionInfo* Executor::session = nullptr;
 
@@ -92,7 +95,7 @@ string Executor::startSession(const Transaction& t) {
 
     int ret;
     try {
-        ret = argcrt::invoke_dispatcher(255, t.calledAppID, t.request);
+        ret = argc::invoke_dispatcher(255, t.calledAppID, t.request);
     } catch (const execution_error& e) {
         // critical error
         printf("**critical**\n");
@@ -102,12 +105,10 @@ string Executor::startSession(const Transaction& t) {
 
     session->heapModifier->writeToHeap();
 
-    printf("returned:%d --> %s\n", ret, threadSession.response.buffer);
-
     session = nullptr;
     free(recoveryStack);
     // here, string constructor makes a copy of the buffer.
-    return {threadSession.response.buffer, static_cast<std::size_t>(threadSession.response.end)};
+    return string(string_t(threadSession.response));
 }
 
 Executor::Executor() {

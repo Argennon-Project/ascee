@@ -23,7 +23,8 @@
 #include "heap/Heap.h"
 
 using namespace ascee;
-using Pointer = ascee::Chunk::Pointer;
+using namespace runtime;
+using Pointer = ascee::runtime::Chunk::Pointer;
 
 
 class HeapModifierDeathTest : public ::testing::Test {

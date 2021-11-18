@@ -26,6 +26,7 @@
 #define FAIL_CHECK_GAS_COEFFICIENT 150000
 
 using namespace ascee;
+using namespace ascee::runtime;
 using std::unordered_map;
 
 void FailureManager::nextInvocation() {

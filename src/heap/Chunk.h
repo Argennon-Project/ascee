@@ -21,7 +21,7 @@
 #include <argc/types.h>
 #include <memory>
 
-namespace ascee {
+namespace ascee::runtime {
 
 class Chunk {
 
@@ -67,5 +67,5 @@ public:
     Pointer getContentPointer(int32 offset);
 };
 
-} // namespace ascee
+} // namespace ascee::runtime
 #endif // ASCEE_CHUNK_H
