@@ -103,8 +103,12 @@ public:
             T read(int16_t version) {
                 if (sizeof(T) > size) throw std::out_of_range("read size");
                 syncTo(version);
-                if (versionList.empty()) return heapLocation.read<T>();
-                return *(T*) versionList.back().content;
+                T ret{};
+                if (versionList.empty()) heapLocation.readBlockTo((byte*) &ret, sizeof(T));
+                else memcpy((byte*) &ret, versionList.back().content, sizeof(T));
+                // Here we return the result by value. This is not bad for performance. Compilers usually implement
+                // return-by-value using pass-by-pointer. (a.k.a NRVO optimization)
+                return ret;
             }
 
             template<typename T>
@@ -114,7 +118,7 @@ public:
                 if (!writable) throw std::out_of_range("block is not writable");
                 syncTo(version);
                 add(version);
-                *(T*) versionList.back().content = value;
+                memcpy(versionList.back().content, (byte*) &value, sizeof(T));
             }
 
             void wrToHeap(int16_t version);

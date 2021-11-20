@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include "argc/types.h"
-#include "argc/runtime/functions.h"
+#include "argc/functions.h"
 
 using namespace ascee;
 using namespace ascee::argc;

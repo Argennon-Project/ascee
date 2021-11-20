@@ -30,9 +30,9 @@ set_target_properties(app10 app11 app12 app13 app14 app15 app16 app17 app18 app1
 
 
 # adding the Google_Tests_run target
-add_executable(Google_Tests_run ../src/argc/runtime/string.cpp ../src/executor/Executor.cpp ../src/executor/ThreadCpuTimer.cpp ../src/loader/AppLoader.cpp ArgcStringTest.cpp AsceeExecutorTest.cpp HeapModifierDeathTest.cpp ArgcFloatTest.cpp AsceeHeapDeathTest.cpp AsceeIdentifiersTest.cpp)
+add_executable(Google_Tests_run ../src/argc/runtime/string.cpp ../src/executor/Executor.cpp ../src/executor/ThreadCpuTimer.cpp ../src/loader/AppLoader.cpp ArgcStringTest.cpp AsceeExecutorTest.cpp HeapModifierDeathTest.cpp ArgcFloatTest.cpp AsceeHeapDeathTest.cpp AsceeIdentifiersTest.cpp AsceeCryptoTest.cpp)
 
 # linking Google_Tests_run with DateConverter_lib which will be tested
 # target_link_libraries(Google_Tests_run DateConverter_lib)
 
-target_link_libraries(Google_Tests_run gtest gtest_main stdc++ m argcrt dl argcrt app10 app11 app12 app13 app14 app15 app16 app17 app18 app19 app20 app21 app22 app23)
+target_link_libraries(Google_Tests_run gtest gtest_main stdc++ m argcrt dl app10 app11 app12 app13 app14 app15 app16 app17 app18 app19 app20 app21 app22 app23)

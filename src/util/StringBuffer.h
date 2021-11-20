@@ -23,6 +23,7 @@
 #include <string>
 #include <cstring>
 #include <stdexcept>
+#include <array>
 
 namespace ascee::runtime {
 
@@ -30,10 +31,11 @@ class StringView : public std::string_view {
 public:
     StringView() = default;
 
+    StringView(const char* str);
+
     StringView(const std::string_view& view); // NOLINT(google-explicit-constructor)
 
     bool isNull();
-
 
     template<typename T>
     StringView scan(const StringView& pattern, T& output) const;
@@ -49,8 +51,6 @@ public:
         if (maxSize < end + str.size()) throw std::out_of_range("append: str is too long");
         std::memcpy(buffer + end, str.data(), str.size());
         end += str.size();
-        // size of the buffer is maxSize + 1 so this is not be out of range.
-        buffer[end] = '\0';
     }
 
     void clear() {
@@ -66,6 +66,7 @@ private:
     // we allocate one extra byte, so always there will be a null at the end of buffer.
     char buffer[maxSize + 1] = {};
 };
+
 
 } // namespace ascee::runtime
 #endif // ASCEE_STRING_BUFFER_H

@@ -81,7 +81,11 @@ TEST_F(HeapModifierDeathTest, SimpleReadWrite) {
     modifier.loadContext(1);
     modifier.loadChunk(short_id_t(10));
     auto got = modifier.load<int64>(100);
+
     EXPECT_EQ(got, 0x102020201020202) << "got: 0x" << std::hex << got;
+
+    auto got2 = modifier.load<std::array<int64, 1>>(100);
+    EXPECT_EQ(got2.at(0), 0x102020201020202) << "got: 0x" << std::hex << got;
 
     modifier.loadChunk(std_id_t(100));
     modifier.store<int64>(100, 123456789);

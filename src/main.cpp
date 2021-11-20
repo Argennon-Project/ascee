@@ -20,77 +20,15 @@
 #include <executor/Executor.h>
 #include <iostream>
 #include <loader/AppLoader.h>
+#include <util/StaticArray.h>
 
 using namespace ascee;
 using namespace ascee::runtime;
 
 int main(int argc, char const* argv[]) {
-    // initialize a pairing, Any file in the param subdirectory will suffice:
-    pairing_t pairing;
-    char param[1024];
-    FILE* params = fopen("/home/aybehrouz/pbc-0.5.14/param/a.param", "r");
-    if (params == nullptr) {
-        printf("here:\n");
-    }
-
-    size_t count = fread(param, 1, 1024, params);
-    fclose(params);
-    if (!count) pbc_die("input error");
-    pairing_init_set_buf(pairing, param, count);
-
-    // We shall need several element_t variables to hold the system parameters, keys and other quantities.
-    // We declare them and initialize them:
-    element_t g, h;
-    element_t public_key, secret_key;
-    element_t sig;
-    element_t temp1, temp2;
-
-    element_init_G2(g, pairing);
-    element_init_G2(public_key, pairing);
-    element_init_G1(h, pairing);
-    element_init_G1(sig, pairing);
-    element_init_GT(temp1, pairing);
-    element_init_GT(temp2, pairing);
-    element_init_Zr(secret_key, pairing);
-
-    // generate system parameters:
-    element_random(g);
-
-    // generate a private key:
-    element_random(secret_key);
-
-    // and the corresponding public key:
-    element_pow_zn(public_key, g, secret_key);
-
-    // When given a message to sign, we first compute its hash, using some standard hash algorithm. Many libraries
-    // can do this, and this operation does not involve pairings, so PBC does not provide functions for this step.
-    // For this example, and our message has already been hashed, possibly using another library. Say the message
-    // hash is "ABCDEF" (a 48-bit hash). We map these bytes to an element h of G1:
-
-    unsigned char digest[EVP_MAX_MD_SIZE];
-    int digestLen;
-    EVP_Digest((void*) "testData", 8, digest, reinterpret_cast<unsigned int*>(&digestLen), nullptr, nullptr);
-
-    element_from_hash(h, digest, digestLen);
-
-    // then sign it:
-    element_pow_zn(sig, h, secret_key);
-
-    // To verify this signature, we compare the outputs of the pairing applied to the signature and system parameter,
-    // and the pairing applied to the message hash and public key. If the pairing outputs match then the
-    // signature is valid:
-    pairing_apply(temp1, sig, g, pairing);
-    pairing_apply(temp2, h, public_key, pairing);
-    if (!element_cmp(temp1, temp2)) {
-        printf("signature verifies\n");
-    } else {
-        printf("signature does not verify\n");
-    }
-
-
     AppLoader::global = std::make_unique<AppLoader>("");
     Executor executor;
-    auto response = executor.startSession(ascee::Transaction{
+    auto response = executor.startSession(Transaction{
             .calledAppID = 1,
             .request = ascee::string_t("test request"),
             .gas = 1000,
@@ -100,6 +38,10 @@ int main(int argc, char const* argv[]) {
     printf("hereeeee@@\n");
 
     printf("%s \n", response.data());
+
+    StaticArray<int, 2> x;
+    x[0] = 12;
+    x[1] = 45;
 /*
     char cStr[20] = "abcdefgh";
     string str = string(cStr, 4);

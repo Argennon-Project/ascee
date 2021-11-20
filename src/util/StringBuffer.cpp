@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-//#include <argc/types.h>
+#include "StaticArray.h"
 #include "StringBuffer.h"
 
 #define MAX_NUM64_LENGTH 32
@@ -74,3 +74,5 @@ template StringView StringView::scan(const StringView&, double&) const;
 bool StringView::isNull() { return data() == nullptr; }
 
 StringView::StringView(const string_view& view) : string_view(view) {}
+
+StringView::StringView(const char* str) : string_view(str) {}
