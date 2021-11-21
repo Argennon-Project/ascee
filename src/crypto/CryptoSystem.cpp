@@ -44,6 +44,9 @@ CryptoSystem::CryptoSystem() {
     element_init_GT(temp2, pairing);
     element_init_Zr(secret_key, pairing);
 
+    // generate system parameters:
+    element_random(g);
+
     PublicKey pk;
     if (element_length_in_bytes_compressed(public_key) > pk.size()) throw std::length_error("public key length");
 
@@ -52,9 +55,6 @@ CryptoSystem::CryptoSystem() {
 
     Signature signature;
     if (element_length_in_bytes_compressed(sig_elem) > signature.size()) throw std::length_error("signature length");
-
-    // generate system parameters:
-    element_random(g);
 }
 
 CryptoSystem::~CryptoSystem() {

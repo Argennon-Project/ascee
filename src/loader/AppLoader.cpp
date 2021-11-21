@@ -36,7 +36,7 @@ AppLoader::~AppLoader() {
     printf("closed\n");
 }
 
-void AppLoader::loadApp(std_id_t appID) {
+void AppLoader::loadApp(long_id appID) {
     void* handle;
     char* error;
     auto appFile = libraryPath / ("libapp" + std::to_string(appID) + ".so");
@@ -49,7 +49,7 @@ void AppLoader::loadApp(std_id_t appID) {
     }
     dlerror(); /* Clear any existing error */
 
-    auto dispatcher = (dispatcher_ptr_t) dlsym(handle, "dispatcher");
+    auto dispatcher = (dispatcher_ptr) dlsym(handle, "dispatcher");
 
     error = dlerror();
     if (error != nullptr) {
@@ -60,7 +60,7 @@ void AppLoader::loadApp(std_id_t appID) {
     dispatchersMap[appID] = {handle, dispatcher};
 }
 
-dispatcher_ptr_t AppLoader::getDispatcher(std_id_t appID) {
+dispatcher_ptr AppLoader::getDispatcher(long_id appID) {
     // we should let readers access the map concurrently, but in the current implementation we are not doing so.
     try {
         scoped_lock<mutex> lock(mapMutex);
@@ -76,8 +76,8 @@ dispatcher_ptr_t AppLoader::getDispatcher(std_id_t appID) {
     }
 }
 
-unordered_map<std_id_t, dispatcher_ptr_t> AppLoader::createAppTable(const vector<std_id_t>& appList) {
-    unordered_map<std_id_t, dispatcher_ptr_t> table(appList.size());
+unordered_map<long_id, dispatcher_ptr> AppLoader::createAppTable(const vector<long_id>& appList) {
+    unordered_map<long_id, dispatcher_ptr> table(appList.size());
     for (const auto& appID: appList) {
         table[appID] = getDispatcher(appID);
     }

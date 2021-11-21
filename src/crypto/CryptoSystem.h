@@ -21,18 +21,10 @@
 #include <pbc.h>
 #include <openssl/evp.h>
 #include <util/StringBuffer.h>
-#include <util/StaticArray.h>
+#include "Keys.h"
 
 
 namespace ascee::runtime {
-
-static const int PUBLIC_KEY_SIZE = 65;
-static const int SIGNATURE_SIZE = 65;
-static const int SECRET_KEY_SIZE = 20;
-
-using SecretKey = StaticArray<byte, SECRET_KEY_SIZE>;
-using PublicKey = StaticArray<byte, PUBLIC_KEY_SIZE>;
-using Signature = StaticArray<byte, SIGNATURE_SIZE>;
 
 /// This class is NOT secure and it should only be used for Debugging.
 class CryptoSystem {

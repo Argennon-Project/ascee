@@ -6,9 +6,9 @@ using namespace ascee;
 using namespace ascee::argc;
 
 extern "C"
-int dispatcher(string_t request) {
+int dispatcher(string_c request) {
     invoke_dispatcher(85, 555, request);
-    string_t response = STRING(" wrong app!");
+    string_c response = STRING(" wrong app!");
     append_str(response_buffer(), response);
     return HTTP_OK;
 }

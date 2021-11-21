@@ -39,16 +39,16 @@ void Heap::Modifier::restoreVersion(int16_t version) {
     currentVersion = version;
 }
 
-void Heap::Modifier::loadChunk(short_id_t chunkID) {
-    loadChunk(std_id_t(chunkID));
+void Heap::Modifier::loadChunk(short_id chunkID) {
+    loadChunk(long_id(chunkID));
 }
 
-void Heap::Modifier::loadChunk(std_id_t chunkID) {
+void Heap::Modifier::loadChunk(long_id chunkID) {
     currentChunk = &chunks->at(chunkID);
     accessTable = &currentChunk->accessTable;
 }
 
-void Heap::Modifier::loadContext(std_id_t appID) {
+void Heap::Modifier::loadContext(long_id appID) {
     // When `appID` does not exist in the map, this function should not throw an exception. Smart contracts do not
     // call this function directly and failing can be problematic for `invoke_dispatcher` function.
     chunks = &appsAccessMaps[appID];
@@ -56,7 +56,7 @@ void Heap::Modifier::loadContext(std_id_t appID) {
     currentChunk = nullptr;
 }
 
-void Heap::Modifier::defineChunk(std_id_t ownerApp, std_id_t chunkID, Chunk::Pointer sizePtr, int32 maxSize) {
+void Heap::Modifier::defineChunk(long_id ownerApp, long_id chunkID, Chunk::Pointer sizePtr, int32 maxSize) {
     bool inserted = appsAccessMaps[ownerApp].emplace(std::piecewise_construct,
                                                      std::forward_as_tuple(chunkID),
                                                      std::forward_as_tuple(sizePtr, maxSize)).second;
@@ -64,7 +64,7 @@ void Heap::Modifier::defineChunk(std_id_t ownerApp, std_id_t chunkID, Chunk::Poi
 }
 
 void Heap::Modifier::defineAccessBlock(Chunk::Pointer heapLocation,
-                                       std_id_t app, std_id_t chunk, int32 offset,
+                                       long_id app, long_id chunk, int32 offset,
                                        int32 size, bool writable) {
     bool inserted = appsAccessMaps.at(app).at(chunk).accessTable.emplace(std::piecewise_construct,
                                                                          std::forward_as_tuple(offset),

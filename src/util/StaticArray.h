@@ -18,7 +18,8 @@
 #ifndef ASCEE_STATIC_ARRAY_H
 #define ASCEE_STATIC_ARRAY_H
 
-#include <argc/types.h>
+#include <string>
+#include <array>
 
 namespace ascee::runtime {
 

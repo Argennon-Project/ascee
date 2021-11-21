@@ -15,27 +15,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef ASCEE_PAGE_H
-#define ASCEE_PAGE_H
-
 #include <argc/types.h>
-#include "Chunk.h"
+#include <argc/functions.h>
 
-namespace ascee::runtime {
+using namespace ascee;
 
-class Page {
-private:
-    std::unique_ptr<Chunk> native;
-public:
-    void setNative(Chunk* newNative) {
-        native.reset(newNative);
-    }
-
-    void addMigrant(long_id appID, long_id chunkID, Chunk* migrant) {};
-
-    byte* getDigest();
-
-};
-
-} // namespace ascee::runtime
-#endif // ASCEE_PAGE_H

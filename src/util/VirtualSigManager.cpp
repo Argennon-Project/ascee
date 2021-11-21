@@ -21,14 +21,14 @@ using namespace ascee;
 using namespace runtime;
 using std::string;
 
-void VirtualSigManager::sign(std_id_t appID, const StringView& msg) {
+void VirtualSigManager::sign(long_id appID, const StringView& msg) {
     // here the msg will be copies and saved inside messages
     bool inserted = messages[appID].emplace(msg).second;
     if (inserted) cost += msg.size() + SIG_CONSTANT_COST;
     if (cost > MAX_COST) throw std::bad_alloc();
 }
 
-bool VirtualSigManager::verify(std_id_t appID, const StringView& msg) {
+bool VirtualSigManager::verify(long_id appID, const StringView& msg) {
     try {
         return messages.at(appID).count(string(msg)) > 0;
     } catch (const std::out_of_range&) {
@@ -36,7 +36,7 @@ bool VirtualSigManager::verify(std_id_t appID, const StringView& msg) {
     }
 }
 
-bool VirtualSigManager::verifyAndInvalidate(std_id_t appID, const StringView& msg) {
+bool VirtualSigManager::verifyAndInvalidate(long_id appID, const StringView& msg) {
     try {
         bool erased = messages.at(appID).erase(string(msg));
         if (erased) cost -= msg.size() + SIG_CONSTANT_COST;

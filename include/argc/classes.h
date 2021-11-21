@@ -15,27 +15,23 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef ASCEE_PAGE_H
-#define ASCEE_PAGE_H
 
-#include <argc/types.h>
-#include "Chunk.h"
+#ifndef ASCEE_CLASSES_TYPES_H
+#define ASCEE_CLASSES_TYPES_H
 
-namespace ascee::runtime {
+#include <util/StringBuffer.h>
+#include <crypto/Keys.h>
+#include "primitives.h"
 
-class Page {
-private:
-    std::unique_ptr<Chunk> native;
-public:
-    void setNative(Chunk* newNative) {
-        native.reset(newNative);
-    }
+namespace ascee {
 
-    void addMigrant(long_id appID, long_id chunkID, Chunk* migrant) {};
+/// argc strings are not null-terminated. However, usually there is a null at the end. `length` is the number of
+/// bytes without considering any null bytes at the end.
+using string_c = runtime::StringView;
+template<int max_size>
+using string_buffer_c = runtime::StringBuffer<max_size>;
+using signature_c = runtime::Signature;
+using publickey_c = runtime::PublicKey;
 
-    byte* getDigest();
-
-};
-
-} // namespace ascee::runtime
-#endif // ASCEE_PAGE_H
+} // namespace ascee
+#endif // ASCEE_CLASSES_TYPES_H

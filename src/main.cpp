@@ -26,11 +26,53 @@ using namespace ascee;
 using namespace ascee::runtime;
 
 int main(int argc, char const* argv[]) {
+    // initialize a pairing:
+    char param[1024];
+    FILE* params = fopen("../param/a.param", "r");
+    if (params == nullptr) {
+        throw std::runtime_error("param file not found");
+    }
+    size_t count = fread(param, 1, 1024, params);
+    fclose(params);
+
+    if (!count) throw std::runtime_error("input error");
+
+    pairing_t pairing{};
+    // We shall need several element_t variables to hold the system parameters, keys and other quantities.
+    // We declare them here and initialize them in the constructor:
+    element_t inv{}, z{};
+    element_t x{}, y{};
+    element_t sig_elem{};
+    element_t temp1{}, temp2{};
+
+    pairing_init_set_buf(pairing, param, count);
+
+    element_init_G2(inv, pairing);
+    element_init_G2(z, pairing);
+    element_init_G2(x, pairing);
+    element_init_G2(y, pairing);
+    element_init_GT(temp1, pairing);
+    element_init_GT(temp2, pairing);
+
+    element_random(x);
+    element_random(y);
+
+    element_invert(inv, x);
+
+    element_add(z, x, inv);
+
+    element_printf("x:%B\nx+y->%B\n", x, z);
+
+    element_mul(z, x, inv);
+
+    element_printf("x.y->%B\n", z);
+
+
     AppLoader::global = std::make_unique<AppLoader>("");
     Executor executor;
     auto response = executor.startSession(Transaction{
             .calledAppID = 1,
-            .request = ascee::string_t("test request"),
+            .request = ascee::string_c("test request"),
             .gas = 1000,
             .appAccessList = {1}
     });
@@ -39,9 +81,6 @@ int main(int argc, char const* argv[]) {
 
     printf("%s \n", response.data());
 
-    StaticArray<int, 2> x;
-    x[0] = 12;
-    x[1] = 45;
 /*
     char cStr[20] = "abcdefgh";
     string str = string(cStr, 4);
@@ -54,7 +93,7 @@ int main(int argc, char const* argv[]) {
     Executor e;
     return 0;
     auto* modifier = heap.initSession(2);
-    short_id_t chunk = 111;
+    short_id chunk = 111;
     modifier->loadContext(2);
     modifier->loadChunk(chunk);
     modifier->saveVersion();

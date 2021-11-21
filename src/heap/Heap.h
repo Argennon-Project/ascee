@@ -35,12 +35,12 @@ struct AppMemAccess {
     };
 
     struct Chunk {
-        std_id_t id;
+        long_id id;
         int32 maxNewSize;
         std::vector<Block> accessBlocks;
     };
 
-    std_id_t appID;
+    long_id appID;
     std::vector<Chunk> chunks;
 };
 
@@ -50,9 +50,9 @@ private:
     std::unordered_map<int128, Chunk*> chunkIndex;
     std::unordered_map<int128, Page> pageCache;
 
-    Chunk* getChunk(std_id_t appID, std_id_t chunkID);
+    Chunk* getChunk(long_id appID, long_id chunkID);
 
-    Chunk* newChunk(std_id_t appID, std_id_t id, int32 size);
+    Chunk* newChunk(long_id appID, long_id id, int32 size);
 
 public:
     class Modifier {
@@ -141,8 +141,8 @@ public:
                     maxSize(maxSize) {}
         };
 
-        typedef std::unordered_map<std_id_t, ChunkInfo> ChunkMap64;
-        typedef std::unordered_map<std_id_t, ChunkMap64> AppMap;
+        typedef std::unordered_map<long_id, ChunkInfo> ChunkMap64;
+        typedef std::unordered_map<long_id, ChunkMap64> AppMap;
 
         AccessTableMap* accessTable = nullptr;
         ChunkInfo* currentChunk = nullptr;
@@ -151,10 +151,10 @@ public:
 
         explicit Modifier(Heap* parent) : parent(parent) {}
 
-        void defineChunk(std_id_t ownerApp, std_id_t chunkID, Chunk::Pointer sizePtr, int32 maxSize = -1);
+        void defineChunk(long_id ownerApp, long_id chunkID, Chunk::Pointer sizePtr, int32 maxSize = -1);
 
         void defineAccessBlock(Chunk::Pointer heapLocation,
-                               std_id_t app, std_id_t chunk, int32 offset,
+                               long_id app, long_id chunk, int32 offset,
                                int32 size, bool writable);
 
     public:
@@ -166,11 +166,11 @@ public:
         inline
         void store(int32 offset, T value) { accessTable->at(offset).write<T>(currentVersion, value); }
 
-        void loadChunk(short_id_t chunkID);
+        void loadChunk(short_id chunkID);
 
-        void loadChunk(std_id_t chunkID);
+        void loadChunk(long_id chunkID);
 
-        void loadContext(std_id_t appID);
+        void loadContext(long_id appID);
 
         void restoreVersion(int16_t version);
 
@@ -185,11 +185,11 @@ public:
 
     Heap();
 
-    Modifier* initSession(std_id_t calledApp);
+    Modifier* initSession(long_id calledApp);
 
     Modifier* initSession(const std::vector<AppMemAccess>& memAccessList);
 
-    void freeChunk(std_id_t appID, std_id_t id);
+    void freeChunk(long_id appID, long_id id);
 };
 
 } // namespace ascee::runtime

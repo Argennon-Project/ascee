@@ -12,7 +12,7 @@ void foo() {
 }
 
 
-int dispatcher(string_t request) {
+int dispatcher(string_c request) {
     int ret = invoke_dispatcher(255, 1, request);
     /*  string_t req = STRING("Hi!");
       foo();

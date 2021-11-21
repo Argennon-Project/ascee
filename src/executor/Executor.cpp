@@ -108,7 +108,7 @@ string Executor::startSession(const Transaction& t) {
     session = nullptr;
     free(recoveryStack);
     // here, string constructor makes a copy of the buffer.
-    return string(string_t(threadSession.response));
+    return string(string_c(threadSession.response));
 }
 
 Executor::Executor() {
@@ -116,11 +116,11 @@ Executor::Executor() {
 }
 
 struct InvocationArgs {
-    int (* invoker)(byte, std_id_t, string_t);
+    int (* invoker)(byte, long_id, string_c);
 
     byte forwarded_gas;
-    std_id_t app_id;
-    string_t request;
+    long_id app_id;
+    string_c request;
     SessionInfo* session;
 };
 
@@ -138,8 +138,8 @@ void* threadStart(void* voidArgs) {
     return ret;
 }
 
-int Executor::controlledExec(int (* invoker)(byte, std_id_t, string_t),
-                             byte forwarded_gas, std_id_t app_id, string_t request, size_t stackSize) {
+int Executor::controlledExec(int (* invoker)(byte, long_id, string_c),
+                             byte forwarded_gas, long_id app_id, string_c request, size_t stackSize) {
     pthread_t threadID;
     pthread_attr_t threadAttr;
 

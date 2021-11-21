@@ -31,15 +31,15 @@ public:
     static const std::size_t SIG_CONSTANT_COST = 8;
     static const std::size_t MAX_COST = 128 * 1024;
 
-    void sign(std_id_t appID, const StringView& msg);
+    void sign(long_id appID, const StringView& msg);
 
-    bool verify(std_id_t appID, const StringView& msg);
+    bool verify(long_id appID, const StringView& msg);
 
-    bool verifyAndInvalidate(std_id_t appID, const StringView& msg);
+    bool verifyAndInvalidate(long_id appID, const StringView& msg);
 
 private:
     std::size_t cost = 0;
-    std::unordered_map<std_id_t, std::unordered_set<std::string>> messages;
+    std::unordered_map<long_id, std::unordered_set<std::string>> messages;
 };
 
 const std::size_t VirtualSigManager::SIG_CONSTANT_COST;

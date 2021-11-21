@@ -11,9 +11,9 @@ int fib(int n) {
 }
 
 extern "C"
-int dispatcher(string_t request) {
+int dispatcher(string_c request) {
     printf("ssss%d\n", fib(20));
-    string_t response = STRING(" is DONE!");
+    string_c response = STRING(" is DONE!");
     append_str(response_buffer(), request);
     append_str(response_buffer(), response);
     return HTTP_OK;

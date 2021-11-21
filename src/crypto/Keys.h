@@ -15,27 +15,23 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef ASCEE_PAGE_H
-#define ASCEE_PAGE_H
 
-#include <argc/types.h>
-#include "Chunk.h"
+#ifndef ASCEE_CRYPTO_KEYS_H
+#define ASCEE_CRYPTO_KEYS_H
+
+#include <util/StaticArray.h>
+#include <argc/primitives.h>
+
 
 namespace ascee::runtime {
 
-class Page {
-private:
-    std::unique_ptr<Chunk> native;
-public:
-    void setNative(Chunk* newNative) {
-        native.reset(newNative);
-    }
+static const int PUBLIC_KEY_SIZE = 65;
+static const int SIGNATURE_SIZE = 65;
+static const int SECRET_KEY_SIZE = 20;
 
-    void addMigrant(long_id appID, long_id chunkID, Chunk* migrant) {};
-
-    byte* getDigest();
-
-};
+using SecretKey = StaticArray<byte, SECRET_KEY_SIZE>;
+using PublicKey = StaticArray<byte, PUBLIC_KEY_SIZE>;
+using Signature = StaticArray<byte, SIGNATURE_SIZE>;
 
 } // namespace ascee::runtime
-#endif // ASCEE_PAGE_H
+#endif // ASCEE_CRYPTO_KEYS_H

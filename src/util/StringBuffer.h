@@ -67,6 +67,5 @@ private:
     char buffer[maxSize + 1] = {};
 };
 
-
 } // namespace ascee::runtime
 #endif // ASCEE_STRING_BUFFER_H

@@ -15,27 +15,34 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef ASCEE_PAGE_H
-#define ASCEE_PAGE_H
+#ifndef ASCEE_PRIMITIVES_H
+#define ASCEE_PRIMITIVES_H
 
-#include <argc/types.h>
-#include "Chunk.h"
+#include <cstdint>
 
-namespace ascee::runtime {
+namespace ascee {
 
-class Page {
-private:
-    std::unique_ptr<Chunk> native;
-public:
-    void setNative(Chunk* newNative) {
-        native.reset(newNative);
-    }
+/// int represents a signed integer with the most efficient size for the platform which MUST NOT be smaller than 32 bits.
+typedef uint8_t byte;
+typedef uint16_t uint16;
+typedef int32_t int32;
+typedef int64_t int64;
+typedef __int128_t int128;
+typedef double float64;
+typedef __float128 float128;
+typedef uint32_t short_id;
+typedef uint64_t long_id;
+typedef struct FullID full_id;
 
-    void addMigrant(long_id appID, long_id chunkID, Chunk* migrant) {};
+struct FullID {
+    __int128_t id;
 
-    byte* getDigest();
+    FullID(__int128_t id) : id(id) {} // NOLINT(google-explicit-constructor)
 
+    FullID(long_id high, long_id low) { id = __int128_t(high) << 64 | low; }
+
+    operator __int128_t() const { return id; } // NOLINT(google-explicit-constructor)
 };
 
-} // namespace ascee::runtime
-#endif // ASCEE_PAGE_H
+} // namespace ascee
+#endif // ASCEE_PRIMITIVES_H

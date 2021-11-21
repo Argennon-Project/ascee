@@ -15,47 +15,18 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef ASCEE_ARGC_TYPES_INC
-#define ASCEE_ARGC_TYPES_INC
+#ifndef ASCEE_TYPES_INC
+#define ASCEE_TYPES_INC
 
-#include <cstdint>
-#include <util/StringBuffer.h>
+#include "primitives.h"
+#include "classes.h"
 
 namespace ascee {
 
-/// int represents a signed integer with the most efficient size for the platform which MUST NOT be smaller than 32 bits.
-typedef uint8_t byte;
-typedef uint16_t uint16;
-typedef int32_t int32;
-typedef int64_t int64;
-typedef __int128_t int128;
-typedef double float64;
-typedef __float128 float128;
-typedef uint32_t short_id_t;
-typedef uint64_t std_id_t;
-typedef struct FullID full_id_t;
+typedef int (* dispatcher_ptr)(string_c request);
 
-
-struct FullID {
-    __int128_t id;
-
-    FullID(__int128_t id) : id(id) {} // NOLINT(google-explicit-constructor)
-
-    FullID(std_id_t high, std_id_t low) { id = __int128_t(high) << 64 | low; }
-
-    operator __int128_t() const { return id; } // NOLINT(google-explicit-constructor)
-};
-
-/// argc strings are not null-terminated. However, usually there is a null at the end. `length` is the number of
-/// bytes without considering any null bytes at the end.
-using string_t = runtime::StringView;
-template<int max_size>
-using string_buffer = runtime::StringBuffer<max_size>;
-
-typedef int (* dispatcher_ptr_t)(string_t request);
-
-#define STRING(str) string_t(str)
-#define STRING_BUFFER(name, size) string_buffer<size> name
+#define STRING(str) string_c(str)
+#define STRING_BUFFER(name, size) string_buffer_c<size> name
 
 #define RESPONSE_MAX_SIZE (2*1024)
 
@@ -80,4 +51,4 @@ typedef int (* dispatcher_ptr_t)(string_t request);
 
 } // namespace ascee
 
-#endif // ASCEE_ARGC_TYPES_INC
+#endif // ASCEE_TYPES_INC

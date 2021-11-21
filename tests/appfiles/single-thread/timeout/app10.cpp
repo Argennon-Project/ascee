@@ -4,6 +4,6 @@
 using namespace ascee;
 
 extern "C"
-int dispatcher(string_t request) {
+int dispatcher(string_c request) {
     while (1);
 }

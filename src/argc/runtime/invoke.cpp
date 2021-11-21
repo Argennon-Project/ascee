@@ -30,7 +30,7 @@ using namespace ascee;
 using namespace ascee::runtime;
 using std::unique_ptr, std::vector, std::unordered_map, std::string, std::string_view;
 
-string_buffer<RESPONSE_MAX_SIZE>& argc::response_buffer() {
+string_buffer_c<RESPONSE_MAX_SIZE>& argc::response_buffer() {
     return Executor::getSession()->response;
 }
 
@@ -45,7 +45,7 @@ void addDefaultResponse(int statusCode) {
     char response[256];
     int n = sprintf(response, "HTTP/1.1 %d %s", statusCode, "OK");
     Executor::getSession()->response.clear();
-    Executor::getSession()->response.append(string_t(string_view(response, n)));
+    Executor::getSession()->response.append(string_c(string_view(response, n)));
 }
 
 static inline
@@ -96,7 +96,7 @@ void argc::exit_area() {
     unBlockSignals();
 }
 
-void argc::invoke_deferred(byte forwarded_gas, std_id_t app_id, string_t request) {
+void argc::invoke_deferred(byte forwarded_gas, long_id app_id, string_c request) {
     Executor::getSession()->currentCall->deferredCalls.emplace_back(DeferredArgs{
             .appID = app_id,
             .forwardedGas = forwarded_gas,
@@ -106,8 +106,8 @@ void argc::invoke_deferred(byte forwarded_gas, std_id_t app_id, string_t request
 }
 
 static inline
-int invoke_dispatcher_impl(byte forwarded_gas, std_id_t app_id, string_t request) {
-    dispatcher_ptr_t dispatcher;
+int invoke_dispatcher_impl(byte forwarded_gas, long_id app_id, string_c request) {
+    dispatcher_ptr dispatcher;
     try {
         dispatcher = Executor::getSession()->appTable.at(app_id);
     } catch (const std::out_of_range&) {
@@ -157,14 +157,14 @@ int invoke_dispatcher_impl(byte forwarded_gas, std_id_t app_id, string_t request
     argc::exit_area();
 
     if (ret < 400) {
-        string mainResponse(string_t(Executor::getSession()->response));
+        string mainResponse(string_c(Executor::getSession()->response));
 
         for (const auto& dCall: Executor::getSession()->currentCall->deferredCalls) {
             int temp = argc::invoke_dispatcher(
                     dCall.forwardedGas,
                     dCall.appID,
                     // we should NOT use length + 1 here.
-                    string_t(dCall.request)
+                    string_c(dCall.request)
             );
             printf("** deferred call returns: %d\n", temp);
             if (temp >= BAD_REQUEST) {
@@ -174,7 +174,7 @@ int invoke_dispatcher_impl(byte forwarded_gas, std_id_t app_id, string_t request
         }
 
         Executor::getSession()->response.clear();
-        Executor::getSession()->response.append(string_t(mainResponse));
+        Executor::getSession()->response.append(string_c(mainResponse));
     }
 
     // restore context
@@ -189,7 +189,7 @@ int invoke_dispatcher_impl(byte forwarded_gas, std_id_t app_id, string_t request
 }
 
 
-int argc::invoke_dispatcher(byte forwarded_gas, std_id_t app_id, string_t request) {
+int argc::invoke_dispatcher(byte forwarded_gas, long_id app_id, string_c request) {
     blockSignals();
 
     Executor::getSession()->failureManager.nextInvocation();

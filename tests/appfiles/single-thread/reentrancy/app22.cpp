@@ -9,9 +9,9 @@ using namespace ascee::argc;
 void f(int deferred_call) {
     enter_area();
 
-    string_t req1 = STRING("choice: 1");
-    string_t req2 = STRING("choice: 2");
-    string_t req3 = STRING("choice: 3");
+    string_c req1 = STRING("choice: 1");
+    string_c req2 = STRING("choice: 2");
+    string_c req3 = STRING("choice: 3");
 
     if (deferred_call) {
         invoke_deferred(50, 23, req3);
@@ -27,7 +27,7 @@ void f(int deferred_call) {
 
     int ret4 = invoke_dispatcher(50, 23, req3);
 
-    string_t space = STRING(" ");
+    string_c space = STRING(" ");
     clear_buffer(response_buffer());
     append_int64(response_buffer(), ret1);
     append_str(response_buffer(), space);
@@ -56,9 +56,9 @@ int h() {
 
 
 extern "C"
-int dispatcher(string_t request) {
-    string_t pattern = STRING("choice: ");
-    string_t rest;
+int dispatcher(string_c request) {
+    string_c pattern = STRING("choice: ");
+    string_c rest;
     int64 choice = scan_int64(request, pattern, rest);
 
     if (choice == 1) f(0);
@@ -66,7 +66,7 @@ int dispatcher(string_t request) {
     else if (choice == 3) return h();
     else if (choice == 4) f(1); // deferred call
 
-    string_t done = STRING(" done: ");
+    string_c done = STRING(" done: ");
     append_str(response_buffer(), done);
     append_int64(response_buffer(), choice);
     return HTTP_OK;

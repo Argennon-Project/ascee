@@ -29,7 +29,7 @@
 #include <vector>
 
 #include <executor/FailureManager.h>
-#include <argc/types.h>
+#include <argc/primitives.h>
 #include <heap/Heap.h>
 #include "ThreadCpuTimer.h"
 
@@ -46,7 +46,7 @@ private:
 };
 
 struct DeferredArgs {
-    std_id_t appID;
+    long_id appID;
     byte forwardedGas;
     std::string request;
 };
@@ -55,14 +55,14 @@ struct SessionInfo {
     bool criticalArea = false;
 
     std::unique_ptr<Heap::Modifier> heapModifier;
-    std::unordered_map<std_id_t, dispatcher_ptr_t> appTable;
-    std::unordered_map<std_id_t, bool> isLocked;
+    std::unordered_map<long_id, dispatcher_ptr> appTable;
+    std::unordered_map<long_id, bool> isLocked;
     FailureManager failureManager;
 
-    string_buffer<RESPONSE_MAX_SIZE> response;
+    string_buffer_c<RESPONSE_MAX_SIZE> response;
 
     struct CallContext {
-        const std_id_t appID;
+        const long_id appID;
         int64_t remainingExternalGas;
         bool hasLock = false;
         std::vector<DeferredArgs> deferredCalls;
@@ -74,10 +74,10 @@ struct SessionInfo {
 };
 
 struct Transaction {
-    std_id_t calledAppID;
-    string_t request;
+    long_id calledAppID;
+    string_c request;
     int64_t gas;
-    std::vector<std_id_t> appAccessList;
+    std::vector<long_id> appAccessList;
 };
 
 class Executor {
@@ -101,8 +101,8 @@ public:
 
     std::string startSession(const Transaction& t);
 
-    static int controlledExec(int (* invoker)(byte, std_id_t, string_t),
-                              byte forwarded_gas, std_id_t appID, string_t request, size_t size);
+    static int controlledExec(int (* invoker)(byte, long_id, string_c),
+                              byte forwarded_gas, long_id appID, string_c request, size_t size);
 };
 
 } // namespace ascee::runtime

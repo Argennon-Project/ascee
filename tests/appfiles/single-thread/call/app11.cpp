@@ -6,8 +6,8 @@ using namespace ascee;
 using namespace ascee::argc;
 
 extern "C"
-int dispatcher(string_t request) {
-    string_t response = STRING(" is DONE!");
+int dispatcher(string_c request) {
+    string_c response = STRING(" is DONE!");
     append_str(response_buffer(), request);
     append_str(response_buffer(), response);
     return HTTP_OK;

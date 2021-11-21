@@ -42,26 +42,26 @@ public:
 
         // appID = 1
         modifier.defineAccessBlock(Pointer(tempHeap),
-                                   1, short_id_t(10), 100,
+                                   1, short_id(10), 100,
                                    8, false);
         modifier.defineAccessBlock(Pointer(tempHeap + 8),
-                                   1, short_id_t(10), 108,
+                                   1, short_id(10), 108,
                                    16, true);
         modifier.defineAccessBlock(Pointer(tempHeap + 50),
-                                   1, short_id_t(11), 100,
+                                   1, short_id(11), 100,
                                    8, true);
         modifier.defineAccessBlock(Pointer(tempHeap + 58),
-                                   1, short_id_t(11), 120,
+                                   1, short_id(11), 120,
                                    8, true);
         modifier.defineAccessBlock(Pointer(tempHeap + 100),
-                                   1, std_id_t(100), 100,
+                                   1, long_id(100), 100,
                                    8, true);
         // appID = 2
         modifier.defineAccessBlock(Pointer(tempHeap + 150),
-                                   2, short_id_t(10), 100,
+                                   2, short_id(10), 100,
                                    8, true);
         modifier.defineAccessBlock(Pointer(tempHeap + 158),
-                                   2, short_id_t(11), 100,
+                                   2, short_id(11), 100,
                                    8, true);
 
         *(int64*) (tempHeap + 50) = 789;
@@ -79,7 +79,7 @@ public:
 TEST_F(HeapModifierDeathTest, SimpleReadWrite) {
     modifier.saveVersion();
     modifier.loadContext(1);
-    modifier.loadChunk(short_id_t(10));
+    modifier.loadChunk(short_id(10));
     auto got = modifier.load<int64>(100);
 
     EXPECT_EQ(got, 0x102020201020202) << "got: 0x" << std::hex << got;
@@ -87,12 +87,12 @@ TEST_F(HeapModifierDeathTest, SimpleReadWrite) {
     auto got2 = modifier.load<std::array<int64, 1>>(100);
     EXPECT_EQ(got2.at(0), 0x102020201020202) << "got: 0x" << std::hex << got;
 
-    modifier.loadChunk(std_id_t(100));
+    modifier.loadChunk(long_id(100));
     modifier.store<int64>(100, 123456789);
     got = modifier.load<int64>(100);
     EXPECT_EQ(got, 123456789);
 
-    modifier.loadChunk(short_id_t(10));
+    modifier.loadChunk(short_id(10));
     EXPECT_THROW(modifier.store(100, 444444), std::out_of_range);
 
     int128 big = 1;
@@ -105,7 +105,7 @@ TEST_F(HeapModifierDeathTest, SimpleReadWrite) {
 
     EXPECT_EXIT(modifier.store(0, 0), testing::KilledBySignal(SIGSEGV), "");
 
-    modifier.loadChunk(short_id_t(10));
+    modifier.loadChunk(short_id(10));
     EXPECT_THROW(modifier.store(100, big), std::out_of_range);
 
     EXPECT_THROW(modifier.load<int128>(100), std::out_of_range);
@@ -115,14 +115,14 @@ TEST_F(HeapModifierDeathTest, SimpleReadWrite) {
     EXPECT_EQ(got, 444555666777888);
 
     modifier.loadContext(1);
-    modifier.loadChunk(std_id_t(100));
+    modifier.loadChunk(long_id(100));
     got = modifier.load<int64>(100);
     EXPECT_EQ(got, 123456789);
 }
 
 TEST_F(HeapModifierDeathTest, VersionZero) {
     modifier.loadContext(1);
-    modifier.loadChunk(short_id_t(10));
+    modifier.loadChunk(short_id(10));
     auto got = modifier.load<int64>(100);
     EXPECT_EQ(got, 0x102020201020202) << "got: 0x" << std::hex << got;
 
@@ -132,7 +132,7 @@ TEST_F(HeapModifierDeathTest, VersionZero) {
 
 TEST_F(HeapModifierDeathTest, SimpleVersioning) {
     modifier.loadContext(1);
-    modifier.loadChunk(short_id_t(11));
+    modifier.loadChunk(short_id(11));
 
     auto v0 = modifier.saveVersion();
     modifier.store<int64>(100, 1);
@@ -172,7 +172,7 @@ TEST_F(HeapModifierDeathTest, SimpleVersioning) {
 
 TEST_F(HeapModifierDeathTest, RestoringMultiVersions) {
     modifier.loadContext(1);
-    modifier.loadChunk(short_id_t(11));
+    modifier.loadChunk(short_id(11));
 
     modifier.saveVersion();
     modifier.store<int64>(100, 1);

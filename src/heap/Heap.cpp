@@ -37,19 +37,19 @@ Heap::Heap() {
     if (!isLittleEndian()) throw std::runtime_error("platform not supported");
 }
 
-Heap::Modifier* Heap::initSession(std_id_t calledApp) {
+Heap::Modifier* Heap::initSession(long_id calledApp) {
     return new Modifier(this);
 }
 
 Heap::Modifier* Heap::initSession(const std::vector<AppMemAccess>& memAccessList) {
     auto* result = new Modifier(this);
-    std::vector<std::pair<std_id_t, std_id_t>> newChunks;
+    std::vector<std::pair<long_id, long_id>> newChunks;
 
     try {
         for (const auto& appAccessList: memAccessList) {
-            std_id_t appID = appAccessList.appID;
+            long_id appID = appAccessList.appID;
             for (const auto& chunkAccessList: appAccessList.chunks) {
-                std_id_t chunkID = chunkAccessList.id;
+                long_id chunkID = chunkAccessList.id;
 
                 // chunkID[->positive integer]
                 // maxNewSize == -1 means that no positive integer was provided
@@ -106,24 +106,24 @@ Heap::Modifier* Heap::initSession(const std::vector<AppMemAccess>& memAccessList
     return result;
 }
 
-Chunk* Heap::getChunk(std_id_t appID, std_id_t chunkID) {
+Chunk* Heap::getChunk(long_id appID, long_id chunkID) {
     try {
-        return chunkIndex.at(full_id_t(appID, chunkID));
+        return chunkIndex.at(full_id(appID, chunkID));
     } catch (const std::out_of_range&) {
         throw std::runtime_error("missing proof of non-existence");
     }
 }
 
-Chunk* Heap::newChunk(std_id_t appID, std_id_t id, int32 size) {
+Chunk* Heap::newChunk(long_id appID, long_id id, int32 size) {
     auto* newChunk = new Chunk(size);
-    auto newID = full_id_t(appID, id);
+    auto newID = full_id(appID, id);
     pageCache[newID].setNative(newChunk);
     chunkIndex[newID] = newChunk;
     return newChunk;
 }
 
-void Heap::freeChunk(std_id_t appID, std_id_t id) {
-    full_id_t fullID = full_id_t(appID, id);
+void Heap::freeChunk(long_id appID, long_id id) {
+    full_id fullID = full_id(appID, id);
     chunkIndex[fullID] = nullptr;
     // We remove the chunk from its native page. This reduces the amount of garbage. However, in case the chunk is
     // migrated, its memory will only be deleted after the garbage collection of the block is done.
