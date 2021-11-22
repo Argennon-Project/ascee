@@ -15,15 +15,13 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#include "gtest/gtest.h"
+#include "subtest.h"
 #include "argc/types.h"
 #include "argc/functions.h"
 
 using namespace ascee;
 using namespace argc;
 using namespace std;
-
-#define SUB_TEST(name, variable)  { SCOPED_TRACE(string(name).append("\n\n")); (variable).test(); }
 
 enum AppendType {
     STR, INT64

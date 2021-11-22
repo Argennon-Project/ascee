@@ -15,115 +15,203 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#include <heap/IdentifierTrie.h>
-#include "gtest/gtest.h"
+#include "subtest.h"
+#include <util/IdentifierTrie.h>
 
 using namespace ascee;
 using namespace runtime;
 
 TEST(AsceeIdentifiersTest, SimpleTrie) {
-    IdentifierTrie<uint64_t, 4> t({0x25, 0x25aa, 0x300000, 0xa1234560});
+    struct {
+        byte input[16] = {};
+        int maxLength = 4;
+        uint64_t wantID = 0;
+        int wantLen = 0;
+        bool wantOutOfRange = false;
+        IdentifierTrie<uint64_t, 4> t = IdentifierTrie<uint64_t, 4>({0x25, 0x25aa, 0x300000, 0xa1234560});
 
-    uint64_t id;
-    int n;
+        void test() {
+            uint64_t gotID;
+            int gotLen;
 
-    byte b1[] = {0x0, 0xff};
-    n = t.readIdentifier(b1, id);
-    EXPECT_EQ(id, 0);
-    EXPECT_EQ(n, 1);
+            if (wantOutOfRange) {
+                EXPECT_THROW(t.readIdentifier(input, &gotLen, maxLength), std::out_of_range);
+                return;
+            }
 
-    byte b2[] = {0x24, 0xff};
-    n = t.readIdentifier(b2, id);
-    EXPECT_EQ(id, 0x2400000000000000);
-    EXPECT_EQ(n, 1);
+            gotID = t.readIdentifier(input, &gotLen, maxLength);
 
-    byte b3[] = {0x25, 0x0};
-    n = t.readIdentifier(b3, id);
-    EXPECT_EQ(id, 0x2500000000000000);
-    EXPECT_EQ(n, 2);
+            EXPECT_EQ(gotID, wantID);
+            EXPECT_EQ(gotLen, wantLen);
+        }
 
-    byte b4[] = {0x25, 0x12};
-    n = t.readIdentifier(b4, id);
-    EXPECT_EQ(id, 0x2512000000000000);
-    EXPECT_EQ(n, 2);
+    } testCase;
 
-    byte b5[] = {0x25, 0xa9, 0x1};
-    n = t.readIdentifier(b5, id);
-    EXPECT_EQ(id, 0x25a9000000000000);
-    EXPECT_EQ(n, 2);
 
-    byte b6[] = {0x25, 0xaa, 0x0, 0x1};
-    n = t.readIdentifier(b6, id);
-    EXPECT_EQ(id, 0x25aa000000000000);
-    EXPECT_EQ(n, 3);
+    testCase = {
+            .input = {0x0, 0xff},
+            .wantID = 0,
+            .wantLen = 1
+    };
+    SUB_TEST("", testCase);
 
-    byte b7[] = {0x25, 0xaa, 0x1, 0x1};
-    n = t.readIdentifier(b7, id);
-    EXPECT_EQ(id, 0x25aa010000000000);
-    EXPECT_EQ(n, 3);
 
-    byte b8[] = {0x30, 0x0, 0x0, 0x0, 0x1};
-    n = t.readIdentifier(b8, id);
-    EXPECT_EQ(id, 0x3000000000000000);
-    EXPECT_EQ(n, 4);
+    testCase = {
+            .input = {0x24, 0xff},
+            .wantID = 0x2400000000000000,
+            .wantLen = 1
+    };
+    SUB_TEST("", testCase);
 
-    byte b9[] = {0x30, 0x1, 0x1, 0x1};
-    n = t.readIdentifier(b9, id);
-    EXPECT_EQ(id, 0x3001010100000000);
-    EXPECT_EQ(n, 4);
 
-    byte b10[] = {0xa1, 0x23, 0x45, 0x60, 0x0};
-    EXPECT_THROW(t.readIdentifier(b10, id, 5), std::out_of_range);
+    testCase = {
+            .input = {0x25, 0x0},
+            .wantID = 0x2500000000000000,
+            .wantLen = 2
+    };
+    SUB_TEST("", testCase);
+
+
+    testCase = {
+            .input =  {0x25, 0x12},
+            .wantID = 0x2512000000000000,
+            .wantLen = 2
+    };
+    SUB_TEST("", testCase);
+
+
+    testCase = {
+            .input =  {0x25, 0xa9, 0x1},
+            .wantID = 0x25a9000000000000,
+            .wantLen = 2
+    };
+    SUB_TEST("", testCase);
+
+
+    testCase = {
+            .input =  {0x25, 0xaa, 0x0, 0x1},
+            .wantID = 0x25aa000000000000,
+            .wantLen = 3
+    };
+    SUB_TEST("", testCase);
+
+
+    testCase = {
+            .input =  {0x25, 0xaa, 0x1, 0x1},
+            .wantID = 0x25aa010000000000,
+            .wantLen = 3
+    };
+    SUB_TEST("", testCase);
+
+
+    testCase = {
+            .input =  {0x30, 0x0, 0x0, 0x0, 0x1},
+            .wantID = 0x3000000000000000,
+            .wantLen = 4
+    };
+    SUB_TEST("", testCase);
+
+
+    testCase = {
+            .input =  {0x30, 0x1, 0x1, 0x1},
+            .wantID = 0x3001010100000000,
+            .wantLen = 4
+    };
+    SUB_TEST("", testCase);
+
+
+    testCase = {
+            .input = {0xa1, 0x23, 0x45, 0x60, 0x0},
+            .wantOutOfRange = true
+    };
+    SUB_TEST("", testCase);
 
     // maxLength test:
-    byte a1[] = {0x25, 0xaa, 0x1, 0x1};;
-    n = t.readIdentifier(a1, id, 5);
-    EXPECT_EQ(id, 0x25aa010000000000);
-    EXPECT_EQ(n, 3);
+    testCase = {
+            .input = {0x25, 0xaa, 0x1, 0x1},
+            .maxLength = 5,
+            .wantID = 0x25aa010000000000,
+            .wantLen = 3,
+    };
+    SUB_TEST("", testCase);
 
-    n = t.readIdentifier(a1, id, 3);
-    EXPECT_EQ(id, 0x25aa010000000000);
-    EXPECT_EQ(n, 3);
+    testCase = {
+            .input = {0x25, 0xaa, 0x1, 0x1},
+            .maxLength = 3,
+            .wantID = 0x25aa010000000000,
+            .wantLen = 3,
+    };
+    SUB_TEST("", testCase);
 
-    EXPECT_THROW(t.readIdentifier(a1, id, 2), std::out_of_range);
+    testCase = {
+            .input = {0x25, 0xaa, 0x1, 0x1},
+            .maxLength = 2,
+            .wantOutOfRange = true
+    };
+    SUB_TEST("", testCase);
 
-    byte a2[1] = {0x0};;
-    n = t.readIdentifier(a2, id, 1);
-    EXPECT_EQ(id, 0x0);
-    EXPECT_EQ(n, 1);
+    testCase = {
+            .input =  {0x0},
+            .maxLength = 1,
+            .wantID = 0x0,
+            .wantLen = 1,
+    };
+    SUB_TEST("", testCase);
 
-    EXPECT_THROW(t.readIdentifier(a2, id, 0), std::out_of_range);
+    testCase = {
+            .input =  {0x0},
+            .maxLength = 0,
+            .wantOutOfRange = true
+    };
+    SUB_TEST("", testCase);
+}
+
+
+TEST(AsceeIdentifiersTest, VarUIntTest) {
+    IdentifierTrie<uint64_t, 3> tr({0x15, 0x2012, 0x210000});
+
+    StaticArray<byte, 8> buf = {};
+
+    int n;
+    n = tr.encodeVarUInt(11, &buf);
+    std::cout << n << ": " << buf.toString() << "\n";
+
+    n = tr.encodeVarUInt(21, &buf);
+    uint64_t v = tr.decodeVarUInt(&buf);
+    std::cout << n << ": " << buf.toString() << "->" << v << "\n";
+
+    n = tr.encodeVarUInt(24169, &buf);
+    v = tr.decodeVarUInt(&buf);
+    std::cout << n << ": " << buf.toString() << "->" << v << "\n";
 }
 
 TEST(AsceeIdentifiersTest, DifferentTries) {
-    IdentifierTrie<uint32_t, 0> t({});
-    uint32_t id, n;
-    byte b1[] = {0x0};;
-    EXPECT_THROW(t.readIdentifier(b1, id, 1), std::out_of_range);
+    uint32_t id;
+    int n;
 
     IdentifierTrie<uint32_t, 4> fixed({0, 0, 0, 0xffffffff});
 
     byte b2[] = {0x1, 0x2, 0x3, 0x4};
-    n = fixed.readIdentifier(b2, id);
+    id = fixed.readIdentifier(b2, &n);
     EXPECT_EQ(id, 0x01020304);
     EXPECT_EQ(n, 4);
 
     byte b3[] = {0xff, 0xff, 0xff, 0xfe};
-    n = fixed.readIdentifier(b3, id);
+    id = fixed.readIdentifier(b3, &n);
     EXPECT_EQ(id, 0xfffffffe);
     EXPECT_EQ(n, 4);
 
-    EXPECT_THROW(fixed.readIdentifier(b3, id, 3), std::out_of_range);
+    EXPECT_THROW(fixed.readIdentifier(b3, &n, 3), std::out_of_range);
 
     byte b4[] = {0xff, 0xff, 0xff, 0xff};
-    EXPECT_THROW(fixed.readIdentifier(b4, id), std::out_of_range);
+    EXPECT_THROW(fixed.readIdentifier(b4, &n), std::out_of_range);
 
     EXPECT_THROW((IdentifierTrie<uint32_t, 3>({0x8, 0x8, 0xa0000})), std::invalid_argument);
 
     IdentifierTrie<uint32_t, 3> noLvl({0x8, 0x800, 0xa0000});
 
     byte b5[] = {0x8, 0x0, 0x0, 0x0};
-    n = noLvl.readIdentifier(b5, id);
+    id = noLvl.readIdentifier(b5, &n);
     EXPECT_EQ(id, 0x08000000);
     EXPECT_EQ(n, 3);
 }

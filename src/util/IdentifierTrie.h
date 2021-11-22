@@ -1,4 +1,4 @@
-// Copyright (c) 2021 aybehrouz <behrouz_ayati@yahoo.com>. All rights reserved.
+// Copyright (c) 2021-2021 aybehrouz <behrouz_ayati@yahoo.com>. All rights reserved.
 // This file is part of the C++ implementation of the Argennon smart contract
 // Execution Environment (AscEE).
 //
@@ -28,27 +28,32 @@ namespace ascee::runtime {
 
 template<typename T, int height = sizeof(T)>
 class IdentifierTrie {
-    static_assert(height <= sizeof(T));
+    static_assert(height <= sizeof(T) && height > 0);
     static_assert(std::is_unsigned<T>::value);
-private:
-    T boundary[height] = {};
-
 public:
     explicit IdentifierTrie(const std::array<T, height>& trie) {
         for (int i = 0; i < height; ++i) {
             boundary[i] = trie[i] << ((sizeof(T) - i - 1) << 3);
             if (i > 0 && boundary[i - 1] > boundary[i]) throw std::invalid_argument("malformed trie");
         }
+
+        count[0] = trie[0] & 0x0ff;
+        for (int i = 1; i < height; ++i) {
+            count[i] = (boundary[i] - boundary[i - 1]) >> ((sizeof(T) - i - 1) << 3);
+        }
     }
 
-    int readIdentifier(const byte* binary, T& id, int maxLength = height) {
-        id = 0;
+    T readIdentifier(const byte* binary, int* len = nullptr, int maxLength = height) {
+        T id = 0;
         if (maxLength > height) maxLength = height;
         for (int i = 0; i < maxLength; ++i) {
             id |= T(binary[i]) << ((sizeof(T) - i - 1) << 3);
-            if (id < boundary[i]) return i + 1;
+            if (id < boundary[i]) {
+                if (len != nullptr) *len = i + 1;
+                return id;
+            }
         }
-        id = 0;
+        if (len != nullptr) *len = 0;
         throw std::out_of_range("readIdentifier: invalid identifier");
     }
 
@@ -66,8 +71,46 @@ public:
             buffer[i++] = component;
             token = strtok(nullptr, ".");
         }
-        int n = readIdentifier(buffer, id, i);
+        int n;
+        id = readIdentifier(buffer, &n, i);
         if (n != i) throw std::invalid_argument("parseIdentifier: input too long");
+    }
+
+    int encodeVarUInt(T value, byte* buffer) {
+        auto sum = 0;
+        for (int i = 0; i < height; ++i) {
+            sum += count[i];
+            if (value < sum) {
+                auto bound = boundary[i] >> ((sizeof(T) - i - 1) << 3);
+                write(bound - (sum - value), buffer, i + 1);
+                return i + 1;
+            }
+
+        }
+        throw std::overflow_error("encodeVarUInt: value too large");
+    }
+
+    T decodeVarUInt(const byte* binary, int* len = nullptr, int maxLength = height) {
+        int n;
+        T code = readIdentifier(binary, &n, maxLength);
+        code >>= (sizeof(T) - n) << 3;
+
+        T sum = 0;
+        for (int i = 0; i < n; ++i) sum += count[i];
+
+        auto bound = boundary[n - 1] >> ((sizeof(T) - n) << 3);
+        if (len != nullptr) *len = n;
+        return sum + code - bound;
+    }
+
+private:
+    T boundary[height] = {};
+    T count[height] = {};
+
+    void write(T value, byte* buffer, int n) {
+        for (int i = 0; i < n; ++i) {
+            buffer[i] = byte(value >> ((n - i - 1) << 3));
+        }
     }
 };
 
