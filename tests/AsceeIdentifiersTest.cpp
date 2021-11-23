@@ -168,21 +168,55 @@ TEST(AsceeIdentifiersTest, SimpleTrie) {
 
 
 TEST(AsceeIdentifiersTest, VarUIntTest) {
-    IdentifierTrie<uint64_t, 3> tr({0x15, 0x2012, 0x210000});
+    IdentifierTrie<uint64_t, 4> tr({0x45684515, 0x2012, 0x220000, 0x31015499});
 
-    StaticArray<byte, 8> buf = {};
+    StaticArray<byte, 16> buf = {};
+    byte* ptr = &buf + 8;
 
     int n;
-    n = tr.encodeVarUInt(11, &buf);
-    std::cout << n << ": " << buf.toString() << "\n";
+    auto code = tr.encodeVarUInt(11, &n);
+    *(uint64_t*) ptr = code;
+    ptr -= n;
+    int m;
+    uint64_t v = tr.decodeVarUInt(code, &m);
+    printf("%lx: %d -> %ld m:%d\n", code, n, v, m);
 
-    n = tr.encodeVarUInt(21, &buf);
-    uint64_t v = tr.decodeVarUInt(&buf);
-    std::cout << n << ": " << buf.toString() << "->" << v << "\n";
+    code = tr.encodeVarUInt(21, &n);
+    *(uint64_t*) ptr = code;
+    ptr -= n;
+    v = tr.decodeVarUInt(code, &m);
+    printf("%lx: %d -> %ld m:%d\n", code, n, v, m);
 
-    n = tr.encodeVarUInt(24169, &buf);
-    v = tr.decodeVarUInt(&buf);
-    std::cout << n << ": " << buf.toString() << "->" << v << "\n";
+    code = tr.encodeVarUInt(77, &n);
+    *(uint64_t*) ptr = code;
+    ptr -= n;
+    v = tr.decodeVarUInt(code, &m);
+    printf("%lx: %d -> %ld m:%d\n", code, n, v, m);
+
+    code = tr.encodeVarUInt(24457169, &n);
+    *(uint64_t*) ptr = code;
+    ptr -= n;
+    v = tr.decodeVarUInt(code, &m);
+    printf("%lx: %d -> %ld m:%d\n", code, n, v, m);
+
+    ptr = &buf + 8;
+    v = tr.decodeVarUInt(*(uint64_t*) ptr, &n);
+    printf("%ld\n", v);
+    ptr -= n;
+
+    v = tr.decodeVarUInt(*(uint64_t*) ptr, &n);
+    printf("%ld\n", v);
+    ptr -= n;
+
+    v = tr.decodeVarUInt(*(uint64_t*) ptr, &n);
+    printf("%ld\n", v);
+    ptr -= n;
+
+    v = tr.decodeVarUInt(*(uint64_t*) ptr, &n);
+    printf("%ld\n", v);
+    ptr -= n;
+
+    printf("%s\n", buf.toString().c_str());
 }
 
 TEST(AsceeIdentifiersTest, DifferentTries) {
