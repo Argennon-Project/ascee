@@ -41,6 +41,8 @@ public:
 
         inline bool isNull() { return heapPtr == nullptr; }
 
+        inline byte* get() { return heapPtr; }
+
         void readBlockTo(byte* dst, int32 size);
 
         void writeBlock(const byte* src, int32 size);

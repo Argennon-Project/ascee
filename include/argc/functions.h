@@ -22,14 +22,6 @@
 
 namespace ascee::argc {
 
-bool verify_by_acc(long_id accountID, string_c msg, const signature_c& sig);
-
-bool verify_by_app(long_id appID, string_c msg);
-
-bool verify_once_by_acc(long_id accountID, string_c msg, const signature_c& sig);
-
-bool verify_once_by_app(long_id appID, string_c msg);
-
 int64 loadInt64(int32 offset);
 
 int invoke_dispatcher(byte forwarded_gas, long_id app_id, string_c request);
@@ -51,12 +43,12 @@ void append_str(string_buffer_c <maxSize>& buf, const string_c& str) {
 
 template<int maxSize>
 void append_int64(string_buffer_c <maxSize>& buf, int64 i) {
-    buf.append(string_c(std::to_string(i)));
+    buf.append(runtime::StringView((std::to_string(i))));
 }
 
 template<int maxSize>
 void append_float64(string_buffer_c <maxSize>& buf, float64 f) {
-    buf.append(string_c(std::to_string(f)));
+    buf.append(std::to_string(f));
 }
 
 template<int maxSize>
@@ -75,6 +67,11 @@ float64 scan_float64(const string_c& input, const string_c& pattern, string_c& r
 
 string_buffer_c<RESPONSE_MAX_SIZE>& response_buffer();
 
+bool verify_by_app(long_id appID, message_c& msg, bool invalidate_msg);
+
+bool verify_by_acc(long_id accountID, message_c& msg, signature_c& sig, bool invalidate_msg);
+
+bool verify_by_acc(long_id accountID, message_c& msg, bool invalidate_msg);
 } // namespace argc
 
 #endif // ASCEE_ARGC_FUNCTIONS_INC

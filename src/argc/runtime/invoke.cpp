@@ -23,9 +23,9 @@
 #include <executor/Executor.h>
 #include <argc/functions.h>
 
+
 #define MIN_GAS 1
 
-using namespace ascee;
 using namespace ascee;
 using namespace ascee::runtime;
 using std::unique_ptr, std::vector, std::unordered_map, std::string, std::string_view;
@@ -45,7 +45,7 @@ void addDefaultResponse(int statusCode) {
     char response[256];
     int n = sprintf(response, "HTTP/1.1 %d %s", statusCode, "OK");
     Executor::getSession()->response.clear();
-    Executor::getSession()->response.append(string_c(string_view(response, n)));
+    Executor::getSession()->response.append(string_c(response, n));
 }
 
 static inline
@@ -174,7 +174,7 @@ int invoke_dispatcher_impl(byte forwarded_gas, long_id app_id, string_c request)
         }
 
         Executor::getSession()->response.clear();
-        Executor::getSession()->response.append(string_c(mainResponse));
+        Executor::getSession()->response.append(StringView(mainResponse));
     }
 
     // restore context

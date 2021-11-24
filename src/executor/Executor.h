@@ -32,6 +32,7 @@
 #include <argc/primitives.h>
 #include <heap/Heap.h>
 #include "ThreadCpuTimer.h"
+#include <util/VirtualSigManager.h>
 
 namespace ascee::runtime {
 
@@ -58,6 +59,7 @@ struct SessionInfo {
     std::unordered_map<long_id, dispatcher_ptr> appTable;
     std::unordered_map<long_id, bool> isLocked;
     FailureManager failureManager;
+    VirtualSigManager virtualSigner;
 
     string_buffer_c<RESPONSE_MAX_SIZE> response;
 

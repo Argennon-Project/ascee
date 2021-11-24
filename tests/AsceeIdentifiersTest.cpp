@@ -194,6 +194,10 @@ TEST(AsceeIdentifiersTest, VarUIntTest) {
     printf("%lx: %d -> %ld m:%d\n", code, n, v, m);
 
     code = tr.encodeVarUInt(24457169, &n);
+    StaticArray<byte, 10> temp = {};
+    tr.writeBigEndian(&temp, code, n);
+    printf("buf2: %s n:%d code:%lx\n", temp.toString().c_str(), n, code);
+
     *(uint64_t*) ptr = code;
     ptr -= n;
     v = tr.decodeVarUInt(code, &m);

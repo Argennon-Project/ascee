@@ -33,5 +33,10 @@ using string_buffer_c = runtime::StringBuffer<max_size>;
 using signature_c = runtime::Signature;
 using publickey_c = runtime::PublicKey;
 
+/// We use a fixed size buffer for messages, instead of allowing smart contracts to choose the buffer size.
+/// I believe letting smart contracts choose this size can introduce undesirable coupling of smart contracts
+/// to the suffix size of the messages, which is appended by the signature verification functions.
+using message_c = runtime::StringBuffer<2 * 1024>;
+
 } // namespace ascee
 #endif // ASCEE_CLASSES_TYPES_H

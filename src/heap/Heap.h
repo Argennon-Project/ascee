@@ -22,6 +22,7 @@
 #include <argc/types.h>
 #include <unordered_map>
 #include <vector>
+#include <util/IdentifierTrie.h>
 #include "Chunk.h"
 #include "Page.h"
 
@@ -60,6 +61,60 @@ public:
 
     private:
         class AccessBlock {
+
+        public:
+            AccessBlock(Chunk::Pointer heapLocation, int32 size, bool writable);
+
+            AccessBlock(const AccessBlock&) = delete;
+
+            [[nodiscard]] int32 getSize() const { return size; }
+
+            template<typename T, int h>
+            inline
+            T readIdentifier(const IdentifierTrie<T, h>& trie, int16_t version, int* n = nullptr) {
+                auto content = syncTo(version);
+                return trie.readIdentifier(content, n, size);
+            }
+
+            template<typename T, int h>
+            inline
+            T readVarUInt(const IdentifierTrie<T, h>& trie, int16_t version, int* n = nullptr) {
+                auto content = syncTo(version);
+                return trie.decodeVarUInt(content, n, size);
+            }
+
+            template<typename T>
+            inline
+            T read(int16_t version) {
+                if (sizeof(T) > size) throw std::out_of_range("read size");
+                auto content = syncTo(version);
+                T ret{};
+                memcpy((byte*) &ret, content, sizeof(T));
+                // Here we return the result by value. This is not bad for performance. Compilers usually implement
+                // return-by-value using pass-by-pointer. (a.k.a NRVO optimization)
+                return ret;
+            }
+
+            template<typename T, int h>
+            inline
+            int writeVarUInt(const IdentifierTrie<T, h>& trie, int16_t version, T value) {
+                int len;
+                auto code = trie.encodeVarUInt(value, &len);
+                prepareToWrite(version, len);
+                trie.writeBigEndian(versionList.back().content, code, len);
+                return len;
+            }
+
+
+            template<typename T>
+            inline
+            void write(int16_t version, T value) {
+                prepareToWrite(version, sizeof(value));
+                memcpy(versionList.back().content, (byte*) &value, sizeof(value));
+            }
+
+            void wrToHeap(int16_t version);
+
         private:
             struct Version {
                 const int16_t number;
@@ -79,49 +134,16 @@ public:
                 }
             };
 
-
             Chunk::Pointer heapLocation;
             int32 size;
-
-        private:
             bool writable;
             std::vector<Version> versionList;
 
-            void syncTo(int16_t version);
+            byte* syncTo(int16_t version);
 
             bool add(int16_t version);
 
-        public:
-            AccessBlock(Chunk::Pointer heapLocation, int32 size, bool writable);
-
-            AccessBlock(const AccessBlock&) = delete;
-
-            [[nodiscard]] int32 getSize() const { return size; }
-
-            template<typename T>
-            inline
-            T read(int16_t version) {
-                if (sizeof(T) > size) throw std::out_of_range("read size");
-                syncTo(version);
-                T ret{};
-                if (versionList.empty()) heapLocation.readBlockTo((byte*) &ret, sizeof(T));
-                else memcpy((byte*) &ret, versionList.back().content, sizeof(T));
-                // Here we return the result by value. This is not bad for performance. Compilers usually implement
-                // return-by-value using pass-by-pointer. (a.k.a NRVO optimization)
-                return ret;
-            }
-
-            template<typename T>
-            inline
-            void write(int16_t version, T value) {
-                if (sizeof(T) != size) throw std::out_of_range("write size");
-                if (!writable) throw std::out_of_range("block is not writable");
-                syncTo(version);
-                add(version);
-                memcpy(versionList.back().content, (byte*) &value, sizeof(T));
-            }
-
-            void wrToHeap(int16_t version);
+            void prepareToWrite(int16_t version, int writeSize);
         };
 
         Heap* parent;
@@ -162,9 +184,27 @@ public:
         inline
         T load(int32 offset) { return accessTable->at(offset).read<T>(currentVersion); }
 
+        template<typename T, int h>
+        inline
+        T loadVarUInt(const IdentifierTrie<T, h>& trie, int32 offset, int* n = nullptr) {
+            return accessTable->at(offset).readVarUInt(trie, currentVersion, n);
+        }
+
+        template<typename T, int h>
+        inline
+        T loadIdentifier(const IdentifierTrie<T, h>& trie, int32 offset, int* n = nullptr) {
+            return accessTable->at(offset).readIdentifier(trie, currentVersion, n);
+        }
+
         template<typename T>
         inline
         void store(int32 offset, T value) { accessTable->at(offset).write<T>(currentVersion, value); }
+
+        template<typename T, int h>
+        inline
+        int storeVarUInt(const IdentifierTrie<T, h>& trie, int32 offset, T value) {
+            return accessTable->at(offset).writeVarUInt(trie, currentVersion, value);
+        }
 
         void loadChunk(short_id chunkID);
 

@@ -73,6 +73,8 @@ template StringView StringView::scan(const StringView&, double&) const;
 
 bool StringView::isNull() { return data() == nullptr; }
 
-StringView::StringView(const string_view& view) : string_view(view) {}
-
 StringView::StringView(const char* str) : string_view(str) {}
+
+StringView::StringView(const char* str, size_type len) : basic_string_view(str, len) {}
+
+StringView::StringView(const string_view& view) : basic_string_view(view) {}

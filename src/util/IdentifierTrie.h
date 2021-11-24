@@ -45,7 +45,7 @@ public:
         }
     }
 
-    T readIdentifier(const byte* binary, int* len = nullptr, int maxLength = height) {
+    T readIdentifier(const byte* binary, int* len = nullptr, int maxLength = height) const {
         T id = 0;
         if (maxLength > height) maxLength = height;
         for (int i = 0; i < maxLength; ++i) {
@@ -59,7 +59,7 @@ public:
         throw std::out_of_range("readIdentifier: invalid identifier");
     }
 
-    T readIdentifier(T binary, int* len = nullptr, int maxLength = height) {
+    T readIdentifier(T binary, int* len = nullptr, int maxLength = height) const {
         if (maxLength > height) maxLength = height;
         for (int i = 0; i < maxLength; ++i) {
             if (binary < boundary[i]) {
@@ -71,7 +71,7 @@ public:
         throw std::out_of_range("readIdentifier: invalid identifier");
     }
 
-    void parseIdentifier(std::string symbolicRep, T& id) {
+    void parseIdentifier(std::string symbolicRep, T& id) const {
         byte buffer[height];
         // returned array by data() is null-terminated after C++11
         char* token = strtok(symbolicRep.data(), ".");
@@ -90,7 +90,7 @@ public:
         if (n != i) throw std::invalid_argument("parseIdentifier: input too long");
     }
 
-    T encodeVarUInt(T value, int* len = nullptr) {
+    T encodeVarUInt(T value, int* len = nullptr) const {
         for (int i = 0; i < height; ++i) {
             if (value < sum[i]) {
                 auto bound = trie[i];
@@ -102,7 +102,8 @@ public:
         throw std::overflow_error("encodeVarUInt: value too large");
     }
 
-    T decodeVarUInt(T binary, int* len = nullptr, int maxLength = height) {
+    template<typename U>
+    T decodeVarUInt(U binary, int* len = nullptr, int maxLength = height) const {
         int n;
         T code = readIdentifier(binary, &n, maxLength);
         code >>= (sizeof(T) - n) << 3;
@@ -112,17 +113,21 @@ public:
         return sum[n - 1] + code - bound;
     }
 
+    void writeBigEndian(byte* dest, T value, int n) const {
+        for (int i = 0; i < n; ++i) {
+            dest[i] = byte(value >> ((sizeof(T) - i - 1) << 3));
+        }
+    }
+
 private:
     T boundary[height] = {};
     T sum[height] = {};
     T trie[height] = {};
-
-    void write(T value, byte* buffer, int n) {
-        for (int i = 0; i < n; ++i) {
-            buffer[i] = byte(value >> ((n - i - 1) << 3));
-        }
-    }
 };
+
+inline const IdentifierTrie<uint16_t, 2> gNonceTrie({0xe0, 0xff00});
+
+inline const IdentifierTrie<uint64_t, 6> gAppTrie({});
 
 } // namespace ascee::runtime
 #endif // ASCEE_IDENTIFIER_TRIE_H

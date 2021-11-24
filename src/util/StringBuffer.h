@@ -31,14 +31,18 @@ class StringView : public std::string_view {
 public:
     StringView() = default;
 
-    StringView(const char* str);
+    StringView(const char* cStr, size_type len);
 
-    StringView(const std::string_view& view); // NOLINT(google-explicit-constructor)
+    StringView(const char* cStr); // NOLINT(google-explicit-constructor)
+
+    explicit StringView(const std::string_view& view);
 
     bool isNull();
 
     template<typename T>
     StringView scan(const StringView& pattern, T& output) const;
+
+    //operator std::string_view() const;
 };
 
 /// This class dose not allocate any memory on heap and only uses stack. This is important for smart contract execution
@@ -47,10 +51,11 @@ template<int maxSize>
 class StringBuffer {
     static_assert(maxSize < MAX_BUFFER_SIZE && maxSize >= 0);
 public:
-    void append(const StringView& str) {
+    auto append(const StringView& str) {
         if (maxSize < end + str.size()) throw std::out_of_range("append: str is too long");
         std::memcpy(buffer + end, str.data(), str.size());
         end += str.size();
+        return this;
     }
 
     void clear() {
@@ -58,7 +63,7 @@ public:
     }
 
     explicit operator StringView() const {
-        return StringView(std::string_view(buffer, end));
+        return StringView(buffer, end);
     }
 
 private:

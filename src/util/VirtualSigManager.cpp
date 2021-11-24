@@ -21,6 +21,9 @@ using namespace ascee;
 using namespace runtime;
 using std::string;
 
+const std::size_t VirtualSigManager::SIG_CONSTANT_COST;
+const std::size_t VirtualSigManager::MAX_COST;
+
 void VirtualSigManager::sign(long_id appID, const StringView& msg) {
     // here the msg will be copies and saved inside messages
     bool inserted = messages[appID].emplace(msg).second;

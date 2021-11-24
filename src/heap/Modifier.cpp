@@ -24,11 +24,6 @@
 using namespace ascee;
 using namespace ascee::runtime;
 
-/*
-uint8_t HeapModifier::loadByte(int32_t offset) {
-    return accessTable.at(offset & ~0b111).heapLocation[offset & 0b111];
-}*/
-
 int16_t Heap::Modifier::saveVersion() {
     if (currentVersion == MAX_VERSION) throw std::out_of_range("version limit reached");
     return currentVersion++;
@@ -106,10 +101,12 @@ int32 Heap::Modifier::getChunkSize() {
     return currentChunk->size.read<int32>(currentVersion);
 }
 
-void Heap::Modifier::AccessBlock::syncTo(int16_t version) {
+byte* Heap::Modifier::AccessBlock::syncTo(int16_t version) {
     while (!versionList.empty() && versionList.back().number > version) {
         versionList.pop_back();
     }
+
+    return versionList.empty() ? heapLocation.get() : versionList.back().content;
 }
 
 bool Heap::Modifier::AccessBlock::add(int16_t version) {
@@ -137,3 +134,10 @@ Heap::Modifier::AccessBlock::AccessBlock(Chunk::Pointer heapLocation,
                                          bool writable) : heapLocation(heapLocation),
                                                           size(size),
                                                           writable(writable) {}
+
+void Heap::Modifier::AccessBlock::prepareToWrite(int16_t version, int writeSize) {
+    if (writeSize > size) throw std::out_of_range("write size");
+    if (!writable) throw std::out_of_range("block is not writable");
+    syncTo(version);
+    add(version);
+}

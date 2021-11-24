@@ -24,8 +24,6 @@
 
 namespace ascee::runtime {
 
-using namespace std;
-
 class VirtualSigManager {
 public:
     static const std::size_t SIG_CONSTANT_COST = 8;
@@ -41,9 +39,6 @@ private:
     std::size_t cost = 0;
     std::unordered_map<long_id, std::unordered_set<std::string>> messages;
 };
-
-const std::size_t VirtualSigManager::SIG_CONSTANT_COST;
-const std::size_t VirtualSigManager::MAX_COST;
 
 } // namespace ascee::runtime
 #endif // ASCEE_VIRTUAL_SIG_MANAGER_H
