@@ -48,6 +48,18 @@ bool verifyWithNonce(long_id spender, uint32_t nonce, message_c& msg, signature_
 }
 
 static
+bool verifyWithMultiwayNonce(int nonceCount, int32 chunkSize,
+                             long_id spender, message_c& msg, signature_c& sig, PublicKey& pk) {
+    int32 nonceIndex = chunkSize - 2 * nonceCount + int32(spender % nonceCount) * 2;
+    auto nonce = Executor::getSession()->heapModifier->load<uint16_t>(nonceIndex);
+    if (nonce >= NONCE16_MAX) return false;
+
+    bool valid = verifyWithNonce(spender, nonce, msg, sig, pk);
+    if (valid) Executor::getSession()->heapModifier->store(nonceIndex, nonce + 1);
+    return valid;
+}
+
+static
 bool verifyByAcc(long_id spender, long_id accountID, message_c& msg, signature_c& sig, bool invalidate_msg = true) {
     auto& heap = Executor::getSession()->heapModifier;
 
@@ -73,13 +85,12 @@ bool verifyByAcc(long_id spender, long_id accountID, message_c& msg, signature_c
     // decisionByte == 1 means that the owner account has 5 nonce values. This improves parallelization for
     // that account. The nonce will be selected based on the id of the spender.
     if (decisionByte == 1) {
-        int32 nonceIndex = chunkSize - 10 + int32(spender % 5) * 2;
-        auto nonce = heap->load<uint16_t>(nonceIndex);
-        if (nonce >= NONCE16_MAX) return false;
+        return verifyWithMultiwayNonce(5, chunkSize, spender, msg, sig, pk);
+    }
 
-        bool valid = verifyWithNonce(spender, nonce, msg, sig, pk);
-        if (valid) heap->store(nonceIndex, nonce + 1);
-        return valid;
+    // decisionByte == 2 means that the owner account has an 11 way nonce value.
+    if (decisionByte == 2) {
+        return verifyWithMultiwayNonce(11, chunkSize, spender, msg, sig, pk);
     }
 
     // if decisionByte > LAST_RESERVED_NONCE this account is a normal account which uses a var length nonce.
@@ -113,7 +124,7 @@ bool argc::verify_by_app(long_id appID, message_c& msg, bool invalidate_msg = tr
     }
 }
 
-bool argc::verify_by_acc(long_id accountID, message_c& msg, signature_c& sig, bool invalidate_msg = true) {
+bool argc::verify_by_account(long_id accountID, message_c& msg, signature_c& sig, bool invalidate_msg = true) {
     Executor::getSession()->heapModifier->loadContext(ARG_APP_ID);
     auto caller = Executor::getSession()->currentCall->appID;
     bool result = verifyByAcc(caller, accountID, msg, sig, invalidate_msg);
@@ -121,8 +132,8 @@ bool argc::verify_by_acc(long_id accountID, message_c& msg, signature_c& sig, bo
     return result;
 }
 
-bool argc::verify_by_acc(long_id accountID, message_c& msg, bool invalidate_msg = true) {
+bool argc::verify_by_account(long_id accountID, message_c& msg, bool invalidate_msg = true) {
     signature_c dummy;
-    return verify_by_acc(accountID, msg, dummy, invalidate_msg);
+    return verify_by_account(accountID, msg, dummy, invalidate_msg);
 }
 
