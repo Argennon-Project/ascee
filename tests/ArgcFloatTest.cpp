@@ -18,6 +18,7 @@
 #include "gtest/gtest.h"
 #include "argc/types.h"
 #include "argc/functions.h"
+#include "subtest.h"
 
 using namespace ascee;
 using namespace argc;
@@ -63,15 +64,179 @@ TEST(ArgcFloatDeathTest, Truncate) {
 
 
 TEST(ArgcFloatDeathTest, SafeAdd) {
-    EXPECT_DOUBLE_EQ(safe_addf64(1000000, 1.3756), 1000001.3756);
+    struct {
+        float64 a, b, c;
+        int n = 0;
+        bool wantErrSafe = false;
+        bool wantErrExact = false;
 
-    EXPECT_THROW(safe_addf64(10000000, 1.3756), std::underflow_error);
+        void test() {
+            float64 second = n == 0 ? b : truncate_float64(b, n);
+            if (wantErrExact) {
+                EXPECT_THROW(exact_addf64(a, second), std::underflow_error);
+            } else {
+                EXPECT_DOUBLE_EQ(exact_addf64(a, second), c);
+            }
+            if (wantErrSafe) {
+                EXPECT_THROW(safe_addf64(a, second), std::underflow_error);
+            } else {
+                EXPECT_DOUBLE_EQ(safe_addf64(a, second), c);
+            }
+        }
+    } testCase;
 
-    EXPECT_DOUBLE_EQ(safe_addf64(1000000, -1.37), 999998.63);
+    testCase = {
+            .a = 1000000,
+            .b = 1.3756,
+            .c = 1000001.3756,
+            .wantErrExact = true
+    };
+    SUB_TEST("", testCase);
 
-    EXPECT_THROW(safe_addf64(10000000, -1.37), std::underflow_error);
+    testCase = {
+            .a = 1000000,
+            .b = -1.37,
+            .c = 999998.63,
+            .wantErrExact = true
+    };
+    SUB_TEST("", testCase);
 
-    EXPECT_DOUBLE_EQ(safe_addf64(1000000000000, truncate_float64(1.375, 12)), 1000000000001.375);
+    testCase = {
+            .a = 1000000000000,
+            .b = 1.375,
+            .c = 1000000000001.375,
+            .n = 12
+    };
+    SUB_TEST("", testCase);
+
+    testCase = {
+            .a = -1000000000000,
+            .b = 1.375,
+            .c = -999999999998.625,
+            .n = 12
+    };
+    SUB_TEST("", testCase);
+
+    // 0.2 has an infinite binary expansion
+    testCase = {
+            .a = 100000,
+            .b = 0.2,
+            .c = 100000.2,
+            .wantErrExact = true
+    };
+    SUB_TEST("", testCase);
+
+    testCase = {
+            .a = 1000000,
+            .b = 0.2,
+            .wantErrSafe = true,
+            .wantErrExact = true
+    };
+    SUB_TEST("", testCase);
+
+    testCase = {
+            .a = -1000000,
+            .b = 0.2,
+            .wantErrSafe = true,
+            .wantErrExact = true
+    };
+    SUB_TEST("", testCase);
+
+    testCase = {
+            .a = 1000000,
+            .b = -0.2,
+            .wantErrSafe = true,
+            .wantErrExact = true
+    };
+    SUB_TEST("", testCase);
+
+    testCase = {
+            .a = 1000000000000000,
+            .b = 0.125,
+            .wantErrSafe = true,
+            .wantErrExact = true
+    };
+    SUB_TEST("", testCase);
+
+    testCase = {
+            .a = -1000000000000000,
+            .b = 0.125,
+            .wantErrSafe = true,
+            .wantErrExact = true
+    };
+    SUB_TEST("", testCase);
+
+    testCase = {
+            .a = 1000000000000000,
+            .b = -0.125,
+            .wantErrSafe = true,
+            .wantErrExact = true
+    };
+    SUB_TEST("", testCase);
+
+    testCase = {
+            .a = -1000000000000000,
+            .b = -0.125,
+            .wantErrSafe = true,
+            .wantErrExact = true
+    };
+    SUB_TEST("", testCase);
+
+    testCase = {
+            .a = 0.1,
+            .b = 0.2,
+            .c = 0.3
+    };
+    SUB_TEST("", testCase);
+
+    testCase = {
+            .a = 100000000000,
+            .b = 0.2,
+            .c = 100000000000.1999817,
+            .n = 15,
+    };
+    SUB_TEST("", testCase);
+
+    testCase = {
+            .a = 1000000000000,
+            .b = 0.2,
+            .c = 1000000000000.1999817,
+            .n = 15,
+            .wantErrSafe = true,
+            .wantErrExact = true
+    };
+    SUB_TEST("", testCase);
+
+    uint64_t s_0 = 10000000;
+    uint64_t r_0 = 200000000000;
+    float64 s = s_0, r = r_0;
+    float64 t = 0.2;
+
+    long long n = 10000000;
+    for (int i = 0; i < n; ++i) {
+        s -= t;
+        r += t;
+    }
+
+    printf("%lf %lf\n", s, r);
+    printf("lost: %lf \n", (s_0 - s) + (r_0 - r));
+
+    s = s_0, r = r_0;
+    float64 tr = truncate_float64(t, 15);
+    for (int i = 0; i < n; ++i) {
+        s = safe_addf64(s, -tr);
+        r = safe_addf64(r, tr);
+    }
+    EXPECT_EQ((s_0 - s) + (r_0 - r), 0);
+
+    s = s_0, r = r_0;
+    for (int i = 0; i < n; ++i) {
+        s = exact_addf64(s, -tr);
+        r = exact_addf64(r, tr);
+    }
+    EXPECT_EQ((s_0 - s) + (r_0 - r), 0);
+    printf("%lf %lf\n", s, r);
+    printf("lost: %lf \n", (s_0 - s) + (r_0 - r));
 }
 
 

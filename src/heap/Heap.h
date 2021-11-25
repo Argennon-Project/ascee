@@ -141,7 +141,7 @@ public:
 
             byte* syncTo(int16_t version);
 
-            bool add(int16_t version);
+            byte* add(int16_t version);
 
             void prepareToWrite(int16_t version, int writeSize);
         };

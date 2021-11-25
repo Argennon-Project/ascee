@@ -109,17 +109,16 @@ byte* Heap::Modifier::AccessBlock::syncTo(int16_t version) {
     return versionList.empty() ? heapLocation.get() : versionList.back().content;
 }
 
-bool Heap::Modifier::AccessBlock::add(int16_t version) {
+byte* Heap::Modifier::AccessBlock::add(int16_t version) {
     assert(version >= 1);
     // checks are ordered for having the best performance on average
     if (!versionList.empty()) {
         auto latestVersion = versionList.back().number;
         assert(latestVersion <= version);
-        if (latestVersion == version) return false;
+        if (latestVersion == version) return nullptr;
     }
 
-    versionList.emplace_back(version, size);
-    return true;
+    return versionList.emplace_back(version, size).content;
 }
 
 void Heap::Modifier::AccessBlock::wrToHeap(int16_t version) {
@@ -138,6 +137,11 @@ Heap::Modifier::AccessBlock::AccessBlock(Chunk::Pointer heapLocation,
 void Heap::Modifier::AccessBlock::prepareToWrite(int16_t version, int writeSize) {
     if (writeSize > size) throw std::out_of_range("write size");
     if (!writable) throw std::out_of_range("block is not writable");
-    syncTo(version);
-    add(version);
+    auto oldContent = syncTo(version);
+    auto newContent = add(version);
+    if (size != writeSize && newContent != nullptr) {
+        memcpy(newContent + writeSize, oldContent + writeSize, size - writeSize);
+    }
+    // Here we don't return the pointer to `content`. It would be better if the caller always finds the end of the
+    // version list using back().content. That way content of the heap would not be modified accidentally.
 }

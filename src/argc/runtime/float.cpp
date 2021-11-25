@@ -29,31 +29,56 @@ int extractExp(float64 f) {
 }
 
 /**
- * Adds two 64 bit floating point numbers and raises SIGFPE if the fractional
- * error for the smaller number is bigger than MAX_ADDITION_LOSS * 2^(-52).
+ * Adds two 64 bit floating point numbers and throws std::underflow_error if the fractional
+ * error for the smaller number is bigger than maxLoss * 2^(-52).
  * @param a
  * @param b
+ * @param maxLoss
  * @return
  */
-float64 argc::safe_addf64(float64 a, float64 b) {
+static
+float64 safeAdd64(float64 a, float64 b, uint64_t maxLoss) {
     auto expDiff = extractExp(a) - extractExp(b);
 
     if (expDiff > 0) {
-        if ((~(UINT64_MAX << expDiff) & *(uint64_t*) &b) > MAX_ADDITION_LOSS) {
-            throw std::underflow_error("safe_add64: precision loss is too large");
+        if (expDiff > 51 || (~(UINT64_MAX << expDiff) & *(uint64_t*) &b) > maxLoss) {
+            throw std::underflow_error("safeAdd64: precision loss is too large");
         }
     } else if (expDiff < 0) {
-        if ((~(UINT64_MAX << -expDiff) & *(uint64_t*) &a) > MAX_ADDITION_LOSS) {
-            throw std::underflow_error("safe_add64: precision loss is too large");
+        if (expDiff < -51 || (~(UINT64_MAX << -expDiff) & *(uint64_t*) &a) > maxLoss) {
+            throw std::underflow_error("safeAdd64: precision loss is too large");
         }
     }
     return a + b;
 }
 
 /**
- * Zeros all bits in @p f that have a significance lower than 2^(-n). As a result,
- * we always have: | truncate_float64(f, n) - f | < 2^(-n)
- * In other words, n bits in the fraction part will be kept.
+ * Adds two 64 bit floating point numbers and throws std::underflow_error if the fractional
+ * error for the smaller number is bigger than MAX_ADDITION_LOSS * 2^(-52).
+ * @param a
+ * @param b
+ * @return
+ */
+float64 argc::safe_addf64(float64 a, float64 b) {
+    return safeAdd64(a, b, MAX_ADDITION_LOSS);
+}
+
+/**
+ * Add two 64 bit floating point numbers and throws std::underflow_error if the result can not be calculated
+ * without any loss.
+ * @param a
+ * @param b
+ * @return
+ */
+float64 argc::exact_addf64(float64 a, float64 b) {
+    return safeAdd64(a, b, 0);
+}
+
+/**
+ * Zeros all bits in @p f that have a significance lower than 2^(-n). As a result, we always
+ * have: | truncate_float64(f, n) - f | < 2^(-n)
+ * In other words, n digits in the fractional part (digits after the point) of the base 2 representation
+ * will be kept.
  * @param f
  * @param n
  * @return
