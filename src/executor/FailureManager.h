@@ -29,22 +29,24 @@ public:
         time, stack
     };
 
+    typedef std::unordered_map<int_fast32_t, Reason> FailureMap;
+
     FailureManager() = default;
 
-    FailureManager(std::unordered_map<int32_t, Reason> failureList);
+    explicit FailureManager(FailureMap failureList);
 
     void nextInvocation();
 
     void completeInvocation();
 
-    int64_t getExecTime(int64_t gas);
+    int_fast64_t getExecTime(int_fast32_t gas);
 
     size_t getStackSize();
 
 private:
-    std::unordered_map<int32_t, Reason> failureList;
+    FailureMap failures;
     int callDepth = 0;
-    int32_t invocationID = 0;
+    int_fast32_t invocationID = 0;
 };
 
 } // namespace ascee::runtime

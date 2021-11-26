@@ -35,9 +35,9 @@ static CryptoSystem cryptoSigner;
 static
 byte loadNonceChunk(long_id accountID, int32& size) {
     auto& heap = Executor::getSession()->heapModifier;
-    heap->loadChunk(accountID & MASK);
-    size = heap->getChunkSize();
-    return heap->load<byte>(size - 1);
+    heap.loadChunk(accountID & MASK);
+    size = heap.getChunkSize();
+    return heap.load<byte>(size - 1);
 }
 
 static
@@ -51,11 +51,11 @@ static
 bool verifyWithMultiwayNonce(int nonceCount, int32 chunkSize,
                              long_id spender, message_c& msg, signature_c& sig, PublicKey& pk) {
     int32 nonceIndex = chunkSize - 2 * nonceCount + int32(spender % nonceCount) * 2;
-    auto nonce = Executor::getSession()->heapModifier->load<uint16_t>(nonceIndex);
+    auto nonce = Executor::getSession()->heapModifier.load<uint16_t>(nonceIndex);
     if (nonce >= NONCE16_MAX) return false;
 
     bool valid = verifyWithNonce(spender, nonce, msg, sig, pk);
-    if (valid) Executor::getSession()->heapModifier->store(nonceIndex, nonce + 1);
+    if (valid) Executor::getSession()->heapModifier.store(nonceIndex, nonce + 1);
     return valid;
 }
 
@@ -72,11 +72,11 @@ bool verifyByAcc(long_id spender, long_id accountID, message_c& msg, signature_c
 
     // decisionByte == 0 means that the owner of the account is an app
     if (decisionByte == 0) {
-        auto app = heap->loadIdentifier(gAppTrie, 0);
+        auto app = heap.loadIdentifier(gAppTrie, 0);
         return argc::verify_by_app(app, msg, invalidate_msg);
     }
 
-    auto pk = heap->load<PublicKey>(0);
+    auto pk = heap.load<PublicKey>(0);
 
     if (!invalidate_msg) {
         return cryptoSigner.verify(StringView(msg), sig, pk);
@@ -96,14 +96,14 @@ bool verifyByAcc(long_id spender, long_id accountID, message_c& msg, signature_c
     // if decisionByte > LAST_RESERVED_NONCE this account is a normal account which uses a var length nonce.
     if (decisionByte > LAST_RESERVED_NONCE) {
         int32 nonceOffset = pk.size() + ARG_BALANCE_BYTES;
-        auto nonce = heap->loadVarUInt(gNonceTrie, nonceOffset);
+        auto nonce = heap.loadVarUInt(gNonceTrie, nonceOffset);
         bool valid = verifyWithNonce(spender, nonce, msg, sig, pk);
         if (valid) {
             try {
                 // If nonce is too big storeVarUInt will throw an exception. Nonce should be much smaller than
                 // UINT16_MAX and the cast is safe.
-                int len = heap->storeVarUInt(gNonceTrie, nonceOffset, uint16_t(nonce + 1));
-                heap->updateChunkSize(nonceOffset + len);
+                int len = heap.storeVarUInt(gNonceTrie, nonceOffset, uint16_t(nonce + 1));
+                heap.updateChunkSize(nonceOffset + len);
             } catch (const std::overflow_error&) {
                 return false;
             }
@@ -125,10 +125,10 @@ bool argc::verify_by_app(long_id appID, message_c& msg, bool invalidate_msg = tr
 }
 
 bool argc::verify_by_account(long_id accountID, message_c& msg, signature_c& sig, bool invalidate_msg = true) {
-    Executor::getSession()->heapModifier->loadContext(ARG_APP_ID);
+    Executor::getSession()->heapModifier.loadContext(ARG_APP_ID);
     auto caller = Executor::getSession()->currentCall->appID;
     bool result = verifyByAcc(caller, accountID, msg, sig, invalidate_msg);
-    Executor::getSession()->heapModifier->loadContext(caller);
+    Executor::getSession()->heapModifier.loadContext(caller);
     return result;
 }
 

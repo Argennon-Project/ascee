@@ -56,22 +56,22 @@ public:
                                           }},
                          }
                  },});
-        modifier->saveVersion();
-        modifier->loadContext(1);
-        modifier->loadChunk(short_id(10));
-        modifier->store<int64>(0, 12345678910);
-        modifier->store<int64>(8, 77777777777);
-        modifier->updateChunkSize(16);
+        modifier.saveVersion();
+        modifier.loadContext(1);
+        modifier.loadChunk(short_id(10));
+        modifier.store<int64>(0, 12345678910);
+        modifier.store<int64>(8, 77777777777);
+        modifier.updateChunkSize(16);
 
-        modifier->loadChunk(short_id(12));
-        modifier->store<int64>(0, 0x1011121314151617);
-        modifier->updateChunkSize(8);
+        modifier.loadChunk(short_id(12));
+        modifier.store<int64>(0, 0x1011121314151617);
+        modifier.updateChunkSize(8);
 
-        modifier->loadChunk(short_id(15));
-        modifier->store<int32>(0, 0x33333333);
-        modifier->updateChunkSize(4);
+        modifier.loadChunk(short_id(15));
+        modifier.store<int32>(0, 0x33333333);
+        modifier.updateChunkSize(4);
 
-        modifier->writeToHeap();
+        modifier.writeToHeap();
     }
 };
 
@@ -85,13 +85,13 @@ TEST_F(AsceeHeapDeathTest, SimpleRead) {
                      }
              },});
 
-    modifier->loadContext(1);
+    modifier.loadContext(1);
 
-    modifier->loadChunk(short_id(10));
-    EXPECT_EQ(modifier->load<int64>(8), 77777777777);
+    modifier.loadChunk(short_id(10));
+    EXPECT_EQ(modifier.load<int64>(8), 77777777777);
 
-    modifier->loadChunk(short_id(15));
-    EXPECT_EQ(modifier->load<byte>(2), 0x33);
+    modifier.loadChunk(short_id(15));
+    EXPECT_EQ(modifier.load<byte>(2), 0x33);
 
     EXPECT_THROW(
             heap.initSession({{.appID = 1, .chunks = {{11, -1, {{8, 8, false}}}}},}),
@@ -179,31 +179,31 @@ TEST_F(AsceeHeapDeathTest, ChunkCreation) {
                      }},
             });
 
-    modifier->loadContext(2);
-    modifier->saveVersion();
+    modifier.loadContext(2);
+    modifier.saveVersion();
 
-    modifier->loadChunk(long_id(10));
-    EXPECT_EQ(modifier->load<int64>(0), 0);
-    modifier->store(0, 0x1122334455667788);
+    modifier.loadChunk(long_id(10));
+    EXPECT_EQ(modifier.load<int64>(0), 0);
+    modifier.store(0, 0x1122334455667788);
 
-    modifier->loadChunk(long_id(11));
-    modifier->store(10, 0x1111111111111111);
+    modifier.loadChunk(long_id(11));
+    modifier.store(10, 0x1111111111111111);
 
-    modifier->loadChunk(long_id(15));
-    EXPECT_EQ(modifier->load<byte>(128), 0);
-    modifier->store<byte>(128, 0x22);
+    modifier.loadChunk(long_id(15));
+    EXPECT_EQ(modifier.load<byte>(128), 0);
+    modifier.store<byte>(128, 0x22);
 
-    modifier->loadChunk(long_id(11));
-    EXPECT_EQ(modifier->load<int64>(10), 0x1111111111111111);
+    modifier.loadChunk(long_id(11));
+    EXPECT_EQ(modifier.load<int64>(10), 0x1111111111111111);
 
-    modifier->loadChunk(long_id(15));
-    EXPECT_EQ(modifier->load<byte>(128), 0x22);
-    modifier->updateChunkSize(0);
+    modifier.loadChunk(long_id(15));
+    EXPECT_EQ(modifier.load<byte>(128), 0x22);
+    modifier.updateChunkSize(0);
 
-    modifier->loadChunk(long_id(10));
-    modifier->updateChunkSize(10);
+    modifier.loadChunk(long_id(10));
+    modifier.updateChunkSize(10);
 
-    modifier->writeToHeap();
+    modifier.writeToHeap();
 
     EXPECT_THROW(
             heap.initSession({{2, {{11, -1, {{10, 1, false}}},}},}),
@@ -220,11 +220,13 @@ TEST_F(AsceeHeapDeathTest, ChunkCreation) {
             std::out_of_range
     );
 
-    modifier = heap.initSession({{2, {{10, -1, {{6, 4, false}}},}},});
+    {
+        auto modifier = heap.initSession({{2, {{10, -1, {{6, 4, false}}},}},});
 
-    modifier->loadContext(2);
-    modifier->loadChunk(long_id(10));
-    EXPECT_EQ(modifier->load<int32>(6), 0x1122);
+        modifier.loadContext(2);
+        modifier.loadChunk(long_id(10));
+        EXPECT_EQ(modifier.load<int32>(6), 0x1122);
+    }
 }
 
 TEST_F(AsceeHeapDeathTest, ChunkRemoval) {
@@ -238,19 +240,19 @@ TEST_F(AsceeHeapDeathTest, ChunkRemoval) {
                      }
              },});
 
-    modifier->saveVersion();
-    modifier->loadContext(1);
-    modifier->loadChunk(short_id(10));
-    modifier->updateChunkSize(0);
+    modifier.saveVersion();
+    modifier.loadContext(1);
+    modifier.loadChunk(short_id(10));
+    modifier.updateChunkSize(0);
 
-    modifier->loadChunk(short_id(15));
-    modifier->updateChunkSize(0);
+    modifier.loadChunk(short_id(15));
+    modifier.updateChunkSize(0);
 
-    EXPECT_EQ(modifier->load<byte>(2), 0x33);
-    modifier->store<byte>(2, 0x88);
-    EXPECT_EQ(modifier->load<byte>(2), 0x88);
+    EXPECT_EQ(modifier.load<byte>(2), 0x33);
+    modifier.store<byte>(2, 0x88);
+    EXPECT_EQ(modifier.load<byte>(2), 0x88);
 
-    modifier->writeToHeap();
+    modifier.writeToHeap();
 
     EXPECT_THROW(
             heap.initSession({{1, {{10, -1, {}}}},}),
@@ -262,14 +264,16 @@ TEST_F(AsceeHeapDeathTest, ChunkRemoval) {
             std::out_of_range
     );
 
-    modifier = heap.initSession({{1, {
-            {15, 10, {{2, 1, true}}},
-            {12, -1, {{0, 8, false}}},
-    }},});
+    {
+        auto modifier = heap.initSession({{1, {
+                {15, 10, {{2, 1, true}}},
+                {12, -1, {{0, 8, false}}},
+        }},});
 
-    modifier->loadContext(1);
-    modifier->loadChunk(short_id(15));
-    EXPECT_EQ(modifier->load<byte>(2), 0);
+        modifier.loadContext(1);
+        modifier.loadChunk(short_id(15));
+        EXPECT_EQ(modifier.load<byte>(2), 0);
+    }
 }
 
 TEST_F(AsceeHeapDeathTest, ChunkResizing) {
@@ -287,24 +291,24 @@ TEST_F(AsceeHeapDeathTest, ChunkResizing) {
                      }},
             });
 
-    modifier->saveVersion();
-    modifier->loadContext(1);
+    modifier.saveVersion();
+    modifier.loadContext(1);
 
-    modifier->loadChunk(long_id(10));
-    EXPECT_EQ(modifier->load<int32>(12), 18);
-    modifier->store<int32>(12, 55555);
-    EXPECT_EQ(modifier->load<int32>(12), 55555);
+    modifier.loadChunk(long_id(10));
+    EXPECT_EQ(modifier.load<int32>(12), 18);
+    modifier.store<int32>(12, 55555);
+    EXPECT_EQ(modifier.load<int32>(12), 55555);
 
-    modifier->updateChunkSize(6);
+    modifier.updateChunkSize(6);
 
-    modifier->loadChunk(long_id(15));
-    EXPECT_EQ(modifier->load<int64>(8), 0);
-    modifier->store<int64>(8, 1515151515);
+    modifier.loadChunk(long_id(15));
+    EXPECT_EQ(modifier.load<int64>(8), 0);
+    modifier.store<int64>(8, 1515151515);
 
-    EXPECT_THROW(modifier->updateChunkSize(17), std::out_of_range);
-    modifier->updateChunkSize(16);
+    EXPECT_THROW(modifier.updateChunkSize(17), std::out_of_range);
+    modifier.updateChunkSize(16);
 
-    modifier->writeToHeap();
+    modifier.writeToHeap();
 
     EXPECT_THROW(
             heap.initSession({{.appID = 1, .chunks = {{10, -1, {{6, 1, false}}},}},}),
@@ -316,21 +320,23 @@ TEST_F(AsceeHeapDeathTest, ChunkResizing) {
             std::out_of_range
     );
 
-    modifier = heap.initSession(
-            {{
-                     .appID = 1,
-                     .chunks = {
-                             {15, -1, {
-                                     {0, 4, false},
-                                     {8, 8, true}
-                             }},
-                     }},
-            });
+    {
+        auto modifier = heap.initSession(
+                {{
+                         .appID = 1,
+                         .chunks = {
+                                 {15, -1, {
+                                         {0, 4, false},
+                                         {8, 8, true}
+                                 }},
+                         }},
+                });
 
-    modifier->saveVersion();
-    modifier->loadContext(1);
-    modifier->loadChunk(long_id(15));
-    EXPECT_EQ(modifier->load<int64>(8), 1515151515);
-    EXPECT_EQ(modifier->load<int32>(0), 0x33333333);
+        modifier.saveVersion();
+        modifier.loadContext(1);
+        modifier.loadChunk(long_id(15));
+        EXPECT_EQ(modifier.load<int64>(8), 1515151515);
+        EXPECT_EQ(modifier.load<int32>(0), 0x33333333);
+    }
 }
 

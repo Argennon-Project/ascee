@@ -87,8 +87,9 @@ string Executor::startSession(const Transaction& t) {
             .remainingExternalGas = t.gas,
     };
     SessionInfo threadSession{
-            .heapModifier = unique_ptr<Heap::Modifier>(heap.initSession(t.calledAppID)),
+            .heapModifier = heap.initSession(t.memoryAccessList),
             .appTable = AppLoader::global->createAppTable(t.appAccessList),
+            .failureManager = FailureManager(t.failedCalls),
             .currentCall = &newCall,
     };
     session = &threadSession;
@@ -99,11 +100,11 @@ string Executor::startSession(const Transaction& t) {
     } catch (const execution_error& e) {
         // critical error
         printf("**critical**\n");
-        session->heapModifier->restoreVersion(0);
+        session->heapModifier.restoreVersion(0);
         ret = e.statusCode();
     }
 
-    session->heapModifier->writeToHeap();
+    session->heapModifier.writeToHeap();
 
     session = nullptr;
     free(recoveryStack);

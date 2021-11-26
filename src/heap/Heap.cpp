@@ -41,8 +41,8 @@ Heap::Modifier* Heap::initSession(long_id calledApp) {
     return new Modifier(this);
 }
 
-Heap::Modifier* Heap::initSession(const std::vector<AppMemAccess>& memAccessList) {
-    auto* result = new Modifier(this);
+Heap::Modifier Heap::initSession(const std::vector<AppMemAccess>& memAccessList) {
+    Modifier result(this);
     std::vector<std::pair<long_id, long_id>> newChunks;
 
     try {
@@ -82,7 +82,7 @@ Heap::Modifier* Heap::initSession(const std::vector<AppMemAccess>& memAccessList
                 // maxNewSize >= 0 means that chunk is resizable
                 // maxNewSize == -1 means that chunk is NOT resizable
                 // maxNewSize < -1 doesn't happen
-                result->defineChunk(appID, chunkID, chunk->getSizePointer(), maxNewSize);
+                result.defineChunk(appID, chunkID, chunk->getSizePointer(), maxNewSize);
 
                 for (const auto& blockAccessList: chunkAccessList.accessBlocks) {
                     int32 offset = blockAccessList.offset, accessBlockSize = blockAccessList.size;
@@ -91,8 +91,8 @@ Heap::Modifier* Heap::initSession(const std::vector<AppMemAccess>& memAccessList
                     int32 bound = std::max(chunkSize, maxNewSize);;
 
                     if (offset + accessBlockSize > bound) throw std::out_of_range("out of chunk");
-                    result->defineAccessBlock(chunk->getContentPointer(offset), appID, chunkID, offset,
-                                              accessBlockSize, isWritable);
+                    result.defineAccessBlock(chunk->getContentPointer(offset), appID, chunkID, offset,
+                                             accessBlockSize, isWritable);
                 }
             }
         }
@@ -100,7 +100,6 @@ Heap::Modifier* Heap::initSession(const std::vector<AppMemAccess>& memAccessList
         for (const auto& idPair: newChunks) {
             freeChunk(idPair.first, idPair.second);
         }
-        delete result;
         throw;
     }
     return result;

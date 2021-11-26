@@ -122,7 +122,7 @@ int invoke_dispatcher_impl(byte forwarded_gas, long_id app_id, string_c request)
 
     int16_t savedVersion;
     try {
-        savedVersion = Executor::getSession()->heapModifier->saveVersion();
+        savedVersion = Executor::getSession()->heapModifier.saveVersion();
     } catch (const std::out_of_range&) {
         return INSUFFICIENT_STORAGE;
     }
@@ -135,7 +135,7 @@ int invoke_dispatcher_impl(byte forwarded_gas, long_id app_id, string_c request)
     };
     Executor::getSession()->currentCall = &newCall;
     Executor::getSession()->response.clear();
-    Executor::getSession()->heapModifier->loadContext(app_id);
+    Executor::getSession()->heapModifier.loadContext(app_id);
 
     ThreadCpuTimer cpuTimer;
     cpuTimer.setAlarm(execTime);
@@ -178,9 +178,9 @@ int invoke_dispatcher_impl(byte forwarded_gas, long_id app_id, string_c request)
     }
 
     // restore context
-    Executor::getSession()->heapModifier->loadContext(oldCallInfo->appID);
+    Executor::getSession()->heapModifier.loadContext(oldCallInfo->appID);
     if (ret >= 400) {
-        Executor::getSession()->heapModifier->restoreVersion(savedVersion);
+        Executor::getSession()->heapModifier.restoreVersion(savedVersion);
     }
 
     // restore previous call info

@@ -59,6 +59,53 @@ public:
     class Modifier {
         friend class Heap;
 
+    public:
+        Modifier(const Modifier&) : parent(nullptr) { std::terminate(); }
+
+        Modifier(Modifier&&) = delete;
+
+        template<typename T>
+        inline
+        T load(int32 offset) { return accessTable->at(offset).read<T>(currentVersion); }
+
+        template<typename T, int h>
+        inline
+        T loadVarUInt(const IdentifierTrie<T, h>& trie, int32 offset, int* n = nullptr) {
+            return accessTable->at(offset).readVarUInt(trie, currentVersion, n);
+        }
+
+        template<typename T, int h>
+        inline
+        T loadIdentifier(const IdentifierTrie<T, h>& trie, int32 offset, int* n = nullptr) {
+            return accessTable->at(offset).readIdentifier(trie, currentVersion, n);
+        }
+
+        template<typename T>
+        inline
+        void store(int32 offset, T value) { accessTable->at(offset).write<T>(currentVersion, value); }
+
+        template<typename T, int h>
+        inline
+        int storeVarUInt(const IdentifierTrie<T, h>& trie, int32 offset, T value) {
+            return accessTable->at(offset).writeVarUInt(trie, currentVersion, value);
+        }
+
+        void loadChunk(short_id chunkID);
+
+        void loadChunk(long_id chunkID);
+
+        void loadContext(long_id appID);
+
+        void restoreVersion(int16_t version);
+
+        int16_t saveVersion();
+
+        void writeToHeap();
+
+        int32 getChunkSize();
+
+        void updateChunkSize(int32 newSize);
+
     private:
         class AccessBlock {
 
@@ -147,8 +194,6 @@ public:
         };
 
         Heap* parent;
-
-    private:
         int16_t currentVersion = 0;
 
         typedef std::unordered_map<int32, AccessBlock> AccessTableMap;
@@ -179,55 +224,13 @@ public:
                                long_id app, long_id chunk, int32 offset,
                                int32 size, bool writable);
 
-    public:
-        template<typename T>
-        inline
-        T load(int32 offset) { return accessTable->at(offset).read<T>(currentVersion); }
-
-        template<typename T, int h>
-        inline
-        T loadVarUInt(const IdentifierTrie<T, h>& trie, int32 offset, int* n = nullptr) {
-            return accessTable->at(offset).readVarUInt(trie, currentVersion, n);
-        }
-
-        template<typename T, int h>
-        inline
-        T loadIdentifier(const IdentifierTrie<T, h>& trie, int32 offset, int* n = nullptr) {
-            return accessTable->at(offset).readIdentifier(trie, currentVersion, n);
-        }
-
-        template<typename T>
-        inline
-        void store(int32 offset, T value) { accessTable->at(offset).write<T>(currentVersion, value); }
-
-        template<typename T, int h>
-        inline
-        int storeVarUInt(const IdentifierTrie<T, h>& trie, int32 offset, T value) {
-            return accessTable->at(offset).writeVarUInt(trie, currentVersion, value);
-        }
-
-        void loadChunk(short_id chunkID);
-
-        void loadChunk(long_id chunkID);
-
-        void loadContext(long_id appID);
-
-        void restoreVersion(int16_t version);
-
-        int16_t saveVersion();
-
-        void writeToHeap();
-
-        int32 getChunkSize();
-
-        void updateChunkSize(int32 newSize);
     };
 
     Heap();
 
     Modifier* initSession(long_id calledApp);
 
-    Modifier* initSession(const std::vector<AppMemAccess>& memAccessList);
+    Modifier initSession(const std::vector<AppMemAccess>& memAccessList);
 
     void freeChunk(long_id appID, long_id id);
 };

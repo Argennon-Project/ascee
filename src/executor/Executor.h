@@ -55,7 +55,7 @@ struct DeferredArgs {
 struct SessionInfo {
     bool criticalArea = false;
 
-    std::unique_ptr<Heap::Modifier> heapModifier;
+    Heap::Modifier heapModifier;
     std::unordered_map<long_id, dispatcher_ptr> appTable;
     std::unordered_map<long_id, bool> isLocked;
     FailureManager failureManager;
@@ -65,7 +65,7 @@ struct SessionInfo {
 
     struct CallContext {
         const long_id appID;
-        int64_t remainingExternalGas;
+        int_fast32_t remainingExternalGas;
         bool hasLock = false;
         std::vector<DeferredArgs> deferredCalls;
     };
@@ -78,8 +78,10 @@ struct SessionInfo {
 struct Transaction {
     long_id calledAppID;
     string_c request;
-    int64_t gas;
+    int_fast32_t gas;
     std::vector<long_id> appAccessList;
+    FailureManager::FailureMap failedCalls;
+    std::vector<AppMemAccess> memoryAccessList;
 };
 
 class Executor {

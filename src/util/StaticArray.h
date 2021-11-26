@@ -28,6 +28,12 @@ class StaticArray : public std::array<T, size> {
 public:
     StaticArray() = default;
 
+    StaticArray(const StaticArray&) { std::terminate(); }
+
+    StaticArray(StaticArray&&) = delete;
+
+    StaticArray& operator=(const StaticArray&) = default;
+
     T* operator&() { // NOLINT(google-runtime-operator)
         return this->data();
     }
