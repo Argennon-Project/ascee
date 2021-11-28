@@ -25,21 +25,19 @@ using namespace ascee;
 using namespace ascee::runtime;
 using std::unique_ptr, std::string, std::to_string;
 
-int invoke_dispatcher();
+thread_local Executor::SessionInfo* Executor::session = nullptr;
 
-thread_local SessionInfo* Executor::session = nullptr;
-
-void Executor::sig_handler(int sig, siginfo_t* info, void* ucontext) {
+void Executor::sig_handler(int sig, siginfo_t* info, void*) {
     printf("Caught signal %d\n", sig);
     // important: session is not valid when sig == SIGALRM
     if (sig != SIGALRM) {
         if (session->criticalArea) {
-            throw execution_error(LOOP_DETECTED);
+            throw std::runtime_error("signal raised from critical area");
         }
-        int ret = INTERNAL_ERROR;
-        if (sig == SIGUSR1) ret = REQUEST_TIMEOUT;
-        if (sig == SIGUSR2) ret = REENTRANCY_DETECTED;
-        throw execution_error(ret);
+
+        if (sig == SIGUSR1) throw execution_error("cpu timer expired", StatusCode::execution_timeout);
+        if (sig == SIGFPE) throw execution_error("SIGFPE was caught", StatusCode::arithmetic_error);
+        else throw execution_error("a signal was caught", StatusCode::internal_error);
     } else {
         pthread_t thread_id = *static_cast<pthread_t*>(info->si_value.sival_ptr);
         printf("Caught signal %d for app %ld\n", sig, thread_id);
@@ -47,67 +45,77 @@ void Executor::sig_handler(int sig, siginfo_t* info, void* ucontext) {
     }
 }
 
+static inline
+void maskSignals(int how) {
+    sigset_t set;
+
+// Block timer's signal
+    sigemptyset(&set);
+    sigaddset(&set, SIGUSR1);
+    sigaddset(&set, SIGKILL);
+    sigaddset(&set, SIGBUS);
+    int s = pthread_sigmask(how, &set, nullptr);
+    if (s != 0) throw std::runtime_error("error in masking signals");
+
+}
+
+void Executor::blockSignals() {
+    maskSignals(SIG_BLOCK);
+    Executor::getSession()->criticalArea = true;
+}
+
+void Executor::unBlockSignals() {
+    maskSignals(SIG_UNBLOCK);
+    Executor::getSession()->criticalArea = false;
+}
+
 void Executor::initHandlers() {
     struct sigaction action{};
     action.sa_flags = SA_SIGINFO | SA_ONSTACK;
     action.sa_sigaction = Executor::sig_handler;
     sigfillset(&action.sa_mask);
+
     int err = 0;
     err += sigaction(SIGALRM, &action, nullptr);
     err += sigaction(SIGFPE, &action, nullptr);
     err += sigaction(SIGSEGV, &action, nullptr);
     err += sigaction(SIGBUS, &action, nullptr);
     err += sigaction(SIGUSR1, &action, nullptr);
-    err += sigaction(SIGUSR2, &action, nullptr);
-    if (err != 0) {
-        throw std::runtime_error("error in creating handlers");
-    }
+    if (err) throw std::runtime_error("error in creating handlers");
 }
 
 void* Executor::registerRecoveryStack() {
     stack_t sig_stack;
 
     sig_stack.ss_sp = malloc(SIGSTKSZ);
-    if (sig_stack.ss_sp == nullptr) {
-        throw std::runtime_error("could not allocate memory for the recovery stack");
-    }
+    if (sig_stack.ss_sp == nullptr) throw std::runtime_error("could not allocate memory for the recovery stack");
+
     sig_stack.ss_size = SIGSTKSZ;
     sig_stack.ss_flags = 0;
-    if (sigaltstack(&sig_stack, nullptr) == -1) {
-        throw std::runtime_error("error in registering the recovery stack");
-    }
+
+    int err = sigaltstack(&sig_stack, nullptr);
+    if (err) throw std::runtime_error("error in registering the recovery stack");
+
     return sig_stack.ss_sp;
 }
 
-string Executor::startSession(const Transaction& t) {
-    void* recoveryStack = registerRecoveryStack();
-
-    SessionInfo::CallContext newCall = {
-            .appID = 0,
-            .remainingExternalGas = t.gas,
-    };
+string Executor::startSession(const Transaction& tx) {
     SessionInfo threadSession{
-            .heapModifier = heap.initSession(t.memoryAccessList),
-            .appTable = AppLoader::global->createAppTable(t.appAccessList),
-            .failureManager = FailureManager(t.failedCalls),
-            .currentCall = &newCall,
+            .heapModifier = heap.initSession(tx.memoryAccessList),
+            .appTable = AppLoader::global->createAppTable(tx.appAccessList),
+            .failureManager = FailureManager(tx.failedCalls),
     };
     session = &threadSession;
-
-    int ret;
     try {
-        ret = argc::invoke_dispatcher(255, t.calledAppID, t.request);
-    } catch (const execution_error& e) {
-        // critical error
-        printf("**critical**\n");
-        session->heapModifier.restoreVersion(0);
-        ret = e.statusCode();
+        CallResourceContext rootCall(tx.gas);
+        argc::invoke_dispatcher(255, tx.calledAppID, tx.request);
+        rootCall.complete();
+        session->heapModifier.writeToHeap();
+    } catch (const std::runtime_error& re) {
+        execution_error(re.what()).toHttpResponse(threadSession.response);
     }
 
-    session->heapModifier.writeToHeap();
-
     session = nullptr;
-    free(recoveryStack);
     // here, string constructor makes a copy of the buffer.
     return string(string_c(threadSession.response));
 }
@@ -117,30 +125,35 @@ Executor::Executor() {
 }
 
 struct InvocationArgs {
-    int (* invoker)(byte, long_id, string_c);
+    int (* invoker)(long_id, string_c);
 
-    byte forwarded_gas;
     long_id app_id;
     string_c request;
-    SessionInfo* session;
+    int_fast64_t execTime;
+    Executor::SessionInfo* session;
 };
 
-static
-void* threadStart(void* voidArgs) {
+void* Executor::threadStart(void* voidArgs) {
     auto* args = (InvocationArgs*) voidArgs;
 
     void* recoveryStack = Executor::registerRecoveryStack();
-    Executor::session = args->session;
+    session = args->session;
 
     int* ret = (int*) malloc(sizeof(int));
-    *ret = args->invoker(args->forwarded_gas, args->app_id, args->request);
+    if (ret == nullptr) throw std::runtime_error("memory allocation error");
+
+    ThreadCpuTimer cpuTimer;
+    cpuTimer.setAlarm(args->execTime);
+
+    *ret = args->invoker(args->app_id, args->request);
 
     free(recoveryStack);
     return ret;
 }
 
-int Executor::controlledExec(int (* invoker)(byte, long_id, string_c),
-                             byte forwarded_gas, long_id app_id, string_c request, size_t stackSize) {
+int Executor::controlledExec(int (* invoker)(long_id, string_c),
+                             long_id app_id, string_c request,
+                             int_fast64_t execTime, size_t stackSize) {
     pthread_t threadID;
     pthread_attr_t threadAttr;
 
@@ -152,9 +165,9 @@ int Executor::controlledExec(int (* invoker)(byte, long_id, string_c),
 
     InvocationArgs args = {
             .invoker = invoker,
-            .forwarded_gas = forwarded_gas,
             .app_id = app_id,
             .request = request,
+            .execTime = execTime,
             .session = Executor::getSession()
     };
 
@@ -173,3 +186,53 @@ int Executor::controlledExec(int (* invoker)(byte, long_id, string_c),
     return ret;
 }
 
+static inline
+int64_t calculateExternalGas(int64_t currentGas) {
+    // the geometric series approaches 1 / (1 - q) so the total amount of externalGas would be 2 * currentGas
+    return 2 * currentGas / 3;
+}
+
+#define MIN_GAS 1
+
+Executor::CallResourceContext::CallResourceContext(byte forwardedGas) {
+    prevResources = session->currentResources;
+
+    gas = (prevResources->remainingExternalGas * forwardedGas) >> 8;
+    if (gas <= MIN_GAS) throw execution_error("forwarded gas is too low", StatusCode::internal_error);
+
+    id = session->failureManager.nextInvocation();
+    prevResources->remainingExternalGas -= gas;
+    remainingExternalGas = calculateExternalGas(gas);
+
+    session->currentResources = this;
+    heapVersion = session->heapModifier.saveVersion();
+}
+
+
+Executor::CallResourceContext::CallResourceContext(int_fast32_t initialGas) {
+    id = session->failureManager.nextInvocation();
+    gas = 0;
+    remainingExternalGas = initialGas;
+
+    session->currentResources = this;
+    heapVersion = 0;
+}
+
+Executor::CallInfoContext::~CallInfoContext() {
+    argc::exit_area();
+
+    // restore context
+    if (prevCallInfo != nullptr) session->heapModifier.loadContext(prevCallInfo->appID);
+
+    // restore previous call info
+    session->currentCall = prevCallInfo;
+}
+
+Executor::CallInfoContext::CallInfoContext(long_id app) : appID(app) {
+    if (session->currentCall != nullptr) {
+        prevCallInfo = session->currentCall;
+        if (prevCallInfo->appID == app) throw execution_error("calling self", StatusCode::invalid_operation);
+    }
+    session->heapModifier.loadContext(app);
+    session->currentCall = this;
+}

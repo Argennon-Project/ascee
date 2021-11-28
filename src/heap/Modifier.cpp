@@ -25,7 +25,7 @@ using namespace ascee;
 using namespace ascee::runtime;
 
 int16_t Heap::Modifier::saveVersion() {
-    if (currentVersion == MAX_VERSION) throw std::out_of_range("version limit reached");
+    if (currentVersion == MAX_VERSION) throw execution_error("version limit reached", StatusCode::limit_exceeded);
     return currentVersion++;
 }
 

@@ -38,5 +38,59 @@ using publickey_c = runtime::PublicKey;
 /// to the suffix size of the messages, which is appended by the signature verification functions.
 using message_c = runtime::StringBuffer<2 * 1024>;
 
+/// HTTP response status codes
+enum class StatusCode {
+    forbidden = 403,
+    not_found = 404,
+    /// This HTTP status code indicates that the transaction has violated its predeclared resource limits.
+    limit_violated = 420,
+    /// Indicates that finishing the execution of the application was not possible in the transaction's specified time
+    execution_timeout = 421,
+    /// Indicates a general error
+    internal_error = 500,
+    /// Indicates that a protocol defined limit for a resource was exceeded by the smart contract.
+    limit_exceeded = 520,
+    /// Indicates that a smart contract tried to perform an operation that was not valid
+    invalid_operation = 521,
+    ///
+    arithmetic_error = 522,
+    reentrancy_attempt = 523,
+};
+
+inline static const std::unordered_map<StatusCode, const char*> gReasonByCode{
+        {StatusCode::not_found,          "Not Found"},
+        {StatusCode::limit_violated,     "Declared Limits Violated"},
+        {StatusCode::execution_timeout,  "Execution Timeout"},
+        {StatusCode::internal_error,     "Internal Error"},
+        {StatusCode::invalid_operation,  "Invalid Operation"},
+        {StatusCode::arithmetic_error,   "Arithmetic Error"},
+        {StatusCode::reentrancy_attempt, "Reentrancy Attempt"},
+};
+
+
+class execution_error : std::exception {
+public:
+    explicit execution_error(std::string msg, StatusCode code = StatusCode::internal_error) : msg(std::move(msg)),
+                                                                                              code(code) {}
+
+    [[nodiscard]] int errorCode() const { return (int) code; }
+
+    [[nodiscard]] StatusCode statusCode() const { return code; }
+
+    [[nodiscard]] std::string_view message() const { return msg; }
+
+    template<int size>
+    void toHttpResponse(runtime::StringBuffer<size>& response) const {
+        response << "HTTP/1.1 " << errorCode() << " ";
+        response << gReasonByCode.at(code) << "\r\n";
+        response << "Content-Length: " << (int) msg.size() + 8 << "\r\n\r\n";
+        response << "Error: " << message() << ".";
+    }
+
+private:
+    const std::string msg;
+    const StatusCode code;
+};
+
 } // namespace ascee
 #endif // ASCEE_CLASSES_TYPES_H

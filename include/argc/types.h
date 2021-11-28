@@ -18,6 +18,7 @@
 #ifndef ASCEE_TYPES_INC
 #define ASCEE_TYPES_INC
 
+#include <unordered_map>
 #include "primitives.h"
 #include "classes.h"
 

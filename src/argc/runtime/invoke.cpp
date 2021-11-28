@@ -24,20 +24,12 @@
 #include <argc/functions.h>
 
 
-#define MIN_GAS 1
-
 using namespace ascee;
 using namespace ascee::runtime;
 using std::unique_ptr, std::vector, std::unordered_map, std::string, std::string_view;
 
 string_buffer_c<RESPONSE_MAX_SIZE>& argc::response_buffer() {
     return Executor::getSession()->response;
-}
-
-static inline
-int64_t calculateExternalGas(int64_t currentGas) {
-    // the geometric series approaches 1 / (1 - q) so the total amount of externalGas would be 2 * currentGas
-    return 2 * currentGas / 3;
 }
 
 static inline
@@ -48,52 +40,27 @@ void addDefaultResponse(int statusCode) {
     Executor::getSession()->response.append(string_c(response, n));
 }
 
-static inline
-void maskSignals(int how) {
-    sigset_t set;
-
-// Block timer's signal
-    sigemptyset(&set);
-    sigaddset(&set, SIGUSR1);
-    sigaddset(&set, SIGKILL);
-    sigaddset(&set, SIGBUS);
-    int s = pthread_sigmask(how, &set, nullptr);
-    if (s != 0) throw std::runtime_error("error in masking signals");
-
-}
-
-static inline
-void blockSignals() {
-    maskSignals(SIG_BLOCK);
-    Executor::getSession()->criticalArea = true;
-}
-
-static inline
-void unBlockSignals() {
-    maskSignals(SIG_UNBLOCK);
-    Executor::getSession()->criticalArea = false;
-}
-
 void argc::enter_area() {
     if (Executor::getSession()->currentCall->hasLock) return;
 
-    if (Executor::getSession()->isLocked[Executor::getSession()->currentCall->appID]) {
-        raise(SIGUSR2);
+    auto app = Executor::getSession()->currentCall->appID;
+    if (Executor::getSession()->isLocked[app]) {
+        throw execution_error("reentrancy lock for " + std::to_string(app), StatusCode::reentrancy_attempt);
     } else {
-        blockSignals();
-        Executor::getSession()->isLocked[Executor::getSession()->currentCall->appID] = true;
+        Executor::blockSignals();
+        Executor::getSession()->isLocked[app] = true;
         Executor::getSession()->currentCall->hasLock = true;
-        unBlockSignals();
+        Executor::unBlockSignals();
     }
 }
 
 void argc::exit_area() {
-    blockSignals();
+    Executor::blockSignals();
     if (Executor::getSession()->currentCall->hasLock) {
         Executor::getSession()->isLocked[Executor::getSession()->currentCall->appID] = false;
         Executor::getSession()->currentCall->hasLock = false;
     }
-    unBlockSignals();
+    Executor::unBlockSignals();
 }
 
 void argc::invoke_deferred(byte forwarded_gas, long_id app_id, string_c request) {
@@ -105,53 +72,26 @@ void argc::invoke_deferred(byte forwarded_gas, long_id app_id, string_c request)
     });
 }
 
-static inline
-int invoke_dispatcher_impl(byte forwarded_gas, long_id app_id, string_c request) {
+int argc::dependant_call_dispatcher(long_id app_id, string_c request) {
     dispatcher_ptr dispatcher;
     try {
         dispatcher = Executor::getSession()->appTable.at(app_id);
     } catch (const std::out_of_range&) {
-        return PRECONDITION_FAILED;
+        throw execution_error("app:" + std::to_string(app_id) + " is not declared in the call list",
+                              StatusCode::limit_violated);
     }
-    if (dispatcher == nullptr || Executor::getSession()->currentCall->appID == app_id) return NOT_FOUND;
-
-    int64_t maxCurrentGas = (Executor::getSession()->currentCall->remainingExternalGas * forwarded_gas) >> 8;
-    if (maxCurrentGas <= MIN_GAS) return REQUEST_TIMEOUT;
-
-    int64_t execTime = Executor::getSession()->failureManager.getExecTime(maxCurrentGas);
-
-    int16_t savedVersion;
-    try {
-        savedVersion = Executor::getSession()->heapModifier.saveVersion();
-    } catch (const std::out_of_range&) {
-        return INSUFFICIENT_STORAGE;
+    if (dispatcher == nullptr) {
+        throw execution_error("app does not exist", StatusCode::not_found);
     }
 
-    Executor::getSession()->currentCall->remainingExternalGas -= maxCurrentGas;
-    auto oldCallInfo = Executor::getSession()->currentCall;
-    SessionInfo::CallContext newCall = {
-            .appID = app_id,
-            .remainingExternalGas = calculateExternalGas(maxCurrentGas),
-    };
-    Executor::getSession()->currentCall = &newCall;
     Executor::getSession()->response.clear();
-    Executor::getSession()->heapModifier.loadContext(app_id);
+    Executor::CallInfoContext callContext(app_id);
 
-    ThreadCpuTimer cpuTimer;
-    cpuTimer.setAlarm(execTime);
-
-    int ret;
-    unBlockSignals();
-    try {
-        ret = dispatcher(request);
-    } catch (const execution_error& e) {
-        ret = e.statusCode();
-    } catch (const std::out_of_range&) {
-        ret = INTERNAL_ERROR;
-    }
+    Executor::unBlockSignals();
+    int ret = dispatcher(request);
     // blockSignals() activates the criticalArea flag. That way if we raise another signal here, we won't get stuck in
     // an infinite loop.
-    blockSignals();
+    Executor::blockSignals();
 
     // as soon as possible we should release the entrance lock (if any)
     argc::exit_area();
@@ -177,35 +117,40 @@ int invoke_dispatcher_impl(byte forwarded_gas, long_id app_id, string_c request)
         Executor::getSession()->response.append(StringView(mainResponse));
     }
 
-    // restore context
-    Executor::getSession()->heapModifier.loadContext(oldCallInfo->appID);
-    if (ret >= 400) {
-        Executor::getSession()->heapModifier.restoreVersion(savedVersion);
-    }
-
-    // restore previous call info
-    Executor::getSession()->currentCall = oldCallInfo;
     return ret;
 }
 
-
-int argc::invoke_dispatcher(byte forwarded_gas, long_id app_id, string_c request) {
-    blockSignals();
-
-    Executor::getSession()->failureManager.nextInvocation();
+static
+int invoke_noexcept(long_id app_id, string_c request) {
     int ret;
     try {
-        auto stackSize = Executor::getSession()->failureManager.getStackSize();
-        ret = Executor::controlledExec(invoke_dispatcher_impl, forwarded_gas, app_id, request, stackSize);
-    } catch (const std::overflow_error&) {
-        ret = MAX_CALL_DEPTH_REACHED;
+        try {
+            ret = argc::dependant_call_dispatcher(app_id, request);
+        } catch (const std::out_of_range& out) {
+            throw execution_error(out.what());
+        }
+    } catch (const execution_error& ee) {
+        ret = ee.errorCode();
+        ee.toHttpResponse(Executor::getSession()->response.clear());
+    }
+    return ret;
+}
+
+int argc::invoke_dispatcher(byte forwarded_gas, long_id app_id, string_c request) {
+    Executor::blockSignals();
+
+    int ret;
+    try {
+        Executor::CallResourceContext resourceContext(forwarded_gas);
+        ret = Executor::controlledExec(invoke_noexcept, app_id, request,
+                                       resourceContext.getExecTime(), resourceContext.getStackSize());
+        if (ret < 400) resourceContext.complete();
+    } catch (const execution_error& ee) {
+        ret = ee.errorCode();
+        ee.toHttpResponse(Executor::getSession()->response.clear());
     }
 
-    if (ret >= 400) addDefaultResponse(ret);
-
-    Executor::getSession()->failureManager.completeInvocation();
-
-    unBlockSignals();
+    Executor::unBlockSignals();
     return ret;
 }
 

@@ -35,13 +35,13 @@ public:
 
     explicit FailureManager(FailureMap failureList);
 
-    void nextInvocation();
+    int_fast32_t nextInvocation();
 
     void completeInvocation();
 
-    int_fast64_t getExecTime(int_fast32_t gas);
+    int_fast64_t getExecTime(int_fast32_t, int_fast32_t gas);
 
-    size_t getStackSize();
+    size_t getStackSize(int_fast32_t);
 
 private:
     FailureMap failures;

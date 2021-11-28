@@ -26,6 +26,7 @@
 #include <string>
 #include <unordered_map>
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include <executor/FailureManager.h>
@@ -36,44 +37,12 @@
 
 namespace ascee::runtime {
 
-class execution_error : std::exception {
-public:
-    explicit execution_error(int code) : code(code) {}
-
-    [[nodiscard]] int statusCode() const { return code; }
-
-private:
-    const int code;
-};
-
 struct DeferredArgs {
     long_id appID;
     byte forwardedGas;
     std::string request;
 };
 
-struct SessionInfo {
-    bool criticalArea = false;
-
-    Heap::Modifier heapModifier;
-    std::unordered_map<long_id, dispatcher_ptr> appTable;
-    std::unordered_map<long_id, bool> isLocked;
-    FailureManager failureManager;
-    VirtualSigManager virtualSigner;
-
-    string_buffer_c<RESPONSE_MAX_SIZE> response;
-
-    struct CallContext {
-        const long_id appID;
-        int_fast32_t remainingExternalGas;
-        bool hasLock = false;
-        std::vector<DeferredArgs> deferredCalls;
-    };
-
-    CallContext* currentCall;
-
-    //SessionInfo(const SessionInfo&) = delete;
-};
 
 struct Transaction {
     long_id calledAppID;
@@ -86,16 +55,64 @@ struct Transaction {
 
 class Executor {
 public:
-    static thread_local SessionInfo* session;
-private:
+    class CallInfoContext {
+    public:
+        const long_id appID;
+        bool hasLock = false;
+        std::vector<DeferredArgs> deferredCalls;
+        CallInfoContext* prevCallInfo = nullptr;
 
-    Heap heap;
+        explicit CallInfoContext(long_id app);
 
-    static void sig_handler(int sig, siginfo_t* info, void* ucontext);
+        ~CallInfoContext() noexcept;
+    };
 
-    void initHandlers();
+    class CallResourceContext {
+    public:
+        explicit CallResourceContext(byte forwardedGas);
 
-public:
+        explicit CallResourceContext(int_fast32_t initialGas);
+
+        [[nodiscard]] int_fast64_t getExecTime() const { return session->failureManager.getExecTime(id, gas); }
+
+        [[nodiscard]] std::size_t getStackSize() const { return session->failureManager.getStackSize(id); }
+
+        void complete() { completed = true; }
+
+        ~CallResourceContext() noexcept {
+            session->currentResources = prevResources;
+            session->failureManager.completeInvocation();
+            if (!completed) {
+                session->heapModifier.restoreVersion(heapVersion);
+            }
+        }
+
+    private:
+        int_fast32_t id;
+        int_fast32_t gas;
+        int_fast32_t remainingExternalGas;
+        int16_t heapVersion;
+        CallResourceContext* prevResources = nullptr;
+        bool completed = false;
+    };
+
+    struct SessionInfo {
+        bool criticalArea = false;
+
+        Heap::Modifier heapModifier;
+        std::unordered_map<long_id, dispatcher_ptr> appTable;
+        std::unordered_map<long_id, bool> isLocked;
+        FailureManager failureManager;
+        VirtualSigManager virtualSigner;
+
+        string_buffer_c<RESPONSE_MAX_SIZE> response;
+
+        CallInfoContext* currentCall = nullptr;
+        CallResourceContext* currentResources = nullptr;
+
+        //SessionInfo(const SessionInfo&) = delete;
+    };
+
     Executor();
 
     static void* registerRecoveryStack();
@@ -103,10 +120,27 @@ public:
     inline
     static SessionInfo* getSession() { return session; }
 
-    std::string startSession(const Transaction& t);
+    static void blockSignals();
 
-    static int controlledExec(int (* invoker)(byte, long_id, string_c),
-                              byte forwarded_gas, long_id appID, string_c request, size_t size);
+    static void unBlockSignals();
+
+    std::string startSession(const Transaction& tx);
+
+    static
+    int controlledExec(int (* invoker)(long_id, string_c), long_id app_id, string_c request,
+                       int_fast64_t execTime, size_t stackSize);
+
+private:
+    static thread_local SessionInfo* session;
+
+    Heap heap;
+
+    static void sig_handler(int sig, siginfo_t* info, void* ucontext);
+
+    static void initHandlers();
+
+
+    static void* threadStart(void* voidArgs);
 };
 
 } // namespace ascee::runtime

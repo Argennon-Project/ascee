@@ -42,8 +42,8 @@ byte loadNonceChunk(long_id accountID, int32& size) {
 
 static
 bool verifyWithNonce(long_id spender, uint32_t nonce, message_c& msg, signature_c& sig, PublicKey& pk) {
-    msg.append(",\"spender\":")->append(StringView(std::to_string(spender)));
-    msg.append(",\"nonce\":")->append(StringView(std::to_string(nonce)))->append("}");
+    msg.append(",\"spender\":").append(StringView(std::to_string(spender)));
+    msg.append(",\"nonce\":").append(StringView(std::to_string(nonce))).append("}");
     return cryptoSigner.verify(StringView(msg), sig, pk);
 }
 
@@ -115,20 +115,26 @@ bool verifyByAcc(long_id spender, long_id accountID, message_c& msg, signature_c
 }
 
 bool argc::verify_by_app(long_id appID, message_c& msg, bool invalidate_msg = true) {
+    Executor::blockSignals();
+    bool result;
     if (invalidate_msg) {
         auto caller = Executor::getSession()->currentCall->appID;
-        msg.append(",\"spender\":")->append(StringView(std::to_string(caller)))->append("}");
-        return Executor::getSession()->virtualSigner.verifyAndInvalidate(appID, StringView(msg));
+        msg.append(",\"spender\":").append(StringView(std::to_string(caller))).append("}");
+        result = Executor::getSession()->virtualSigner.verifyAndInvalidate(appID, StringView(msg));
     } else {
-        return Executor::getSession()->virtualSigner.verify(appID, StringView(msg));
+        result = Executor::getSession()->virtualSigner.verify(appID, StringView(msg));
     }
+    Executor::unBlockSignals();
+    return result;
 }
 
 bool argc::verify_by_account(long_id accountID, message_c& msg, signature_c& sig, bool invalidate_msg = true) {
+    Executor::blockSignals();
     Executor::getSession()->heapModifier.loadContext(ARG_APP_ID);
     auto caller = Executor::getSession()->currentCall->appID;
     bool result = verifyByAcc(caller, accountID, msg, sig, invalidate_msg);
     Executor::getSession()->heapModifier.loadContext(caller);
+    Executor::unBlockSignals();
     return result;
 }
 

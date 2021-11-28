@@ -29,16 +29,17 @@ using namespace ascee;
 using namespace ascee::runtime;
 using std::unordered_map;
 
-void FailureManager::nextInvocation() {
+int_fast32_t FailureManager::nextInvocation() {
     invocationID++;
     callDepth++;
+    return invocationID;
 }
 
 void FailureManager::completeInvocation() {
     callDepth--;
 }
 
-int_fast64_t FailureManager::getExecTime(int_fast32_t gas) {
+int_fast64_t FailureManager::getExecTime(int_fast32_t invocationID, int_fast32_t gas) {
     try {
         auto reason = failures.at(invocationID);
         if (reason == time) return FAIL_CHECK_GAS_COEFFICIENT * gas;
@@ -47,8 +48,10 @@ int_fast64_t FailureManager::getExecTime(int_fast32_t gas) {
     return DEFAULT_GAS_COEFFICIENT * gas;
 }
 
-size_t FailureManager::getStackSize() {
-    if (callDepth > MAX_CALL_DEPTH) throw std::overflow_error("max call depth reached");
+size_t FailureManager::getStackSize(int_fast32_t invocationID) {
+    if (callDepth > MAX_CALL_DEPTH) {
+        throw execution_error("max call depth reached", StatusCode::limit_exceeded);
+    }
     try {
         auto reason = failures.at(invocationID);
         if (reason == stack) return FAIL_CHECK_STACK_SIZE;
