@@ -26,8 +26,6 @@ int64 loadInt64(int32 offset);
 
 int invoke_dispatcher(byte forwarded_gas, long_id app_id, string_c request);
 
-void invoke_deferred(byte forwarded_gas, long_id app_id, string_c request);
-
 void enter_area();
 
 void exit_area();
@@ -75,7 +73,9 @@ bool verify_by_account(long_id accountID, message_c& msg, bool invalidate_msg);
 
 float64 exact_addf64(float64 a, float64 b);
 
-int dependant_call_dispatcher(long_id app_id, string_c request);
+int dependant_call(long_id app_id, string_c request);
+
+void invoke_deferred(long_id app_id, string_c request);
 } // namespace argc
 
 #endif // ASCEE_ARGC_FUNCTIONS_INC

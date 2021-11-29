@@ -30,9 +30,9 @@ using namespace ascee::runtime;
 using std::unordered_map;
 
 int_fast32_t FailureManager::nextInvocation() {
-    invocationID++;
+    lastGeneratedID++;
     callDepth++;
-    return invocationID;
+    return lastGeneratedID;
 }
 
 void FailureManager::completeInvocation() {

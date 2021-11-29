@@ -46,7 +46,7 @@ public:
 private:
     FailureMap failures;
     int callDepth = 0;
-    int_fast32_t invocationID = 0;
+    int_fast32_t lastGeneratedID = 0;
 };
 
 } // namespace ascee::runtime

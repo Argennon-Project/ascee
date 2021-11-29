@@ -34,10 +34,10 @@ void Executor::sig_handler(int sig, siginfo_t* info, void*) {
         if (session->criticalArea) {
             throw std::runtime_error("signal raised from critical area");
         }
-
+        if (sig == SIGSEGV) throw execution_error("segmentation fault");
         if (sig == SIGUSR1) throw execution_error("cpu timer expired", StatusCode::execution_timeout);
         if (sig == SIGFPE) throw execution_error("SIGFPE was caught", StatusCode::arithmetic_error);
-        else throw execution_error("a signal was caught", StatusCode::internal_error);
+        else throw execution_error("a signal was caught");
     } else {
         pthread_t thread_id = *static_cast<pthread_t*>(info->si_value.sival_ptr);
         printf("Caught signal %d for app %ld\n", sig, thread_id);
@@ -53,7 +53,6 @@ void maskSignals(int how) {
     sigemptyset(&set);
     sigaddset(&set, SIGUSR1);
     sigaddset(&set, SIGKILL);
-    sigaddset(&set, SIGBUS);
     int s = pthread_sigmask(how, &set, nullptr);
     if (s != 0) throw std::runtime_error("error in masking signals");
 
@@ -179,9 +178,8 @@ int Executor::controlledExec(int (* invoker)(long_id, string_c),
 
     void* retPtr;
     err = pthread_join(threadID, &retPtr);
-    if (err) throw std::runtime_error(to_string(errno) + ": pthread_join failed");
+    int ret = err ? int(StatusCode::internal_error) : *(int*) retPtr;
 
-    int ret = *(int*) retPtr;
     free(retPtr);
     return ret;
 }
@@ -218,7 +216,18 @@ Executor::CallResourceContext::CallResourceContext(int_fast32_t initialGas) {
     heapVersion = 0;
 }
 
-Executor::CallInfoContext::~CallInfoContext() {
+Executor::CallResourceContext::~CallResourceContext() noexcept {
+    blockSignals();
+    session->currentResources = prevResources;
+    session->failureManager.completeInvocation();
+    if (!completed) {
+        session->heapModifier.restoreVersion(heapVersion);
+    }
+    unBlockSignals();
+}
+
+Executor::CallInfoContext::~CallInfoContext() noexcept {
+    blockSignals();
     argc::exit_area();
 
     // restore context
@@ -226,6 +235,7 @@ Executor::CallInfoContext::~CallInfoContext() {
 
     // restore previous call info
     session->currentCall = prevCallInfo;
+    unBlockSignals();
 }
 
 Executor::CallInfoContext::CallInfoContext(long_id app) : appID(app) {

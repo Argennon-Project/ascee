@@ -48,13 +48,14 @@ char* getDefaultResponse(char buf[], int statusCode) {
 TEST_F(AsceeExecutorTest, ZeroGas) {
     auto response = executor.startSession(Transaction{
             .calledAppID = 11,
-            .request = STRING("test request"),
+            .request = string_c("test request"),
             .gas = 1,
             .appAccessList = {11}
     });
 
-    char buf[200];
-    EXPECT_STREQ(response.data(), getDefaultResponse(buf, REQUEST_TIMEOUT));
+    string_buffer_c<1024> buf;
+    execution_error("forwarded gas is too low", StatusCode::internal_error).toHttpResponse(buf);
+    EXPECT_STREQ(response.data(), StringView(buf).data());
 }
 
 TEST_F(AsceeExecutorTest, OneLevelCall) {

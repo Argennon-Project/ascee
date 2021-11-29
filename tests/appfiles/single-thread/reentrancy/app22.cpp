@@ -14,7 +14,7 @@ void f(int deferred_call) {
     string_c req3 = STRING("choice: 3");
 
     if (deferred_call) {
-        invoke_deferred(50, 23, req3);
+        invoke_deferred(23, req3);
         // forgetting to call exit_area()...
         return;
     }

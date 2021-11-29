@@ -37,13 +37,6 @@
 
 namespace ascee::runtime {
 
-struct DeferredArgs {
-    long_id appID;
-    byte forwardedGas;
-    std::string request;
-};
-
-
 struct Transaction {
     long_id calledAppID;
     string_c request;
@@ -51,6 +44,11 @@ struct Transaction {
     std::vector<long_id> appAccessList;
     FailureManager::FailureMap failedCalls;
     std::vector<AppMemAccess> memoryAccessList;
+};
+
+struct DeferredArgs {
+    long_id appID;
+    std::string request;
 };
 
 class Executor {
@@ -79,13 +77,7 @@ public:
 
         void complete() { completed = true; }
 
-        ~CallResourceContext() noexcept {
-            session->currentResources = prevResources;
-            session->failureManager.completeInvocation();
-            if (!completed) {
-                session->heapModifier.restoreVersion(heapVersion);
-            }
-        }
+        ~CallResourceContext() noexcept;
 
     private:
         int_fast32_t id;

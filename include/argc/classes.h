@@ -57,11 +57,12 @@ enum class StatusCode {
     reentrancy_attempt = 523,
 };
 
-inline static const std::unordered_map<StatusCode, const char*> gReasonByCode{
+inline static std::unordered_map<StatusCode, const char*> gReasonByCode{
         {StatusCode::not_found,          "Not Found"},
         {StatusCode::limit_violated,     "Declared Limits Violated"},
         {StatusCode::execution_timeout,  "Execution Timeout"},
         {StatusCode::internal_error,     "Internal Error"},
+        {StatusCode::limit_exceeded,     "Resource Limit Reached"},
         {StatusCode::invalid_operation,  "Invalid Operation"},
         {StatusCode::arithmetic_error,   "Arithmetic Error"},
         {StatusCode::reentrancy_attempt, "Reentrancy Attempt"},

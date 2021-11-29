@@ -63,16 +63,15 @@ void argc::exit_area() {
     Executor::unBlockSignals();
 }
 
-void argc::invoke_deferred(byte forwarded_gas, long_id app_id, string_c request) {
+void argc::invoke_deferred(long_id app_id, string_c request) {
     Executor::getSession()->currentCall->deferredCalls.emplace_back(DeferredArgs{
             .appID = app_id,
-            .forwardedGas = forwarded_gas,
             // string constructor makes a copy of its input, so we should be safe here.
             .request = std::string(request),
     });
 }
 
-int argc::dependant_call_dispatcher(long_id app_id, string_c request) {
+int argc::dependant_call(long_id app_id, string_c request) {
     dispatcher_ptr dispatcher;
     try {
         dispatcher = Executor::getSession()->appTable.at(app_id);
@@ -89,33 +88,24 @@ int argc::dependant_call_dispatcher(long_id app_id, string_c request) {
 
     Executor::unBlockSignals();
     int ret = dispatcher(request);
-    // blockSignals() activates the criticalArea flag. That way if we raise another signal here, we won't get stuck in
-    // an infinite loop.
-    Executor::blockSignals();
+    if (ret >= 400) {
+        throw execution_error("returning an error code normally", StatusCode::invalid_operation);
+    }
+    // There is no need for blocking signals here.
 
-    // as soon as possible we should release the entrance lock (if any)
+    // before performing deferred calls we release the entrance lock (if any)
     argc::exit_area();
 
-    if (ret < 400) {
-        string mainResponse(string_c(Executor::getSession()->response));
-
-        for (const auto& dCall: Executor::getSession()->currentCall->deferredCalls) {
-            int temp = argc::invoke_dispatcher(
-                    dCall.forwardedGas,
-                    dCall.appID,
-                    // we should NOT use length + 1 here.
-                    string_c(dCall.request)
-            );
-            printf("** deferred call returns: %d\n", temp);
-            if (temp >= BAD_REQUEST) {
-                ret = FAILED_DEPENDENCY;
-                break;
-            }
-        }
-
-        Executor::getSession()->response.clear();
-        Executor::getSession()->response.append(StringView(mainResponse));
+    // Here we use heap memory for keeping a copy of the main response.
+    string mainResponse(string_c(Executor::getSession()->response));
+    for (const auto& dCall: callContext.deferredCalls) {
+        int temp = argc::dependant_call(dCall.appID, string_c(dCall.request));
+        printf("** deferred call returns: %d\n", temp);
     }
+
+    // Discarding the responses of deferred calls and restoring the original response
+    Executor::getSession()->response.clear();
+    Executor::getSession()->response.append(StringView(mainResponse));
 
     return ret;
 }
@@ -125,11 +115,12 @@ int invoke_noexcept(long_id app_id, string_c request) {
     int ret;
     try {
         try {
-            ret = argc::dependant_call_dispatcher(app_id, request);
+            ret = argc::dependant_call(app_id, request);
         } catch (const std::out_of_range& out) {
             throw execution_error(out.what());
         }
     } catch (const execution_error& ee) {
+        Executor::blockSignals();
         ret = ee.errorCode();
         ee.toHttpResponse(Executor::getSession()->response.clear());
     }
@@ -150,6 +141,7 @@ int argc::invoke_dispatcher(byte forwarded_gas, long_id app_id, string_c request
         ee.toHttpResponse(Executor::getSession()->response.clear());
     }
 
+    // unBlockSignals() should be called here, in case resourceContext's constructor throws an exception.
     Executor::unBlockSignals();
     return ret;
 }
