@@ -45,7 +45,7 @@ void argc::enter_area() {
 
     auto app = Executor::getSession()->currentCall->appID;
     if (Executor::getSession()->isLocked[app]) {
-        throw execution_error("reentrancy lock for " + std::to_string(app), StatusCode::reentrancy_attempt);
+        throw Executor::GenericError("reentrancy lock for " + std::to_string(app), StatusCode::reentrancy_attempt);
     } else {
         Executor::blockSignals();
         Executor::getSession()->isLocked[app] = true;
@@ -76,11 +76,11 @@ int argc::dependant_call(long_id app_id, string_c request) {
     try {
         dispatcher = Executor::getSession()->appTable.at(app_id);
     } catch (const std::out_of_range&) {
-        throw execution_error("app:" + std::to_string(app_id) + " is not declared in the call list",
-                              StatusCode::limit_violated);
+        throw Executor::GenericError("app/" + std::to_string(app_id) + " was not declared in the call list",
+                                     StatusCode::limit_violated);
     }
     if (dispatcher == nullptr) {
-        throw execution_error("app does not exist", StatusCode::not_found);
+        throw Executor::GenericError("app does not exist", StatusCode::not_found);
     }
 
     Executor::getSession()->response.clear();
@@ -89,24 +89,25 @@ int argc::dependant_call(long_id app_id, string_c request) {
     Executor::unBlockSignals();
     int ret = dispatcher(request);
     if (ret >= 400) {
-        throw execution_error("returning an error code normally", StatusCode::invalid_operation);
+        throw Executor::GenericError("returning an error code normally", StatusCode::invalid_operation);
     }
     // There is no need for blocking signals here.
 
     // before performing deferred calls we release the entrance lock (if any)
     argc::exit_area();
 
-    // Here we use heap memory for keeping a copy of the main response.
-    string mainResponse(string_c(Executor::getSession()->response));
-    for (const auto& dCall: callContext.deferredCalls) {
-        int temp = argc::dependant_call(dCall.appID, string_c(dCall.request));
-        printf("** deferred call returns: %d\n", temp);
+    if (!callContext.deferredCalls.empty()) {
+        // Here we use heap memory for keeping a copy of the main response.
+        string mainResponse(string_c(Executor::getSession()->response));
+        for (const auto& dCall: callContext.deferredCalls) {
+            int temp = argc::dependant_call(dCall.appID, string_c(dCall.request));
+            printf("** deferred call returns: %d\n", temp);
+        }
+
+        // Discarding the responses of deferred calls and restoring the original response
+        Executor::getSession()->response.clear();
+        Executor::getSession()->response.append(StringView(mainResponse));
     }
-
-    // Discarding the responses of deferred calls and restoring the original response
-    Executor::getSession()->response.clear();
-    Executor::getSession()->response.append(StringView(mainResponse));
-
     return ret;
 }
 
@@ -117,9 +118,9 @@ int invoke_noexcept(long_id app_id, string_c request) {
         try {
             ret = argc::dependant_call(app_id, request);
         } catch (const std::out_of_range& out) {
-            throw execution_error(out.what());
+            throw Executor::GenericError(out.what());
         }
-    } catch (const execution_error& ee) {
+    } catch (const Executor::GenericError& ee) {
         Executor::blockSignals();
         ret = ee.errorCode();
         ee.toHttpResponse(Executor::getSession()->response.clear());
@@ -136,7 +137,7 @@ int argc::invoke_dispatcher(byte forwarded_gas, long_id app_id, string_c request
         ret = Executor::controlledExec(invoke_noexcept, app_id, request,
                                        resourceContext.getExecTime(), resourceContext.getStackSize());
         if (ret < 400) resourceContext.complete();
-    } catch (const execution_error& ee) {
+    } catch (const Executor::GenericError& ee) {
         ret = ee.errorCode();
         ee.toHttpResponse(Executor::getSession()->response.clear());
     }

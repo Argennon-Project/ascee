@@ -19,6 +19,7 @@
 #include <heap/Heap.h>
 #include <loader/AppLoader.h>
 #include <argc/functions.h>
+#include <thread>
 #include "Executor.h"
 
 using namespace ascee;
@@ -34,10 +35,10 @@ void Executor::sig_handler(int sig, siginfo_t* info, void*) {
         if (session->criticalArea) {
             throw std::runtime_error("signal raised from critical area");
         }
-        if (sig == SIGSEGV) throw execution_error("segmentation fault");
-        if (sig == SIGUSR1) throw execution_error("cpu timer expired", StatusCode::execution_timeout);
-        if (sig == SIGFPE) throw execution_error("SIGFPE was caught", StatusCode::arithmetic_error);
-        else throw execution_error("a signal was caught");
+        if (sig == SIGSEGV) throw GenericError("segmentation fault");
+        if (sig == SIGUSR1) throw GenericError("cpu timer expired", StatusCode::execution_timeout);
+        if (sig == SIGFPE) throw GenericError("SIGFPE was caught", StatusCode::arithmetic_error);
+        else throw GenericError("a signal was caught");
     } else {
         pthread_t thread_id = *static_cast<pthread_t*>(info->si_value.sival_ptr);
         printf("Caught signal %d for app %ld\n", sig, thread_id);
@@ -98,25 +99,30 @@ void* Executor::registerRecoveryStack() {
     return sig_stack.ss_sp;
 }
 
-string Executor::startSession(const Transaction& tx) {
-    SessionInfo threadSession{
-            .heapModifier = heap.initSession(tx.memoryAccessList),
-            .appTable = AppLoader::global->createAppTable(tx.appAccessList),
-            .failureManager = FailureManager(tx.failedCalls),
-    };
-    session = &threadSession;
-    try {
-        CallResourceContext rootCall(tx.gas);
-        argc::invoke_dispatcher(255, tx.calledAppID, tx.request);
-        rootCall.complete();
-        session->heapModifier.writeToHeap();
-    } catch (const std::runtime_error& re) {
-        execution_error(re.what()).toHttpResponse(threadSession.response);
-    }
-
+TransactionResult Executor::executeOne(const Transaction& tx) {
+    TransactionResult result{.txID = tx.id};
     session = nullptr;
-    // here, string constructor makes a copy of the buffer.
-    return string(string_c(threadSession.response));
+    try {
+        SessionInfo threadSession{
+                .heapModifier = heap.initSession(tx.memoryAccessList),
+                .appTable = AppLoader::global->createAppTable(tx.appAccessList),
+                .failureManager = FailureManager(tx.stackSizeFailures, tx.cpuTimeFailures),
+        };
+        session = &threadSession;
+
+        CallResourceContext rootResourceCtx(tx.gas);
+        CallInfoContext rootInfoCtx;
+        result.statusCode = argc::invoke_dispatcher(255, tx.calledAppID, tx.request);
+        // here, string's assignment operator makes a copy of the buffer.
+        result.response = StringView(session->response);
+        rootResourceCtx.complete();
+        session->heapModifier.writeToHeap();
+    } catch (const std::out_of_range& err) {
+
+    }
+    session = nullptr;
+
+    return result;
 }
 
 Executor::Executor() {
@@ -184,6 +190,20 @@ int Executor::controlledExec(int (* invoker)(long_id, string_c),
     return ret;
 }
 
+void Executor::executeAll(int workersCount = -1) {
+    using namespace std;
+    workersCount = workersCount == -1 ? (int) thread::hardware_concurrency() : workersCount;
+
+    thread pool[workersCount];
+    for (auto& worker: pool) {
+        worker = thread(&Executor::worker, this);
+    }
+
+    for (auto& worker: pool) {
+        worker.join();
+    }
+}
+
 static inline
 int64_t calculateExternalGas(int64_t currentGas) {
     // the geometric series approaches 1 / (1 - q) so the total amount of externalGas would be 2 * currentGas
@@ -194,9 +214,10 @@ int64_t calculateExternalGas(int64_t currentGas) {
 
 Executor::CallResourceContext::CallResourceContext(byte forwardedGas) {
     prevResources = session->currentResources;
+    caller = session->currentCall->appID;
 
     gas = (prevResources->remainingExternalGas * forwardedGas) >> 8;
-    if (gas <= MIN_GAS) throw execution_error("forwarded gas is too low", StatusCode::internal_error);
+    if (gas <= MIN_GAS) throw GenericError("forwarded gas is too low", StatusCode::internal_error);
 
     id = session->failureManager.nextInvocation();
     prevResources->remainingExternalGas -= gas;
@@ -209,6 +230,7 @@ Executor::CallResourceContext::CallResourceContext(byte forwardedGas) {
 
 Executor::CallResourceContext::CallResourceContext(int_fast32_t initialGas) {
     id = session->failureManager.nextInvocation();
+    caller = 0;
     gas = 0;
     remainingExternalGas = initialGas;
 
@@ -223,7 +245,21 @@ Executor::CallResourceContext::~CallResourceContext() noexcept {
     if (!completed) {
         session->heapModifier.restoreVersion(heapVersion);
     }
+    // CallInfoContext's destructor restores the caller's context, but we also do this here to make sure.
+    session->heapModifier.loadContext(caller);
     unBlockSignals();
+}
+
+Executor::CallInfoContext::CallInfoContext(long_id app) : appID(app) {
+    prevCallInfo = session->currentCall;
+    if (prevCallInfo->appID == app) throw GenericError("calling self", StatusCode::invalid_operation);
+    session->heapModifier.loadContext(app);
+    session->currentCall = this;
+}
+
+Executor::CallInfoContext::CallInfoContext() : appID(0) {
+    prevCallInfo = nullptr;
+    session->currentCall = this;
 }
 
 Executor::CallInfoContext::~CallInfoContext() noexcept {
@@ -238,11 +274,3 @@ Executor::CallInfoContext::~CallInfoContext() noexcept {
     unBlockSignals();
 }
 
-Executor::CallInfoContext::CallInfoContext(long_id app) : appID(app) {
-    if (session->currentCall != nullptr) {
-        prevCallInfo = session->currentCall;
-        if (prevCallInfo->appID == app) throw execution_error("calling self", StatusCode::invalid_operation);
-    }
-    session->heapModifier.loadContext(app);
-    session->currentCall = this;
-}

@@ -15,9 +15,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+#include <argc/classes.h>
 #include "FailureManager.h"
-
-#include <utility>
 
 #define MAX_CALL_DEPTH 16
 #define DEFAULT_STACK_SIZE 2*1024*1024
@@ -27,7 +26,6 @@
 
 using namespace ascee;
 using namespace ascee::runtime;
-using std::unordered_map;
 
 int_fast32_t FailureManager::nextInvocation() {
     lastGeneratedID++;
@@ -39,25 +37,19 @@ void FailureManager::completeInvocation() {
     callDepth--;
 }
 
-int_fast64_t FailureManager::getExecTime(int_fast32_t invocationID, int_fast32_t gas) {
-    try {
-        auto reason = failures.at(invocationID);
-        if (reason == time) return FAIL_CHECK_GAS_COEFFICIENT * gas;
-    } catch (const std::out_of_range&) {}
-
+int_fast64_t FailureManager::getExecTime(InvocationID id, int_fast32_t gas) {
+    if (cpuTimeFailures.contains(id)) return FAIL_CHECK_GAS_COEFFICIENT * gas;
     return DEFAULT_GAS_COEFFICIENT * gas;
 }
 
-size_t FailureManager::getStackSize(int_fast32_t invocationID) {
+size_t FailureManager::getStackSize(InvocationID id) {
     if (callDepth > MAX_CALL_DEPTH) {
-        throw execution_error("max call depth reached", StatusCode::limit_exceeded);
+        throw AsceeException("max call depth reached", StatusCode::limit_exceeded);
     }
-    try {
-        auto reason = failures.at(invocationID);
-        if (reason == stack) return FAIL_CHECK_STACK_SIZE;
-    } catch (const std::out_of_range&) {}
-
+    if (stackFailures.contains(id)) return FAIL_CHECK_STACK_SIZE;
     return DEFAULT_STACK_SIZE;
 }
 
-FailureManager::FailureManager(FailureMap failureList) : failures(std::move(failureList)) {}
+FailureManager::FailureManager(std::unordered_set<InvocationID> stackFailures,
+                               std::unordered_set<InvocationID> cpuTimeFailures)
+        : stackFailures(std::move(stackFailures)), cpuTimeFailures(std::move(cpuTimeFailures)) {}

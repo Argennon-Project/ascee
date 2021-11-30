@@ -21,6 +21,8 @@
 
 #include <util/StringBuffer.h>
 #include <crypto/Keys.h>
+
+#include <utility>
 #include "primitives.h"
 
 namespace ascee {
@@ -57,41 +59,48 @@ enum class StatusCode {
     reentrancy_attempt = 523,
 };
 
-inline static std::unordered_map<StatusCode, const char*> gReasonByCode{
-        {StatusCode::not_found,          "Not Found"},
-        {StatusCode::limit_violated,     "Declared Limits Violated"},
-        {StatusCode::execution_timeout,  "Execution Timeout"},
-        {StatusCode::internal_error,     "Internal Error"},
-        {StatusCode::limit_exceeded,     "Resource Limit Reached"},
-        {StatusCode::invalid_operation,  "Invalid Operation"},
-        {StatusCode::arithmetic_error,   "Arithmetic Error"},
-        {StatusCode::reentrancy_attempt, "Reentrancy Attempt"},
-};
+inline const char* gReasonByStatusCode(StatusCode code) {
+    switch (code) {
+        case StatusCode::not_found:
+            return "Not Found";
+        case StatusCode::limit_violated:
+            return "Declared Limits Violated";
+        case StatusCode::execution_timeout:
+            return "Execution Timeout";
+        case StatusCode::internal_error:
+            return "Internal Error";
+        case StatusCode::limit_exceeded:
+            return "Resource Limit Reached";
+        case StatusCode::invalid_operation:
+            return "Invalid Operation";
+        case StatusCode::arithmetic_error:
+            return "Arithmetic Error";
+        case StatusCode::reentrancy_attempt:
+            return "Reentrancy Attempt";
+        case StatusCode::forbidden:
+            return "Forbidden";
+    }
+    return "Unknown Reason";
+}
 
-
-class execution_error : std::exception {
+class AsceeException : public std::exception {
 public:
-    explicit execution_error(std::string msg, StatusCode code = StatusCode::internal_error) : msg(std::move(msg)),
-                                                                                              code(code) {}
+    explicit AsceeException(
+            std::string msg,
+            StatusCode code = StatusCode::internal_error,
+            std::string thrower = ""
+    ) noexcept: msg(std::move(msg)),
+                code(code), thrower(std::move(thrower)),
+                message(this->thrower.empty() ? this->msg : "[" + this->thrower + "]-> " + this->msg) {}
 
     [[nodiscard]] int errorCode() const { return (int) code; }
 
-    [[nodiscard]] StatusCode statusCode() const { return code; }
-
-    [[nodiscard]] std::string_view message() const { return msg; }
-
-    template<int size>
-    void toHttpResponse(runtime::StringBuffer<size>& response) const {
-        response << "HTTP/1.1 " << errorCode() << " ";
-        response << gReasonByCode.at(code) << "\r\n";
-        response << "Content-Length: " << (int) msg.size() + 8 << "\r\n\r\n";
-        response << "Error: " << message() << ".";
-    }
-
-private:
+    const std::string thrower;
     const std::string msg;
+    const std::string message;
     const StatusCode code;
 };
+
 
 } // namespace ascee
 #endif // ASCEE_CLASSES_TYPES_H

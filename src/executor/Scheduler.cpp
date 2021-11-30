@@ -15,36 +15,4 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef ASCEE_FAILURE_MANAGER_H
-#define ASCEE_FAILURE_MANAGER_H
-
-#include <unordered_set>
-
-namespace ascee::runtime {
-
-class FailureManager {
-public:
-    typedef int_fast32_t InvocationID;
-
-    FailureManager() = default;
-
-    FailureManager(std::unordered_set<InvocationID> stackFailures,
-                   std::unordered_set<InvocationID> cpuTimeFailures);
-
-    int_fast32_t nextInvocation();
-
-    void completeInvocation();
-
-    int_fast64_t getExecTime(InvocationID id, int_fast32_t gas);
-
-    size_t getStackSize(InvocationID id);
-
-private:
-    std::unordered_set<InvocationID> stackFailures;
-    std::unordered_set<InvocationID> cpuTimeFailures;
-    int callDepth = 0;
-    InvocationID lastGeneratedID = 0;
-};
-
-} // namespace ascee::runtime
-#endif // ASCEE_FAILURE_MANAGER_H
+#include "Scheduler.h"

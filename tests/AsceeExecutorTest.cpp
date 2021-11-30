@@ -46,7 +46,7 @@ char* getDefaultResponse(char buf[], int statusCode) {
 }
 
 TEST_F(AsceeExecutorTest, ZeroGas) {
-    auto response = executor.startSession(Transaction{
+    auto response = executor.executeOne(Transaction{
             .calledAppID = 11,
             .request = string_c("test request"),
             .gas = 1,
@@ -59,7 +59,7 @@ TEST_F(AsceeExecutorTest, ZeroGas) {
 }
 
 TEST_F(AsceeExecutorTest, OneLevelCall) {
-    auto response = executor.startSession(Transaction{
+    auto response = executor.executeOne(Transaction{
             .calledAppID = 11,
             .request = STRING("test request"),
             .gas = NORMAL_GAS,
@@ -70,7 +70,7 @@ TEST_F(AsceeExecutorTest, OneLevelCall) {
 }
 
 TEST_F(AsceeExecutorTest, TwoLevelCall) {
-    auto response = executor.startSession(Transaction{
+    auto response = executor.executeOne(Transaction{
             .calledAppID = 15,
             .request = STRING("test request"),
             .gas = NORMAL_GAS,
@@ -81,7 +81,7 @@ TEST_F(AsceeExecutorTest, TwoLevelCall) {
 }
 
 TEST_F(AsceeExecutorTest, AppNotFound) {
-    auto response = executor.startSession(Transaction{
+    auto response = executor.executeOne(Transaction{
             .calledAppID = 16,
             .request = STRING("test request"),
             .gas = NORMAL_GAS,
@@ -92,7 +92,7 @@ TEST_F(AsceeExecutorTest, AppNotFound) {
 }
 
 TEST_F(AsceeExecutorTest, AppNotDeclared) {
-    auto response = executor.startSession(Transaction{
+    auto response = executor.executeOne(Transaction{
             .calledAppID = 15,
             .request = STRING("test request"),
             .gas = NORMAL_GAS,
@@ -104,7 +104,7 @@ TEST_F(AsceeExecutorTest, AppNotDeclared) {
 }
 
 TEST_F(AsceeExecutorTest, SimpleTimeOut) {
-    auto response = executor.startSession(Transaction{
+    auto response = executor.executeOne(Transaction{
             .calledAppID = 10,
             .request = STRING("test request"),
             .gas = NORMAL_GAS,
@@ -116,7 +116,7 @@ TEST_F(AsceeExecutorTest, SimpleTimeOut) {
 }
 
 TEST_F(AsceeExecutorTest, CalledTimeOut) {
-    auto response = executor.startSession(Transaction{
+    auto response = executor.executeOne(Transaction{
             .calledAppID = 12,
             .request = STRING("test request"),
             .gas = NORMAL_GAS,
@@ -128,7 +128,7 @@ TEST_F(AsceeExecutorTest, CalledTimeOut) {
 }
 
 TEST_F(AsceeExecutorTest, SimpleStackOverflow) {
-    auto response = executor.startSession(Transaction{
+    auto response = executor.executeOne(Transaction{
             .calledAppID = 13,
             .request = STRING("test request"),
             .gas = NORMAL_GAS,
@@ -140,7 +140,7 @@ TEST_F(AsceeExecutorTest, SimpleStackOverflow) {
 }
 
 TEST_F(AsceeExecutorTest, CalledStackOverflow) {
-    auto response = executor.startSession(Transaction{
+    auto response = executor.executeOne(Transaction{
             .calledAppID = 14,
             .request = STRING("test request"),
             .gas = NORMAL_GAS,
@@ -152,7 +152,7 @@ TEST_F(AsceeExecutorTest, CalledStackOverflow) {
 }
 
 TEST_F(AsceeExecutorTest, CircularCallLowGas) {
-    auto response = executor.startSession(Transaction{
+    auto response = executor.executeOne(Transaction{
             .calledAppID = 17,
             .request = STRING("test request"),
             .gas = LOW_GAS,
@@ -164,7 +164,7 @@ TEST_F(AsceeExecutorTest, CircularCallLowGas) {
 }
 
 TEST_F(AsceeExecutorTest, CircularCallHighGas) {
-    auto response = executor.startSession(Transaction{
+    auto response = executor.executeOne(Transaction{
             .calledAppID = 17,
             .request = STRING("test request"),
             .gas = 10000000000,
@@ -176,7 +176,7 @@ TEST_F(AsceeExecutorTest, CircularCallHighGas) {
 }
 
 TEST_F(AsceeExecutorTest, FailedCalls) {
-    auto response = executor.startSession(Transaction{
+    auto response = executor.executeOne(Transaction{
             .calledAppID = 19,
             .request = STRING("test request"),
             .gas = NORMAL_GAS,
@@ -194,7 +194,7 @@ TEST_F(AsceeExecutorTest, FailedCalls) {
 }
 
 TEST_F(AsceeExecutorTest, SimpleReentancy) {
-    auto response = executor.startSession(Transaction{
+    auto response = executor.executeOne(Transaction{
             .calledAppID = 22,
             .request = STRING("choice: 1"),
             .gas = NORMAL_GAS,
@@ -208,7 +208,7 @@ TEST_F(AsceeExecutorTest, SimpleReentancy) {
 }
 
 TEST_F(AsceeExecutorTest, SimpleDeferredCall) {
-    auto response = executor.startSession(Transaction{
+    auto response = executor.executeOne(Transaction{
             .calledAppID = 22,
             .request = STRING("choice: 4"),
             .gas = NORMAL_GAS,

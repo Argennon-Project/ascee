@@ -70,16 +70,15 @@ int main(int argc, char const* argv[]) {
 
     AppLoader::global = std::make_unique<AppLoader>("");
     Executor executor;
-    auto response = executor.startSession(Transaction{
+    auto response = executor.executeOne(Transaction{
             .calledAppID = 1,
             .request = ascee::string_c("test request"),
             .gas = 1000,
-            .appAccessList = {1}
+            .appAccessList = {11}
     });
 
-    printf("hereeeee@@\n");
+    printf("hereeeee@@ \n%s\n", response.response.c_str());
 
-    printf("%s \n", response.data());
 
 /*
     char cStr[20] = "abcdefgh";

@@ -33,18 +33,10 @@
 #include <argc/primitives.h>
 #include <heap/Heap.h>
 #include "ThreadCpuTimer.h"
+#include "Scheduler.h"
 #include <util/VirtualSigManager.h>
 
 namespace ascee::runtime {
-
-struct Transaction {
-    long_id calledAppID;
-    string_c request;
-    int_fast32_t gas;
-    std::vector<long_id> appAccessList;
-    FailureManager::FailureMap failedCalls;
-    std::vector<AppMemAccess> memoryAccessList;
-};
 
 struct DeferredArgs {
     long_id appID;
@@ -53,8 +45,31 @@ struct DeferredArgs {
 
 class Executor {
 public:
+    class GenericError : public AsceeException {
+    public:
+        explicit GenericError(
+                const std::string& msg,
+                StatusCode code = StatusCode::internal_error,
+                const std::string& thrower = "",
+                const long_id app = session->currentCall->appID
+        ) noexcept: AsceeException(msg, code, thrower), app(app) {}
+
+        template<int size>
+        void toHttpResponse(runtime::StringBuffer<size>& response) const {
+            response << "HTTP/1.1 " << errorCode() << " ";
+            response << gReasonByStatusCode(code) << "\r\n";
+            response << "Server: " << app << "\r\n";
+            response << "Content-Length: " << (int) message.size() + 8 << "\r\n\r\n";
+            response << "Error: " << StringView(message) << ".";
+        }
+
+        const long_id app;
+    };
+
     class CallInfoContext {
     public:
+        CallInfoContext();
+
         const long_id appID;
         bool hasLock = false;
         std::vector<DeferredArgs> deferredCalls;
@@ -81,6 +96,7 @@ public:
 
     private:
         int_fast32_t id;
+        long_id caller;
         int_fast32_t gas;
         int_fast32_t remainingExternalGas;
         int16_t heapVersion;
@@ -116,7 +132,7 @@ public:
 
     static void unBlockSignals();
 
-    std::string startSession(const Transaction& tx);
+    TransactionResult executeOne(const Transaction& tx);
 
     static
     int controlledExec(int (* invoker)(long_id, string_c), long_id app_id, string_c request,
@@ -126,13 +142,21 @@ private:
     static thread_local SessionInfo* session;
 
     Heap heap;
+    Scheduler scheduler;
 
     static void sig_handler(int sig, siginfo_t* info, void* ucontext);
 
     static void initHandlers();
 
+    void worker() {
+        while (auto* txPtr = scheduler.nextTransaction()) {
+            scheduler.submitResult(executeOne(*txPtr));
+        }
+    }
 
     static void* threadStart(void* voidArgs);
+
+    void executeAll(int workersCount);
 };
 
 } // namespace ascee::runtime
