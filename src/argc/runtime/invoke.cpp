@@ -45,7 +45,7 @@ void argc::enter_area() {
 
     auto app = Executor::getSession()->currentCall->appID;
     if (Executor::getSession()->isLocked[app]) {
-        throw Executor::GenericError("reentrancy lock for " + std::to_string(app), StatusCode::reentrancy_attempt);
+        throw Executor::GenericError("reentrancy is not allowed", StatusCode::reentrancy_attempt);
     } else {
         Executor::blockSignals();
         Executor::getSession()->isLocked[app] = true;
@@ -69,6 +69,11 @@ void argc::invoke_deferred(long_id app_id, string_c request) {
             // string constructor makes a copy of its input, so we should be safe here.
             .request = std::string(request),
     });
+}
+
+void argc::revert(string_c msg) {
+    Executor::blockSignals();
+    throw Executor::GenericError(std::string(msg));
 }
 
 int argc::dependant_call(long_id app_id, string_c request) {
@@ -100,7 +105,7 @@ int argc::dependant_call(long_id app_id, string_c request) {
         // Here we use heap memory for keeping a copy of the main response.
         string mainResponse(string_c(Executor::getSession()->response));
         for (const auto& dCall: callContext.deferredCalls) {
-            int temp = argc::dependant_call(dCall.appID, string_c(dCall.request));
+            int temp = argc::dependant_call(dCall.appID, StringView(dCall.request));
             printf("** deferred call returns: %d\n", temp);
         }
 
@@ -124,6 +129,10 @@ int invoke_noexcept(long_id app_id, string_c request) {
         Executor::blockSignals();
         ret = ee.errorCode();
         ee.toHttpResponse(Executor::getSession()->response.clear());
+    } catch (const AsceeException& ae) {
+        Executor::blockSignals();
+        ret = ae.errorCode();
+        Executor::GenericError(ae).toHttpResponse(Executor::getSession()->response.clear());
     }
     return ret;
 }

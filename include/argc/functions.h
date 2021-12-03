@@ -76,6 +76,8 @@ float64 exact_addf64(float64 a, float64 b);
 int dependant_call(long_id app_id, string_c request);
 
 void invoke_deferred(long_id app_id, string_c request);
+
+void revert(string_c msg);
 } // namespace argc
 
 #endif // ASCEE_ARGC_FUNCTIONS_INC

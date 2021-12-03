@@ -19,26 +19,22 @@ void f(int deferred_call) {
         return;
     }
 
-    int ret1 = invoke_dispatcher(50, 23, req1);
+    STRING_BUFFER(temp, 1024);
+    invoke_dispatcher(50, 23, req1);
+    append_str(temp, response_buffer());
 
-    int ret2 = invoke_dispatcher(50, 23, req2);
+    invoke_dispatcher(50, 23, req2);
+    append_str(temp, response_buffer());
 
-    int ret3 = invoke_dispatcher(50, 23, req1);
+    invoke_dispatcher(50, 23, req1);
+    append_str(temp, response_buffer());
 
-    int ret4 = invoke_dispatcher(50, 23, req3);
+    invoke_dispatcher(50, 23, req3);
+    append_str(temp, response_buffer());
 
-    string_c space = STRING(" ");
     clear_buffer(response_buffer());
-    append_int64(response_buffer(), ret1);
-    append_str(response_buffer(), space);
+    append_str(response_buffer(), temp);
 
-    append_int64(response_buffer(), ret2);
-    append_str(response_buffer(), space);
-
-    append_int64(response_buffer(), ret3);
-    append_str(response_buffer(), space);
-
-    append_int64(response_buffer(), ret4);
     exit_area();
 }
 
@@ -51,7 +47,7 @@ int h() {
     enter_area();
     printf("h called!\n");
     exit_area();
-    return 777;
+    return 277;
 }
 
 
@@ -66,7 +62,7 @@ int dispatcher(string_c request) {
     else if (choice == 3) return h();
     else if (choice == 4) f(1); // deferred call
 
-    string_c done = STRING(" done: ");
+    string_c done = STRING(" Done: ");
     append_str(response_buffer(), done);
     append_int64(response_buffer(), choice);
     return HTTP_OK;

@@ -35,7 +35,7 @@ void Executor::sig_handler(int sig, siginfo_t* info, void*) {
         if (session->criticalArea) {
             throw std::runtime_error("signal raised from critical area");
         }
-        if (sig == SIGSEGV) throw GenericError("segmentation fault");
+        if (sig == SIGSEGV) throw GenericError("segmentation fault (possibly stack overflow)");
         if (sig == SIGUSR1) throw GenericError("cpu timer expired", StatusCode::execution_timeout);
         if (sig == SIGFPE) throw GenericError("SIGFPE was caught", StatusCode::arithmetic_error);
         else throw GenericError("a signal was caught");

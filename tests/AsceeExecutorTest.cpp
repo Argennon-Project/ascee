@@ -18,6 +18,7 @@
 #include "executor/Executor.h"
 #include "loader/AppLoader.h"
 #include "argc/types.h"
+#include "subtest.h"
 
 #include <gtest/gtest.h>
 
@@ -26,6 +27,7 @@
 
 using namespace ascee;
 using namespace runtime;
+using std::string, std::vector, std::to_string;
 
 class AsceeExecutorTest : public ::testing::Test {
 protected:
@@ -34,10 +36,6 @@ public:
     AsceeExecutorTest() {
         AppLoader::global = std::make_unique<AppLoader>("appfiles/compiled");
     }
-
-    virtual ~AsceeExecutorTest() {
-
-    }
 };
 
 char* getDefaultResponse(char buf[], int statusCode) {
@@ -45,176 +43,281 @@ char* getDefaultResponse(char buf[], int statusCode) {
     return buf;
 }
 
-TEST_F(AsceeExecutorTest, ZeroGas) {
-    auto response = executor.executeOne(Transaction{
-            .calledAppID = 11,
-            .request = string_c("test request"),
-            .gas = 1,
-            .appAccessList = {11}
-    });
+struct AppTestCase {
+    Executor* executor;
+    long_id calledApp;
+    string request;
+    int_fast32_t gas;
+    vector<long_id> appAccessList;
+    string wantResponse;
+    int wantCode;
 
-    string_buffer_c<1024> buf;
-    execution_error("forwarded gas is too low", StatusCode::internal_error).toHttpResponse(buf);
-    EXPECT_STREQ(response.data(), StringView(buf).data());
+
+    void test() const {
+        auto result = executor->executeOne(Transaction{
+                .calledAppID = calledApp,
+                .request = std::string_view(request),
+                .gas = gas,
+                .appAccessList = appAccessList
+        });
+
+        EXPECT_EQ(result.response, wantResponse);
+
+        EXPECT_EQ(result.statusCode, wantCode);
+    }
+};
+
+TEST_F(AsceeExecutorTest, ZeroGas) {
+    StringBuffer<1024> buf;
+    AppTestCase testCase{
+            .executor = &executor,
+            .calledApp = 11,
+            .request = "test request",
+            .gas = 1,
+            .appAccessList = {11},
+            .wantResponse = string(Executor::GenericError(
+                    "forwarded gas is too low",
+                    StatusCode::internal_error,
+                    long_id(0)).toHttpResponse(buf)),
+            .wantCode = 500
+    };
+    SUB_TEST("zero gas", testCase);
 }
 
 TEST_F(AsceeExecutorTest, OneLevelCall) {
-    auto response = executor.executeOne(Transaction{
-            .calledAppID = 11,
-            .request = STRING("test request"),
+    AppTestCase testCase{
+            .executor = &executor,
+            .calledApp = 11,
+            .request = "test request",
             .gas = NORMAL_GAS,
-            .appAccessList = {11}
-    });
-
-    EXPECT_STREQ(response.data(), "test request is DONE!");
+            .appAccessList = {11},
+            .wantResponse = "test request is DONE!",
+            .wantCode = 200
+    };
+    SUB_TEST("one level call", testCase);
 }
 
 TEST_F(AsceeExecutorTest, TwoLevelCall) {
-    auto response = executor.executeOne(Transaction{
-            .calledAppID = 15,
-            .request = STRING("test request"),
+    AppTestCase testCase{
+            .executor = &executor,
+            .calledApp = 15,
+            .request = "test request",
             .gas = NORMAL_GAS,
-            .appAccessList = {11, 15}
-    });
-
-    EXPECT_STREQ(response.data(), "request from 15 is DONE! got in 15");
+            .appAccessList = {11, 15},
+            .wantResponse = "request from 15 is DONE! got in 15",
+            .wantCode = 200
+    };
+    SUB_TEST("two level call", testCase);
 }
 
 TEST_F(AsceeExecutorTest, AppNotFound) {
-    auto response = executor.executeOne(Transaction{
-            .calledAppID = 16,
-            .request = STRING("test request"),
+    StringBuffer<1024> buf;
+    AppTestCase testCase{
+            .executor = &executor,
+            .calledApp = 16,
+            .request = "test request",
             .gas = NORMAL_GAS,
-            .appAccessList = {16, 555}
-    });
-    char buf[200];
-    EXPECT_STREQ(response.data(), strcat(getDefaultResponse(buf, NOT_FOUND), " wrong app!"));
+            .appAccessList = {16, 555},
+            .wantResponse = string(Executor::GenericError(
+                    "app does not exist",
+                    StatusCode::not_found,
+                    long_id(16)).toHttpResponse(buf)) + " wrong app!",
+            .wantCode = 200
+    };
+    SUB_TEST("", testCase);
 }
 
 TEST_F(AsceeExecutorTest, AppNotDeclared) {
-    auto response = executor.executeOne(Transaction{
-            .calledAppID = 15,
-            .request = STRING("test request"),
+    StringBuffer<1024> buf;
+    AppTestCase testCase{
+            .executor = &executor,
+            .calledApp = 15,
+            .request = "test request",
             .gas = NORMAL_GAS,
-            .appAccessList = {15}
-    });
-
-    char buf[200];
-    EXPECT_STREQ(response.data(), strcat(getDefaultResponse(buf, PRECONDITION_FAILED), " got in 15"));
+            .appAccessList = {15},
+            .wantResponse = string(Executor::GenericError(
+                    "app/11 was not declared in the call list",
+                    StatusCode::limit_violated,
+                    long_id(15)).toHttpResponse(buf)) + " got in 15",
+            .wantCode = 200
+    };
+    SUB_TEST("not declared", testCase);
 }
 
 TEST_F(AsceeExecutorTest, SimpleTimeOut) {
-    auto response = executor.executeOne(Transaction{
-            .calledAppID = 10,
-            .request = STRING("test request"),
+    StringBuffer<1024> buf;
+    AppTestCase testCase{
+            .executor = &executor,
+            .calledApp = 10,
+            .request = "test request",
             .gas = NORMAL_GAS,
-            .appAccessList = {10}
-    });
-
-    char buf[200];
-    EXPECT_STREQ(response.data(), getDefaultResponse(buf, REQUEST_TIMEOUT));
+            .appAccessList = {10},
+            .wantResponse = string(Executor::GenericError(
+                    "cpu timer expired",
+                    StatusCode::execution_timeout,
+                    long_id(10)).toHttpResponse(buf)),
+            .wantCode = 421
+    };
+    SUB_TEST("time out", testCase);
 }
 
 TEST_F(AsceeExecutorTest, CalledTimeOut) {
-    auto response = executor.executeOne(Transaction{
-            .calledAppID = 12,
-            .request = STRING("test request"),
+    StringBuffer<1024> buf;
+    AppTestCase testCase{
+            .executor = &executor,
+            .calledApp = 12,
+            .request = "test request",
             .gas = NORMAL_GAS,
-            .appAccessList = {12, 10}
-    });
-
-    char buf[200];
-    EXPECT_STREQ(response.data(), strcat(getDefaultResponse(buf, REQUEST_TIMEOUT), " TOO LONG..."));
+            .appAccessList = {12, 10},
+            .wantResponse = string(Executor::GenericError(
+                    "cpu timer expired",
+                    StatusCode::execution_timeout,
+                    long_id(10)).toHttpResponse(buf)) + " TOO LONG...",
+            .wantCode = 200
+    };
+    SUB_TEST("time out", testCase);
 }
 
 TEST_F(AsceeExecutorTest, SimpleStackOverflow) {
-    auto response = executor.executeOne(Transaction{
-            .calledAppID = 13,
-            .request = STRING("test request"),
+    StringBuffer<1024> buf;
+    AppTestCase testCase{
+            .executor = &executor,
+            .calledApp = 13,
+            .request = "test request",
             .gas = NORMAL_GAS,
-            .appAccessList = {13}
-    });
-
-    char buf[200];
-    EXPECT_STREQ(response.data(), getDefaultResponse(buf, INTERNAL_ERROR));
+            .appAccessList = {13},
+            .wantResponse = string(Executor::GenericError(
+                    "segmentation fault (possibly stack overflow)",
+                    StatusCode::internal_error,
+                    long_id(13)).toHttpResponse(buf)),
+            .wantCode = 500
+    };
+    SUB_TEST("stack overflow", testCase);
 }
 
 TEST_F(AsceeExecutorTest, CalledStackOverflow) {
-    auto response = executor.executeOne(Transaction{
-            .calledAppID = 14,
-            .request = STRING("test request"),
+    StringBuffer<1024> buf;
+    AppTestCase testCase{
+            .executor = &executor,
+            .calledApp = 14,
+            .request = "test request",
             .gas = NORMAL_GAS,
-            .appAccessList = {13, 14}
-    });
-
-    char buf[200];
-    EXPECT_STREQ(response.data(), strcat(getDefaultResponse(buf, INTERNAL_ERROR), " OVER FLOW... fib: 832040"));
+            .appAccessList = {13, 14},
+            .wantResponse = string(Executor::GenericError(
+                    "segmentation fault (possibly stack overflow)",
+                    StatusCode::internal_error,
+                    long_id(13)).toHttpResponse(buf)) + " OVER FLOW... fib: 832040",
+            .wantCode = 200
+    };
+    SUB_TEST("stack overflow", testCase);
 }
 
 TEST_F(AsceeExecutorTest, CircularCallLowGas) {
-    auto response = executor.executeOne(Transaction{
-            .calledAppID = 17,
-            .request = STRING("test request"),
+    StringBuffer<1024> buf;
+    AppTestCase testCase{
+            .executor = &executor,
+            .calledApp = 17,
+            .request = "test request",
             .gas = LOW_GAS,
-            .appAccessList = {17, 18}
-    });
-
-    char buf[200];
-    EXPECT_STREQ(response.data(), getDefaultResponse(buf, REQUEST_TIMEOUT));
+            .appAccessList = {17, 18},
+            .wantResponse = string(Executor::GenericError(
+                    "forwarded gas is too low",
+                    StatusCode::internal_error,
+                    long_id(18)).toHttpResponse(buf)),
+            .wantCode = 200
+    };
+    SUB_TEST("circular", testCase);
 }
 
 TEST_F(AsceeExecutorTest, CircularCallHighGas) {
-    auto response = executor.executeOne(Transaction{
-            .calledAppID = 17,
-            .request = STRING("test request"),
-            .gas = 10000000000,
-            .appAccessList = {17, 18}
-    });
-
-    char buf[200];
-    EXPECT_STREQ(response.data(), getDefaultResponse(buf, MAX_CALL_DEPTH_REACHED));
+    StringBuffer<1024> buf;
+    AppTestCase testCase{
+            .executor = &executor,
+            .calledApp = 17,
+            .request = "test request",
+            .gas = 1000000000,
+            .appAccessList = {17, 18},
+            .wantResponse = string(Executor::GenericError(
+                    "max call depth reached",
+                    StatusCode::limit_exceeded,
+                    long_id(18)).toHttpResponse(buf)),
+            .wantCode = 200
+    };
+    SUB_TEST("circular", testCase);
 }
 
 TEST_F(AsceeExecutorTest, FailedCalls) {
-    auto response = executor.executeOne(Transaction{
-            .calledAppID = 19,
-            .request = STRING("test request"),
-            .gas = NORMAL_GAS,
-            .appAccessList = {20, 21, 10, 19}
-    });
+    StringBuffer<1024> buf;
+    Executor::GenericError(
+            "cpu timer expired",
+            StatusCode::execution_timeout,
+            long_id(10)).toHttpResponse(buf);
+    Executor::GenericError(
+            "SIGFPE was caught",
+            StatusCode::arithmetic_error,
+            long_id(20)).toHttpResponse(buf);
+    Executor::GenericError(
+            "calling self",
+            StatusCode::invalid_operation,
+            long_id(19)).toHttpResponse(buf);
+    Executor::GenericError(
+            "app/11 was not declared in the call list",
+            StatusCode::limit_violated,
+            long_id(19)).toHttpResponse(buf);
+    Executor::GenericError(
+            "append: str is too long",
+            StatusCode::internal_error,
+            long_id(19)).toHttpResponse(buf);
+    // caller can see out_of_range exception so server is 19
 
-    char expected[1024], buf[200];
-    getDefaultResponse(expected, REQUEST_TIMEOUT);
-    strcat(expected, getDefaultResponse(buf, INTERNAL_ERROR));
-    strcat(expected, getDefaultResponse(buf, NOT_FOUND));
-    strcat(expected, getDefaultResponse(buf, PRECONDITION_FAILED));
-    strcat(expected, getDefaultResponse(buf, INTERNAL_ERROR));
-    strcat(expected, " all called...");
-    EXPECT_STREQ(response.data(), expected);
+    AppTestCase testCase{
+            .executor = &executor,
+            .calledApp = 19,
+            .request = "test request",
+            .gas = NORMAL_GAS,
+            .appAccessList = {20, 21, 10, 19},
+            .wantResponse = string(buf) + " all called...",
+            .wantCode = 200
+    };
+    SUB_TEST("failed calls", testCase);
 }
 
 TEST_F(AsceeExecutorTest, SimpleReentancy) {
-    auto response = executor.executeOne(Transaction{
-            .calledAppID = 22,
-            .request = STRING("choice: 1"),
-            .gas = NORMAL_GAS,
-            .appAccessList = {22, 23}
-    });
+    auto reentrancyErr = Executor::GenericError(
+            "reentrancy is not allowed",
+            StatusCode::reentrancy_attempt,
+            long_id(22));
+    StringBuffer<1024> buf;
+    reentrancyErr.toHttpResponse(buf);
+    buf.append(" Done: 2");
+    reentrancyErr.toHttpResponse(buf);
+    reentrancyErr.toHttpResponse(buf);
 
-    char buf[200];
-    sprintf(buf, "%d %d %d %d done: 1", REENTRANCY_DETECTED + 1, HTTP_OK + 1, REENTRANCY_DETECTED + 1,
-            REENTRANCY_DETECTED + 1);
-    EXPECT_STREQ(response.data(), buf);
+    AppTestCase testCase{
+            .executor = &executor,
+            .calledApp = 22,
+            .request = "choice: 1",
+            .gas = NORMAL_GAS,
+            .appAccessList = {22, 23},
+            .wantResponse = string(buf) + " Done: 1",
+            .wantCode = 200
+    };
+    SUB_TEST("", testCase);
 }
 
 TEST_F(AsceeExecutorTest, SimpleDeferredCall) {
-    auto response = executor.executeOne(Transaction{
-            .calledAppID = 22,
-            .request = STRING("choice: 4"),
+    StringBuffer<1024> buf;
+    AppTestCase testCase{
+            .executor = &executor,
+            .calledApp = 22,
+            .request = "choice: 4",
             .gas = NORMAL_GAS,
-            .appAccessList = {22, 23}
-    });
-
-    char buf[200];
-    EXPECT_STREQ(response.data(), getDefaultResponse(buf, FAILED_DEPENDENCY));
+            .appAccessList = {22, 23},
+            .wantResponse = string(Executor::GenericError(
+                    "deferred success!",
+                    StatusCode::internal_error,
+                    long_id(23)).toHttpResponse(buf)),
+            .wantCode = 500
+    };
+    SUB_TEST("deferred", testCase);
 }

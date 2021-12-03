@@ -47,20 +47,27 @@ class Executor {
 public:
     class GenericError : public AsceeException {
     public:
+        explicit GenericError(const AsceeException& ae, long_id app = session->currentCall->appID) : AsceeException(ae),
+                                                                                                     app(app) {}
+
         explicit GenericError(
                 const std::string& msg,
                 StatusCode code = StatusCode::internal_error,
                 const std::string& thrower = "",
-                const long_id app = session->currentCall->appID
+                long_id app = session->currentCall->appID
         ) noexcept: AsceeException(msg, code, thrower), app(app) {}
 
+        explicit GenericError(const std::string& msg, StatusCode code, long_id app) noexcept:
+                AsceeException(msg, code, ""), app(app) {}
+
         template<int size>
-        void toHttpResponse(runtime::StringBuffer<size>& response) const {
+        auto& toHttpResponse(runtime::StringBuffer<size>& response) const {
             response << "HTTP/1.1 " << errorCode() << " ";
             response << gReasonByStatusCode(code) << "\r\n";
             response << "Server: " << app << "\r\n";
             response << "Content-Length: " << (int) message.size() + 8 << "\r\n\r\n";
             response << "Error: " << StringView(message) << ".";
+            return response;
         }
 
         const long_id app;

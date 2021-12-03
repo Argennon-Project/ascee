@@ -7,6 +7,8 @@ using namespace ascee::argc;
 
 extern "C"
 int dispatcher(string_c request) {
-    return invoke_dispatcher(100, 22, request) + 1;
+    int ret = invoke_dispatcher(100, 22, request);
+    if (ret == 277) revert("deferred success!");
+    return 200;
 }
 

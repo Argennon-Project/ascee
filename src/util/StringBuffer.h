@@ -73,7 +73,7 @@ public:
         return *this;
     }
 
-    explicit operator StringView() const {
+    operator StringView() const { // NOLINT(google-explicit-constructor)
         return StringView(buffer, end);
     }
 

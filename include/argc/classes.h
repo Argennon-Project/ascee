@@ -95,6 +95,8 @@ public:
 
     [[nodiscard]] int errorCode() const { return (int) code; }
 
+    [[nodiscard]] const char* what() const noexcept override { return message.c_str(); }
+
     const std::string thrower;
     const std::string msg;
     const std::string message;
