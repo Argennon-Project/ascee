@@ -77,9 +77,9 @@ TEST_F(AsceeExecutorTest, ZeroGas) {
             .appAccessList = {11},
             .wantResponse = string(Executor::GenericError(
                     "forwarded gas is too low",
-                    StatusCode::internal_error,
+                    StatusCode::invalid_operation,
                     long_id(0)).toHttpResponse(buf)),
-            .wantCode = 500
+            .wantCode = int(StatusCode::invalid_operation)
     };
     SUB_TEST("zero gas", testCase);
 }
@@ -222,7 +222,7 @@ TEST_F(AsceeExecutorTest, CircularCallLowGas) {
             .appAccessList = {17, 18},
             .wantResponse = string(Executor::GenericError(
                     "forwarded gas is too low",
-                    StatusCode::internal_error,
+                    StatusCode::invalid_operation,
                     long_id(18)).toHttpResponse(buf)),
             .wantCode = 200
     };
@@ -240,7 +240,7 @@ TEST_F(AsceeExecutorTest, CircularCallHighGas) {
             .wantResponse = string(Executor::GenericError(
                     "max call depth reached",
                     StatusCode::limit_exceeded,
-                    long_id(18)).toHttpResponse(buf)),
+                    long_id(17)).toHttpResponse(buf)),
             .wantCode = 200
     };
     SUB_TEST("circular", testCase);

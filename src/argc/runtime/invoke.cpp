@@ -129,10 +129,6 @@ int invoke_noexcept(long_id app_id, string_c request) {
         Executor::blockSignals();
         ret = ee.errorCode();
         ee.toHttpResponse(Executor::getSession()->response.clear());
-    } catch (const AsceeException& ae) {
-        Executor::blockSignals();
-        ret = ae.errorCode();
-        Executor::GenericError(ae).toHttpResponse(Executor::getSession()->response.clear());
     }
     return ret;
 }
@@ -146,9 +142,9 @@ int argc::invoke_dispatcher(byte forwarded_gas, long_id app_id, string_c request
         ret = Executor::controlledExec(invoke_noexcept, app_id, request,
                                        resourceContext.getExecTime(), resourceContext.getStackSize());
         if (ret < 400) resourceContext.complete();
-    } catch (const Executor::GenericError& ee) {
-        ret = ee.errorCode();
-        ee.toHttpResponse(Executor::getSession()->response.clear());
+    } catch (const AsceeException& ae) {
+        ret = ae.errorCode();
+        Executor::GenericError(ae).toHttpResponse(Executor::getSession()->response.clear());
     }
 
     // unBlockSignals() should be called here, in case resourceContext's constructor throws an exception.

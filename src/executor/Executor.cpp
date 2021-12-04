@@ -217,7 +217,7 @@ Executor::CallResourceContext::CallResourceContext(byte forwardedGas) {
     caller = session->currentCall->appID;
 
     gas = (prevResources->remainingExternalGas * forwardedGas) >> 8;
-    if (gas <= MIN_GAS) throw GenericError("forwarded gas is too low", StatusCode::internal_error);
+    if (gas <= MIN_GAS) throw AsceeException("forwarded gas is too low", StatusCode::invalid_operation);
 
     id = session->failureManager.nextInvocation();
     prevResources->remainingExternalGas -= gas;
@@ -252,7 +252,7 @@ Executor::CallResourceContext::~CallResourceContext() noexcept {
 
 Executor::CallInfoContext::CallInfoContext(long_id app) : appID(app) {
     prevCallInfo = session->currentCall;
-    if (prevCallInfo->appID == app) throw GenericError("calling self", StatusCode::invalid_operation);
+    if (prevCallInfo->appID == app) throw GenericError("calling self", StatusCode::invalid_operation, app);
     session->heapModifier.loadContext(app);
     session->currentCall = this;
 }
