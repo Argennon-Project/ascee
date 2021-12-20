@@ -44,7 +44,7 @@ int_fast64_t FailureManager::getExecTime(InvocationID id, int_fast32_t gas) {
 
 size_t FailureManager::getStackSize(InvocationID id) {
     if (callDepth > MAX_CALL_DEPTH) {
-        throw AsceeException("max call depth reached", StatusCode::limit_exceeded);
+        throw ApplicationError("max call depth reached", StatusCode::limit_exceeded);
     }
     if (stackFailures.contains(id)) return FAIL_CHECK_STACK_SIZE;
     return DEFAULT_STACK_SIZE;

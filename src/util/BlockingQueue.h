@@ -42,12 +42,28 @@ public:
         // Wait until queue has items
         std::unique_lock<std::mutex> lk(queueMutex);
         // predicate does not need to acquire any locks, lk does the required locking
-        cv.wait(lk, [this] { return !content.empty(); });
+        cv.wait(lk, [this] { return !(content.empty() && producerCount > 0); });
         // After the wait, we own the lock.
+
+        if (content.empty()) throw std::out_of_range("empty queue without any producers");
 
         T result = content.front();
         content.pop();
         return result;
+    }
+
+    void addProducer() {
+        std::lock_guard<std::mutex> lock(queueMutex);
+        ++producerCount;
+    }
+
+    void removeProducer() {
+        std::unique_lock<std::mutex> lk(queueMutex);
+        --producerCount;
+        if (producerCount == 0) {
+            lk.unlock();
+            cv.notify_all();
+        }
     }
 
     bool isEmpty() {
@@ -59,6 +75,7 @@ private:
     std::mutex queueMutex;
     std::condition_variable cv;
     std::queue<T> content;
+    int producerCount = 0;
 };
 
 } // namespace ascee::runtime

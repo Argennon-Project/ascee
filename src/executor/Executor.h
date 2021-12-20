@@ -31,9 +31,10 @@
 
 #include <executor/FailureManager.h>
 #include <argc/primitives.h>
-#include <heap/Heap.h>
+#include "heap/Cache.h"
 #include "ThreadCpuTimer.h"
 #include "Scheduler.h"
+#include "heap/Modifier.h"
 #include <util/VirtualSigManager.h>
 
 namespace ascee::runtime {
@@ -45,20 +46,21 @@ struct DeferredArgs {
 
 class Executor {
 public:
-    class GenericError : public AsceeException {
+    class GenericError : public ApplicationError {
     public:
-        explicit GenericError(const AsceeException& ae, long_id app = session->currentCall->appID) : AsceeException(ae),
-                                                                                                     app(app) {}
+        explicit GenericError(const ApplicationError& ae, long_id app = session->currentCall->appID) : ApplicationError(
+                ae),
+                                                                                                       app(app) {}
 
         explicit GenericError(
                 const std::string& msg,
                 StatusCode code = StatusCode::internal_error,
                 const std::string& thrower = "",
                 long_id app = session->currentCall->appID
-        ) noexcept: AsceeException(msg, code, thrower), app(app) {}
+        ) noexcept: ApplicationError(msg, code, thrower), app(app) {}
 
         explicit GenericError(const std::string& msg, StatusCode code, long_id app) noexcept:
-                AsceeException(msg, code, ""), app(app) {}
+                ApplicationError(msg, code, ""), app(app) {}
 
         template<int size>
         auto& toHttpResponse(runtime::StringBuffer<size>& response) const {
@@ -114,7 +116,7 @@ public:
     struct SessionInfo {
         bool criticalArea = false;
 
-        Heap::Modifier heapModifier;
+        heap::Modifier heapModifier;
         std::unordered_map<long_id, dispatcher_ptr> appTable;
         std::unordered_map<long_id, bool> isLocked;
         FailureManager failureManager;
@@ -148,7 +150,7 @@ public:
 private:
     static thread_local SessionInfo* session;
 
-    Heap heap;
+    heap::Cache heap;
     Scheduler scheduler;
 
     static void sig_handler(int sig, siginfo_t* info, void* ucontext);

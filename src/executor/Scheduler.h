@@ -22,7 +22,8 @@
 #include <util/BlockingQueue.h>
 #include <unordered_set>
 #include <cassert>
-#include <heap/Heap.h>
+#include "heap/Cache.h"
+#include <atomic>
 
 namespace ascee::runtime {
 
@@ -33,7 +34,7 @@ struct Transaction {
     string_c request;
     int_fast32_t gas;
     std::vector<long_id> appAccessList;
-    std::vector<AppMemAccess> memoryAccessList;
+    //std::vector<AppMemAccess> memoryAccessList;
     std::unordered_set<int_fast32_t> stackSizeFailures;
     std::unordered_set<int_fast32_t> cpuTimeFailures;
 };
@@ -69,10 +70,18 @@ private:
 
 };
 
+/// works fine even if the graph is not a dag and contains loops
 class Scheduler {
 public:
     const Transaction* nextTransaction() {
-        return zeroQueue.blockingDequeue();
+        try {
+            auto* result = zeroQueue.blockingDequeue();
+            zeroQueue.addProducer();
+            return result;
+        } catch (const std::out_of_range&) {
+            if (count != 0) throw BlockError("execution graph is not a dag");
+            return nullptr;
+        }
     };
 
     void submitResult(const TransactionResult& result) {
@@ -85,9 +94,12 @@ public:
         }
         // We don't use nodeIndex.erase(...) because if a rehash happens that would not be thread-safe.
         txNode.reset();
+        --count;
+        zeroQueue.removeProducer();
     };
 
 private:
+    std::atomic<int> count;
     BlockingQueue<Transaction*> zeroQueue;
     std::unordered_map<Transaction::IdType, std::unique_ptr<DagNode>> nodeIndex;
 };

@@ -83,9 +83,9 @@ inline const char* gReasonByStatusCode(StatusCode code) {
     return "Unknown Reason";
 }
 
-class AsceeException : public std::exception {
+class ApplicationError : public std::exception {
 public:
-    explicit AsceeException(
+    explicit ApplicationError(
             std::string msg,
             StatusCode code = StatusCode::internal_error,
             std::string thrower = ""
@@ -101,6 +101,15 @@ public:
     const std::string msg;
     const std::string message;
     const StatusCode code;
+};
+
+class BlockError : public std::exception {
+public:
+    const std::string message;
+
+    explicit BlockError(std::string message) : message(std::move(message)) {}
+
+    [[nodiscard]] const char* what() const noexcept override { return message.c_str(); }
 };
 
 

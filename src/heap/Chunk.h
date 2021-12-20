@@ -20,54 +20,48 @@
 
 #include <argc/types.h>
 #include <memory>
+#include <atomic>
 
-namespace ascee::runtime {
+namespace ascee::runtime::heap {
 
 class Chunk {
-
 public:
     class Pointer {
-        friend class Chunk;
-
-    private:
-        byte* const heapPtr;
-
-        explicit Pointer(byte* heapPtr) noexcept: heapPtr(heapPtr) {}
-
     public:
-        template<typename T>
-        inline
-        T read() { return *(T*) heapPtr; }
+
+        explicit Pointer(byte* heapPtr, byte* lastValid) noexcept: heapPtr(heapPtr), boundary(lastValid) {}
 
         inline bool isNull() { return heapPtr == nullptr; }
 
-        inline byte* get() { return heapPtr; }
+        inline byte* get(int32 accessSize) {
+            if (heapPtr + accessSize >= boundary) throw std::out_of_range("out of chunk");
+            return heapPtr;
+        }
 
-        void readBlockTo(byte* dst, int32 size);
-
-        void writeBlock(const byte* src, int32 size);
+    private:
+        byte* const heapPtr;
+        byte* const boundary;
     };
+
+    Chunk() noexcept = default;
+
+    explicit Chunk(int32 capacity);
+
+    [[nodiscard]] int32 getsize() const;
+
+    void reSize(int newSize);
+
+    [[nodiscard]] bool isTransient() const;
+
+    Pointer getContentPointer(int32 offset);
 
 private:
     std::unique_ptr<byte[]> content;
-    int32 chunkSize = 0;
+    std::atomic<int32> chunkSize = 0;
     int32 capacity = 0;
 
-public:
-    Chunk() noexcept = default;
-
-    explicit Chunk(int32 size);
-
-    int32 getsize() const;
-
-    void expandSpace(int extra);
-
-    bool isTransient() const;
-
-    Pointer getSizePointer();
-
-    Pointer getContentPointer(int32 offset);
+    bool isValid(const byte* ptr) const;
 };
 
-} // namespace ascee::runtime
+} // namespace ascee::runtime::heap
 #endif // ASCEE_CHUNK_H

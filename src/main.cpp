@@ -21,6 +21,7 @@
 #include <iostream>
 #include <loader/AppLoader.h>
 #include <util/StaticArray.h>
+#include "executor/CollisionMap.h"
 
 using namespace ascee;
 using namespace ascee::runtime;
@@ -78,6 +79,18 @@ int main(int argc, char const* argv[]) {
     });
 
     printf("hereeeee@@ \n%s\n", response.response.c_str());
+
+
+    CollisionMap cm;
+    cm.findCollisions(10, 100, {
+            {-1, 1, 0, false},
+            {-1, 1, 1, false},
+            {-1, 1, 2, false},
+            {2, 4, 1, false},
+            {2, 5, 2, true},
+            {3, 4, 0, true},
+    });
+
 
 
 /*

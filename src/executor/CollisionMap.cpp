@@ -15,30 +15,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#include "Heap.h"
-#include <argc/types.h>
-#include <stdexcept>
-#include <cstring>
+//
+// Created by aybehrouz on 12/11/21.
+//
 
-using namespace ascee;
-using namespace ascee;
-using namespace ascee::runtime;
-
-template<typename T>
-inline static
-void copy(byte* dst, const byte* src) {
-    *(T*) dst = *(T*) src;
-}
-
-static
-void smartCopy(byte* dst, const byte* src, int32 size) {
-    memcpy(dst, src, size);
-}
-
-void Chunk::Pointer::readBlockTo(byte* dst, int32 size) {
-    smartCopy(dst, heapPtr, size);
-}
-
-void Chunk::Pointer::writeBlock(const byte* src, int32 size) {
-    smartCopy(heapPtr, src, size);
-}
+#include "CollisionMap.h"

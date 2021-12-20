@@ -142,7 +142,7 @@ int argc::invoke_dispatcher(byte forwarded_gas, long_id app_id, string_c request
         ret = Executor::controlledExec(invoke_noexcept, app_id, request,
                                        resourceContext.getExecTime(), resourceContext.getStackSize());
         if (ret < 400) resourceContext.complete();
-    } catch (const AsceeException& ae) {
+    } catch (const ApplicationError& ae) {
         ret = ae.errorCode();
         Executor::GenericError(ae).toHttpResponse(Executor::getSession()->response.clear());
     }

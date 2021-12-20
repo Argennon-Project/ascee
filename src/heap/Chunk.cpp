@@ -21,14 +21,14 @@
 #define MAX_CHUNK_SIZE 32*1024
 
 using namespace ascee;
-using namespace ascee::runtime;
+using namespace ascee::runtime::heap;
 
 /// new chunks always have a size of zero. Their size usually should be changed through the pointer obtainable by
 /// getSizePointer function.
 /// The chunk will be zero initialized. This is important to make sure that smart contracts
 /// behave deterministically and validators will agree on the result of executing a smart contact.
-Chunk::Chunk(int size) : capacity(size), content(new byte[size]()) {
-    if (size > MAX_CHUNK_SIZE) throw std::out_of_range("max chunk size exceeded");
+Chunk::Chunk(int capacity) : capacity(capacity), content(new byte[capacity]()) {
+    if (capacity > MAX_CHUNK_SIZE) throw std::out_of_range("max chunk size exceeded");
 }
 
 int32 Chunk::getsize() const {
@@ -40,23 +40,34 @@ bool Chunk::isTransient() const {
 }
 
 Chunk::Pointer Chunk::getContentPointer(int32 offset) {
-    return Pointer(content.get() + offset);
+    return Pointer(content.get() + offset, content.get() + chunkSize);
 }
 
-Chunk::Pointer Chunk::getSizePointer() {
-    return Pointer(reinterpret_cast<byte*>(&chunkSize));
-}
+void Chunk::reSize(int newSize) {
+    if (newSize > MAX_CHUNK_SIZE || newSize < 0) throw std::out_of_range("invalid chunk size");
 
-void Chunk::expandSpace(int extra) {
-    if (chunkSize + extra <= capacity) return;
+    if (newSize < chunkSize) {
+        if (newSize == 0) {
+            content = std::make_unique<byte[]>(0);
+            capacity = 0;
+        } else {
+            memset(content.get() + newSize, 0, chunkSize - newSize);
+        }
+    }
 
-    if (chunkSize + extra > MAX_CHUNK_SIZE) throw std::out_of_range("can't expand beyond max chunk size");
+    chunkSize = newSize;
 
-    auto newCapacity = std::min(MAX_CHUNK_SIZE, 2 * (chunkSize + extra));
+    if (newSize <= capacity) return;
+
+    auto newCapacity = std::min(MAX_CHUNK_SIZE, 2 * newSize);
 
     // memory must be zero initialized.
     auto* newContent = new byte[newCapacity]();
     memcpy(newContent, content.get(), chunkSize);
     content = std::unique_ptr<byte[]>(newContent);
     capacity = newCapacity;
+}
+
+bool Chunk::isValid(const byte* ptr) const {
+    return ptr < content.get() + chunkSize || ptr == (byte*) &chunkSize;
 }

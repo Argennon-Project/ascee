@@ -18,9 +18,12 @@
 #include <gtest/gtest.h>
 #include <argc/types.h>
 
+#include <memory>
+
 #define private public
 
-#include "heap/Heap.h"
+#include "heap/Cache.h"
+#include "heap/Chunk.h"
 
 using namespace ascee;
 using namespace runtime;
@@ -29,50 +32,46 @@ using Pointer = ascee::runtime::Chunk::Pointer;
 
 class HeapModifierDeathTest : public ::testing::Test {
 protected:
-    byte tempHeap[256] = {2, 2, 2, 1, 2, 2, 2, 1};
+    Chunk tempChunk{256};
+    byte* tempHeap = new byte[256]{2, 2, 2, 1, 2, 2, 2, 1};
     Heap::Modifier modifier = Heap::Modifier(nullptr);
 
 public:
     HeapModifierDeathTest() {
-        modifier.defineChunk(1, 10, Pointer(nullptr));
-        modifier.defineChunk(1, 11, Pointer(nullptr));
-        modifier.defineChunk(1, 100, Pointer(nullptr));
-        modifier.defineChunk(2, 10, Pointer(nullptr));
-        modifier.defineChunk(2, 11, Pointer(nullptr));
+        tempChunk.content.reset(tempHeap);
+        tempChunk.chunkSize = 256;
+        modifier.defineChunk(1, 10, Pointer(&tempChunk, nullptr));
+        modifier.defineChunk(1, 11, Pointer(&tempChunk, nullptr));
+        modifier.defineChunk(1, 100, Pointer(&tempChunk, nullptr));
+        modifier.defineChunk(2, 10, Pointer(&tempChunk, nullptr));
+        modifier.defineChunk(2, 11, Pointer(&tempChunk, nullptr));
 
         // appID = 1
-        modifier.defineAccessBlock(Pointer(tempHeap),
+        modifier.defineAccessBlock(Pointer(&tempChunk, tempHeap),
                                    1, short_id(10), 100,
                                    8, false);
-        modifier.defineAccessBlock(Pointer(tempHeap + 8),
+        modifier.defineAccessBlock(Pointer(&tempChunk, tempHeap + 8),
                                    1, short_id(10), 108,
                                    16, true);
-        modifier.defineAccessBlock(Pointer(tempHeap + 50),
+        modifier.defineAccessBlock(Pointer(&tempChunk, tempHeap + 50),
                                    1, short_id(11), 100,
                                    8, true);
-        modifier.defineAccessBlock(Pointer(tempHeap + 58),
+        modifier.defineAccessBlock(Pointer(&tempChunk, tempHeap + 58),
                                    1, short_id(11), 120,
                                    8, true);
-        modifier.defineAccessBlock(Pointer(tempHeap + 100),
+        modifier.defineAccessBlock(Pointer(&tempChunk, tempHeap + 100),
                                    1, long_id(100), 100,
                                    8, true);
         // appID = 2
-        modifier.defineAccessBlock(Pointer(tempHeap + 150),
+        modifier.defineAccessBlock(Pointer(&tempChunk, tempHeap + 150),
                                    2, short_id(10), 100,
                                    8, true);
-        modifier.defineAccessBlock(Pointer(tempHeap + 158),
+        modifier.defineAccessBlock(Pointer(&tempChunk, tempHeap + 158),
                                    2, short_id(11), 100,
                                    8, true);
 
         *(int64*) (tempHeap + 50) = 789;
         *(int64*) (tempHeap + 58) = 321;
-    }
-
-    void memDump() {
-        for (unsigned char i: tempHeap) {
-            printf("%d ", i);
-        }
-        printf("\n");
     }
 };
 

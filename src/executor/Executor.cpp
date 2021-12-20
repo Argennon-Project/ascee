@@ -16,7 +16,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include <csignal>
-#include <heap/Heap.h>
+#include "heap/Cache.h"
 #include <loader/AppLoader.h>
 #include <argc/functions.h>
 #include <thread>
@@ -104,7 +104,6 @@ TransactionResult Executor::executeOne(const Transaction& tx) {
     session = nullptr;
     try {
         SessionInfo threadSession{
-                .heapModifier = heap.initSession(tx.memoryAccessList),
                 .appTable = AppLoader::global->createAppTable(tx.appAccessList),
                 .failureManager = FailureManager(tx.stackSizeFailures, tx.cpuTimeFailures),
         };
@@ -217,7 +216,7 @@ Executor::CallResourceContext::CallResourceContext(byte forwardedGas) {
     caller = session->currentCall->appID;
 
     gas = (prevResources->remainingExternalGas * forwardedGas) >> 8;
-    if (gas <= MIN_GAS) throw AsceeException("forwarded gas is too low", StatusCode::invalid_operation);
+    if (gas <= MIN_GAS) throw ApplicationError("forwarded gas is too low", StatusCode::invalid_operation);
 
     id = session->failureManager.nextInvocation();
     prevResources->remainingExternalGas -= gas;

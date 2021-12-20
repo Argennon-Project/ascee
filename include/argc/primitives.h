@@ -39,7 +39,7 @@ struct FullID {
 
     FullID(__int128_t id) : id(id) {} // NOLINT(google-explicit-constructor)
 
-    FullID(long_id high, long_id low) { id = __int128_t(high) << 64 | low; }
+    FullID(long_id up, long_id down) { id = __int128_t(up) << 64 | down; }
 
     operator __int128_t() const { return id; } // NOLINT(google-explicit-constructor)
 };

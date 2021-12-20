@@ -15,13 +15,13 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef ASCEE_PAGE_H
-#define ASCEE_PAGE_H
+#ifndef ASCEE_HEAP_PAGE_H
+#define ASCEE_HEAP_PAGE_H
 
 #include <argc/types.h>
 #include "Chunk.h"
 
-namespace ascee::runtime {
+namespace ascee::runtime::heap {
 
 class Page {
 private:
@@ -37,5 +37,5 @@ public:
 
 };
 
-} // namespace ascee::runtime
-#endif // ASCEE_PAGE_H
+} // namespace ascee::runtime::heap
+#endif // ASCEE_HEAP_PAGE_H

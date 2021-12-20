@@ -20,7 +20,7 @@
 
 #define private public
 
-#include "heap/Heap.h"
+#include "heap/Cache.h"
 
 using namespace ascee;
 using namespace runtime;
