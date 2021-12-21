@@ -54,12 +54,13 @@ struct AppTestCase {
 
 
     void test() const {
-        auto result = executor->executeOne(Transaction{
+        AppRequest req{
                 .calledAppID = calledApp,
-                .request = std::string_view(request),
+                .httpRequest = request,
                 .gas = gas,
-                .appAccessList = appAccessList
-        });
+                .appTable = AppLoader::global->createAppTable(appAccessList)
+        };
+        auto result = executor->executeOne(&req);
 
         EXPECT_EQ(result.response, wantResponse);
 

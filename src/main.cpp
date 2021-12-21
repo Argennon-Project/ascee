@@ -21,7 +21,6 @@
 #include <iostream>
 #include <loader/AppLoader.h>
 #include <util/StaticArray.h>
-#include "executor/CollisionMap.h"
 
 using namespace ascee;
 using namespace ascee::runtime;
@@ -71,24 +70,30 @@ int main(int argc, char const* argv[]) {
 
     AppLoader::global = std::make_unique<AppLoader>("");
     Executor executor;
-    auto response = executor.executeOne(Transaction{
+    AppRequest request{
             .calledAppID = 1,
-            .request = ascee::string_c("test request"),
+            .httpRequest = "test request",
             .gas = 1000,
-            .appAccessList = {11}
-    });
+            .appTable = AppLoader::global->createAppTable({11})
+    };
+    auto response = executor.executeOne(&request);
 
     printf("hereeeee@@ \n%s\n", response.response.c_str());
 
 
-    CollisionMap cm;
-    cm.findCollisions(10, 100, {
+    heap::Cache h;
+    h.cacheBlockData({}, {full_id(10, 100)});
+    RequestScheduler rs(10, h);
+    rs.addRequest(0);
+    rs.addRequest(1);
+    rs.addRequest(2);
+    rs.addMemoryAccessList(10, 100, {
             {-1, 1, 0, false},
             {-1, 1, 1, false},
             {-1, 1, 2, false},
-            {2, 4, 1, false},
-            {2, 5, 2, true},
-            {3, 4, 0, true},
+            {2,  4, 1, false},
+            {2,  5, 2, true},
+            {3,  4, 0, true},
     });
 
 

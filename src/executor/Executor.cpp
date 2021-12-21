@@ -99,19 +99,18 @@ void* Executor::registerRecoveryStack() {
     return sig_stack.ss_sp;
 }
 
-TransactionResult Executor::executeOne(const Transaction& tx) {
-    TransactionResult result{.txID = tx.id};
+AppResponse Executor::executeOne(AppRequest* tx) {
+    AppResponse result{.txID = tx->id};
     session = nullptr;
     try {
         SessionInfo threadSession{
-                .appTable = AppLoader::global->createAppTable(tx.appAccessList),
-                .failureManager = FailureManager(tx.stackSizeFailures, tx.cpuTimeFailures),
+                .request = tx,
         };
         session = &threadSession;
 
-        CallResourceContext rootResourceCtx(tx.gas);
+        CallResourceContext rootResourceCtx(tx->gas);
         CallInfoContext rootInfoCtx;
-        result.statusCode = argc::invoke_dispatcher(255, tx.calledAppID, tx.request);
+        result.statusCode = argc::invoke_dispatcher(255, tx->calledAppID, string_c(tx->httpRequest));
         // here, string's assignment operator makes a copy of the buffer.
         result.response = StringView(session->response);
         rootResourceCtx.complete();
@@ -124,7 +123,7 @@ TransactionResult Executor::executeOne(const Transaction& tx) {
     return result;
 }
 
-Executor::Executor() {
+Executor::Executor() : scheduler(10, heap) {
     initHandlers();
 }
 

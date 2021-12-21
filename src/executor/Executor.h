@@ -33,7 +33,7 @@
 #include <argc/primitives.h>
 #include "heap/Cache.h"
 #include "ThreadCpuTimer.h"
-#include "Scheduler.h"
+#include "RequestScheduler.h"
 #include "heap/Modifier.h"
 #include <util/VirtualSigManager.h>
 
@@ -114,12 +114,13 @@ public:
     };
 
     struct SessionInfo {
+        AppRequest* request;
         bool criticalArea = false;
 
-        heap::Modifier heapModifier;
-        std::unordered_map<long_id, dispatcher_ptr> appTable;
+        heap::Modifier& heapModifier = request->modifier;
+        std::unordered_map<long_id, dispatcher_ptr>& appTable = request->appTable;
+        FailureManager& failureManager = request->failureManager;
         std::unordered_map<long_id, bool> isLocked;
-        FailureManager failureManager;
         VirtualSigManager virtualSigner;
 
         string_buffer_c<RESPONSE_MAX_SIZE> response;
@@ -141,7 +142,7 @@ public:
 
     static void unBlockSignals();
 
-    TransactionResult executeOne(const Transaction& tx);
+    AppResponse executeOne(AppRequest* tx);
 
     static
     int controlledExec(int (* invoker)(long_id, string_c), long_id app_id, string_c request,
@@ -151,15 +152,15 @@ private:
     static thread_local SessionInfo* session;
 
     heap::Cache heap;
-    Scheduler scheduler;
+    RequestScheduler scheduler;
 
     static void sig_handler(int sig, siginfo_t* info, void* ucontext);
 
     static void initHandlers();
 
     void worker() {
-        while (auto* txPtr = scheduler.nextTransaction()) {
-            scheduler.submitResult(executeOne(*txPtr));
+        while (auto* txPtr = scheduler.nextRequest()) {
+            scheduler.submitResult(executeOne(txPtr));
         }
     }
 
