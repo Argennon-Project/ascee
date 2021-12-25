@@ -22,7 +22,7 @@
 #include <util/BlockingQueue.h>
 #include <unordered_set>
 #include <cassert>
-#include "heap/Cache.h"
+#include "heap/PageCache.h"
 #include "heap/Modifier.h"
 #include "FailureManager.h"
 #include <atomic>
@@ -104,15 +104,16 @@ public:
         nodeIndex.at(id) = std::make_unique<DagNode>(id);
     }
 
-    explicit RequestScheduler(int_fast32_t totalCount, heap::Cache& heap) : heap(heap), count(totalCount),
-                                                                            nodeIndex(totalCount) {
+    explicit RequestScheduler(int_fast32_t totalCount, heap::PageCache::BlockIndex& heapIndex) : heapIndex(heapIndex),
+                                                                                                 count(totalCount),
+                                                                                                 nodeIndex(totalCount) {
         //todo: change
     }
 
 //todo: change this
     DependencyGraph graph;
 private:
-    heap::Cache& heap;
+    heap::PageCache::BlockIndex& heapIndex;
     std::atomic<int_fast32_t> count;
     BlockingQueue<DagNode*> zeroQueue;
     std::vector<std::unique_ptr<DagNode>> nodeIndex;

@@ -16,7 +16,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include <csignal>
-#include "heap/Cache.h"
+#include "heap/PageCache.h"
 #include <loader/AppLoader.h>
 #include <argc/functions.h>
 #include <thread>
@@ -123,7 +123,7 @@ AppResponse Executor::executeOne(AppRequest* tx) {
     return result;
 }
 
-Executor::Executor() : scheduler(10, heap) {
+Executor::Executor() {
     initHandlers();
 }
 
@@ -188,6 +188,7 @@ int Executor::controlledExec(int (* invoker)(long_id, string_c),
     return ret;
 }
 
+/*
 void Executor::executeAll(int workersCount = -1) {
     using namespace std;
     workersCount = workersCount == -1 ? (int) thread::hardware_concurrency() : workersCount;
@@ -200,7 +201,7 @@ void Executor::executeAll(int workersCount = -1) {
     for (auto& worker: pool) {
         worker.join();
     }
-}
+}*/
 
 static inline
 int64_t calculateExternalGas(int64_t currentGas) {

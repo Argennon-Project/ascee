@@ -20,7 +20,7 @@
 
 #define private public
 
-#include "heap/Cache.h"
+#include "heap/PageCache.h"
 
 using namespace ascee;
 using namespace runtime;

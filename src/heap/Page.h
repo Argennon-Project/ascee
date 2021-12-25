@@ -19,22 +19,45 @@
 #define ASCEE_HEAP_PAGE_H
 
 #include <argc/types.h>
+#include <vector>
 #include "Chunk.h"
 
 namespace ascee::runtime::heap {
 
-class Page {
-private:
-    std::unique_ptr<Chunk> native;
-public:
-    void setNative(Chunk* newNative) {
-        native.reset(newNative);
-    }
+class Delta {
 
+};
+
+class Page {
+public:
     void addMigrant(long_id appID, long_id chunkID, Chunk* migrant) {};
 
-    byte* getDigest();
+    byte* getDigest() { return nullptr; };
 
+    int_fast64_t getBlockNumber() const {
+        return blockNumber;
+    }
+
+    void applyDelta(Delta delta, int_fast64_t blockNumber) {
+
+    }
+
+    void removeDelta(Delta delta) {
+
+    }
+
+    Chunk* getNative(bool writable) {
+        native.setWritable(writable);
+        return &native;
+    }
+
+    std::vector<std::pair<full_id, Chunk*>> getMigrants(bool writable) {
+        return std::vector<std::pair<full_id, Chunk*>>();
+    }
+
+private:
+    int_fast64_t blockNumber = 0;
+    Chunk native;
 };
 
 } // namespace ascee::runtime::heap

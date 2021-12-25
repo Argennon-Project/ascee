@@ -22,7 +22,7 @@
 
 #define private public
 
-#include "heap/Cache.h"
+#include "heap/PageCache.h"
 #include "heap/Chunk.h"
 
 using namespace ascee;

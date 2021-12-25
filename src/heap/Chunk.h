@@ -39,6 +39,8 @@ public:
         }
 
     private:
+        // We are going to have a lot of copies of this object. So we try to optimize its memory usage and avoid
+        // storing any unnecessary data in this class.
         byte* const heapPtr;
         byte* const boundary;
     };
@@ -51,14 +53,22 @@ public:
 
     void reSize(int newSize);
 
+
+    [[nodiscard]] bool isWritable() const {
+        return writable;
+    };
+
     [[nodiscard]] bool isTransient() const;
 
     Pointer getContentPointer(int32 offset);
+
+    void setWritable(bool writable);
 
 private:
     std::unique_ptr<byte[]> content;
     std::atomic<int32> chunkSize = 0;
     int32 capacity = 0;
+    bool writable = false;
 
     bool isValid(const byte* ptr) const;
 };

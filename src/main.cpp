@@ -81,9 +81,9 @@ int main(int argc, char const* argv[]) {
     printf("hereeeee@@ \n%s\n", response.response.c_str());
 
 
-    heap::Cache h;
-    h.cacheBlockData({}, {full_id(10, 100)});
-    RequestScheduler rs(10, h);
+    heap::PageCache c;
+    heap::PageCache::BlockIndex ind(c, {{full_id(10, 100), true}}, 7878);
+    RequestScheduler rs(10, ind);
     rs.addRequest(0);
     rs.addRequest(1);
     rs.addRequest(2);

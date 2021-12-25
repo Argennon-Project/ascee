@@ -18,7 +18,7 @@
 #include <cstring>
 #include "Chunk.h"
 
-#define MAX_CHUNK_SIZE 32*1024
+#define MAX_CHUNK_SIZE (32*1024)
 
 using namespace ascee;
 using namespace ascee::runtime::heap;
@@ -70,4 +70,8 @@ void Chunk::reSize(int newSize) {
 
 bool Chunk::isValid(const byte* ptr) const {
     return ptr < content.get() + chunkSize || ptr == (byte*) &chunkSize;
+}
+
+void Chunk::setWritable(bool wr) {
+    writable = wr;
 }

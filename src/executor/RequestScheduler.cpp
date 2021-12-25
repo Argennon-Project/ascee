@@ -46,13 +46,15 @@ void RequestScheduler::submitResult(const AppResponse& result) {
 
 void RequestScheduler::addMemoryAccessList(ascee::long_id appID, ascee::long_id chunkID,
                                            const std::vector<AccessBlock>& sortedAccessBlocks) {
-    auto chunkPtr = heap.getChunk(appID, chunkID);
+    auto chunkPtr = heapIndex.getChunk(full_id(appID, chunkID));
 
     for (int i = 0; i < sortedAccessBlocks.size(); ++i) {
         auto& request = nodeIndex[sortedAccessBlocks[i].txID]->getAppRequest();
         auto end = sortedAccessBlocks[i].offset + sortedAccessBlocks[i].size;
         auto writable = sortedAccessBlocks[i].writable;
         auto offset = sortedAccessBlocks[i].offset;
+
+        if (writable && !chunkPtr->isWritable()) throw BlockError("trying to modify a readonly chunk");
 
         if (offset == -1) {
             auto newSize = sortedAccessBlocks[i].size;

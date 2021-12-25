@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#include "Cache.h"
+#include "PageCache.h"
 #include "Chunk.h"
 
 using namespace ascee;
@@ -32,30 +32,6 @@ bool isLittleEndian() {
     return true;
 }
 
-Cache::Cache() {
+PageCache::PageCache() {
     if (!isLittleEndian()) throw std::runtime_error("platform not supported");
 }
-
-Chunk* Cache::getChunk(long_id appID, long_id chunkID) {
-    try {
-        return chunkIndex.at(full_id(appID, chunkID));
-    } catch (const std::out_of_range&) {
-        throw BlockError("missing chunk");
-    }
-}
-
-Chunk* Cache::newChunk(full_id id, int32 size) {
-    auto* newChunk = new Chunk(size);
-    pageCache[id].setNative(newChunk);
-    chunkIndex[id] = newChunk;
-    return newChunk;
-}
-
-void Cache::freeChunk(long_id appID, long_id id) {
-    full_id fullID = full_id(appID, id);
-    chunkIndex[fullID] = nullptr;
-    // We remove the chunk from its native page. This reduces the amount of garbage. However, in case the chunk is
-    // migrated, its memory will only be deleted after the garbage collection of the block is done.
-    pageCache[fullID].setNative(nullptr);
-}
-

@@ -31,7 +31,7 @@
 
 #include <executor/FailureManager.h>
 #include <argc/primitives.h>
-#include "heap/Cache.h"
+#include "heap/PageCache.h"
 #include "ThreadCpuTimer.h"
 #include "RequestScheduler.h"
 #include "heap/Modifier.h"
@@ -150,19 +150,18 @@ public:
 
 private:
     static thread_local SessionInfo* session;
-
-    heap::Cache heap;
-    RequestScheduler scheduler;
+    //  RequestScheduler& scheduler;
 
     static void sig_handler(int sig, siginfo_t* info, void* ucontext);
 
     static void initHandlers();
 
+/*
     void worker() {
         while (auto* txPtr = scheduler.nextRequest()) {
             scheduler.submitResult(executeOne(txPtr));
         }
-    }
+    }*/
 
     static void* threadStart(void* voidArgs);
 
