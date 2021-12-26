@@ -188,21 +188,6 @@ int Executor::controlledExec(int (* invoker)(long_id, string_c),
     return ret;
 }
 
-/*
-void Executor::executeAll(int workersCount = -1) {
-    using namespace std;
-    workersCount = workersCount == -1 ? (int) thread::hardware_concurrency() : workersCount;
-
-    thread pool[workersCount];
-    for (auto& worker: pool) {
-        worker = thread(&Executor::worker, this);
-    }
-
-    for (auto& worker: pool) {
-        worker.join();
-    }
-}*/
-
 static inline
 int64_t calculateExternalGas(int64_t currentGas) {
     // the geometric series approaches 1 / (1 - q) so the total amount of externalGas would be 2 * currentGas

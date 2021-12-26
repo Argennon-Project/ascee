@@ -15,23 +15,4 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#include "PageCache.h"
-#include "Chunk.h"
-
-using namespace ascee;
-using namespace ascee::runtime::heap;
-
-static
-bool isLittleEndian() {
-    byte buf[16] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
-    int128 x = *(int128*) buf;
-    auto xl = int64(x);
-    auto xh = int64(x >> 64);
-    if (xl != 0x706050403020100) return false;
-    if (xh != 0xf0e0d0c0b0a0908) return false;
-    return true;
-}
-
-PageCache::PageCache(runtime::PageLoader& loader) : loader(loader) {
-    if (!isLittleEndian()) throw std::runtime_error("platform not supported");
-}
+#include "PageLoader.h"

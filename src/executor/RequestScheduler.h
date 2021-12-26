@@ -25,6 +25,7 @@
 #include "heap/PageCache.h"
 #include "heap/Modifier.h"
 #include "FailureManager.h"
+#include "loader/BlockLoader.h"
 #include <atomic>
 #include <utility>
 
@@ -80,13 +81,6 @@ private:
 /// works fine even if the graph is not a dag and contains loops
 class RequestScheduler {
 public:
-    struct AccessBlock {
-        int32 offset;
-        int32 size;
-        AppRequest::IdType txID;
-        bool writable;
-    };
-
     class DependencyGraph {
     public:
         void registerDependency(AppRequest::IdType u, AppRequest::IdType v) {
@@ -94,26 +88,28 @@ public:
         }
     };
 
-    AppRequest* nextRequest();;
+    AppRequest* nextRequest();
 
     void submitResult(const AppResponse& result);;
 
     void addMemoryAccessList(long_id appID, long_id chunkID, const std::vector<AccessBlock>& sortedAccessBlocks);
 
-    void addRequest(AppRequest::IdType id) {
+    void addRequest(long id, ascee::runtime::AppRequestRawData data) {
         nodeIndex.at(id) = std::make_unique<DagNode>(id);
     }
 
-    explicit RequestScheduler(int_fast32_t totalCount, heap::PageCache::BlockIndex& heapIndex) : heapIndex(heapIndex),
-                                                                                                 count(totalCount),
-                                                                                                 nodeIndex(totalCount) {
+    explicit RequestScheduler(int_fast32_t totalRequestCount, heap::PageCache::ChunkIndex& heapIndex) : heapIndex(
+            heapIndex),
+                                                                                                        count(totalRequestCount),
+                                                                                                        nodeIndex(
+                                                                                                                totalRequestCount) {
         //todo: change
     }
 
 //todo: change this
     DependencyGraph graph;
 private:
-    heap::PageCache::BlockIndex& heapIndex;
+    heap::PageCache::ChunkIndex& heapIndex;
     std::atomic<int_fast32_t> count;
     BlockingQueue<DagNode*> zeroQueue;
     std::vector<std::unique_ptr<DagNode>> nodeIndex;

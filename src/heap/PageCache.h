@@ -27,62 +27,23 @@
 #include <cassert>
 #include "Chunk.h"
 #include "Page.h"
+#include "loader/PageLoader.h"
+#include "loader/BlockLoader.h"
 
 namespace ascee::runtime::heap {
-
-class PageLoader {
-public:
-    void preparePage(full_id pageID, const Page& page, int_fast64_t blockNumber) {
-        assert(page.getBlockNumber() < blockNumber);
-        submitDownloadRequest(pageID, page.getBlockNumber(), blockNumber);
-    }
-
-
-    Delta getDelta(full_id pageID, int_fast64_t from, int_fast64_t to, int tries) {
-        return Delta();
-    }
-
-    void loadPage(full_id pageID, Page& page, int_fast64_t blockNumber) {
-        int tries = 0;
-        while (true) {
-            auto delta = getDelta(pageID, page.getBlockNumber(), blockNumber, tries++);
-            page.applyDelta(delta, blockNumber);
-
-            if (verify(pageID, page.getDigest())) break;
-            else page.removeDelta(delta);
-        }
-    }
-
-    void updateDigest(full_id pageID, byte* digest) {
-
-    }
-
-private:
-    void submitDownloadRequest(full_id pageID, int_fast64_t from, int_fast64_t to) {
-
-    }
-
-    bool verify(full_id pageID, byte* digest) {
-        return true;
-    }
-};
 
 //TODO: Heap must be signal-safe but it does not need to be thread-safe
 class PageCache {
 public:
-    struct PageAccessType {
-        full_id id;
-        bool isWritable;
-    };
-
-    class BlockIndex {
+    class ChunkIndex {
     public:
         /// use std::move for passing requiredPages when possible.
-        BlockIndex(PageCache& parent, std::vector<PageAccessType> requiredPages, int_fast64_t blockNumber)
-                : parent(parent), requiredPages(std::move(requiredPages)), blockNumber(blockNumber) {
+        ChunkIndex(PageCache& parent, std::vector<PageAccessType> requiredPages, const Block& block)
+                : parent(parent), requiredPages(std::move(requiredPages)) {
             chunkIndex.reserve(this->requiredPages.size() * 12 / 10);
+            parent.loader.loadBlock(block);
             for (const auto& page: this->requiredPages) {
-                parent.loader.preparePage(page.id, parent.cache[page.id], blockNumber);
+                parent.loader.preparePage(page.id, parent.cache[page.id]);
             }
 
             for (const auto& page: this->requiredPages) {
@@ -110,26 +71,25 @@ public:
 
     private:
         PageCache& parent;
-        int_fast64_t blockNumber = 0;
         std::vector<PageAccessType> requiredPages;
         std::unordered_map<int128, Chunk*> chunkIndex;
 
         void indexPage(const PageAccessType& accessInfo) {
             auto& page = parent.cache[accessInfo.id];
-            parent.loader.loadPage(accessInfo.id, page, blockNumber);
+            parent.loader.loadPage(accessInfo.id, page);
             chunkIndex.emplace(accessInfo.id, page.getNative(accessInfo.isWritable));
-            auto index = page.getMigrants(accessInfo.isWritable);
-            chunkIndex.insert(index.begin(), index.end());
+            auto chunkList = page.getMigrants(accessInfo.isWritable);
+            chunkIndex.insert(chunkList.begin(), chunkList.end());
         }
     };
 
-    PageCache();
+    explicit PageCache(PageLoader& loader);
 
     PageCache(const PageCache&) = delete;
 
 private:
     std::unordered_map<int128, Page> cache;
-    PageLoader loader;
+    PageLoader& loader;
 };
 
 } // namespace ascee::runtime::heap

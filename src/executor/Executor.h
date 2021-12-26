@@ -150,22 +150,12 @@ public:
 
 private:
     static thread_local SessionInfo* session;
-    //  RequestScheduler& scheduler;
 
     static void sig_handler(int sig, siginfo_t* info, void* ucontext);
 
     static void initHandlers();
 
-/*
-    void worker() {
-        while (auto* txPtr = scheduler.nextRequest()) {
-            scheduler.submitResult(executeOne(txPtr));
-        }
-    }*/
-
     static void* threadStart(void* voidArgs);
-
-    void executeAll(int workersCount);
 };
 
 } // namespace ascee::runtime
