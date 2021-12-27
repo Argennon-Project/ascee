@@ -44,5 +44,8 @@ struct FullID {
     operator __int128_t() const { return id; } // NOLINT(google-explicit-constructor)
 };
 
+class Digest {
+};
+
 } // namespace ascee
 #endif // ASCEE_PRIMITIVES_H

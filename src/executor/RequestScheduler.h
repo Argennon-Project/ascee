@@ -26,93 +26,122 @@
 #include "heap/Modifier.h"
 #include "FailureManager.h"
 #include "loader/BlockLoader.h"
+#include "loader/AppLoader.h"
 #include <atomic>
 #include <utility>
 
 namespace ascee::runtime {
 
+using ReqIdType = AppRequestRawData::IdType;
+
 struct AppRequest {
-    typedef int_fast32_t IdType;
-    IdType id;
+    ReqIdType id;
     long_id calledAppID;
     std::string httpRequest;
     int_fast32_t gas;
     heap::Modifier modifier;
     std::unordered_map<long_id, dispatcher_ptr> appTable;
     FailureManager failureManager;
-/*
-    AppRequest(IdType id, long_id calledAppId, std::string request, int_fast32_t gas) : id(id),
-                                                                                        calledAppID(calledAppId),
-                                                                                        request(std::move(request)),
-                                                                                        gas(gas) {}*/
+    Digest headerDigest;
+    Digest fullDigest;
 };
 
 struct AppResponse {
-    AppRequest::IdType txID;
+    ReqIdType txID;
     int statusCode;
     std::string response;
 };
 
 class DagNode {
 public:
-    int DecrementInDegree() {
-        std::lock_guard<std::mutex> lock(degreeMutex);
+    int_fast32_t decrementInDegree() {
         assert(inDegree > 0);
         return --inDegree;
     }
 
+    void incrementInDegree() { ++inDegree; }
+
     AppRequest& getAppRequest() {
-        return tx;
+        return request;
     }
 
-    const std::vector<DagNode*>& adjacentNodes() {
+    int_fast32_t getInDegree() const {
+        return inDegree;
+    }
+
+    auto& adjacentNodes() {
         return adjList;
     }
 
-    DagNode(AppRequest::IdType id) : tx{.id = id} {}
+    bool isAdjacent(ReqIdType other) const {
+        return adjList.contains(other);
+    }
+
+    // Members are initialized in left-to-right order as they appear in this class's base-specifier list.
+    explicit DagNode(AppRequestRawData&& data) :
+            adjList(std::move(data.adjList)),
+            request{
+                    data.id,
+                    data.calledAppID,
+                    std::move(data.httpRequest),
+                    data.gas,
+                    {},
+                    AppLoader::global->createAppTable(data.appAccessList),
+                    FailureManager(std::move(data.stackSizeFailures), std::move(data.cpuTimeFailures)),
+                    std::move(data.headerDigest)
+            } {}
 
 private:
-    AppRequest tx;
-    std::vector<DagNode*> adjList;
-    int inDegree = 0;
-    std::mutex degreeMutex;
+    AppRequest request;
+    const std::unordered_set<ReqIdType> adjList;
+    std::atomic<int_fast32_t> inDegree = 0;
 };
 
 /// works fine even if the graph is not a dag and contains loops
 class RequestScheduler {
 public:
-    class DependencyGraph {
-    public:
-        void registerDependency(AppRequest::IdType u, AppRequest::IdType v) {
-            printf("[%ld->%ld]\n", u, v);
-        }
-    };
-
     AppRequest* nextRequest();
 
-    void submitResult(const AppResponse& result);;
+    void submitResult(const AppResponse& result);
 
     void addMemoryAccessList(long_id appID, long_id chunkID, const std::vector<AccessBlock>& sortedAccessBlocks);
 
-    void addRequest(long id, ascee::runtime::AppRequestRawData data) {
-        nodeIndex.at(id) = std::make_unique<DagNode>(id);
+    /// this function is thread-safe as long as all used `id`s are distinct
+    auto& requestAt(long id) {
+        return nodeIndex.at(id);
     }
 
-    explicit RequestScheduler(int_fast32_t totalRequestCount, heap::PageCache::ChunkIndex& heapIndex) : heapIndex(
-            heapIndex),
-                                                                                                        count(totalRequestCount),
-                                                                                                        nodeIndex(
-                                                                                                                totalRequestCount) {
-        //todo: change
+    /// this function is thread-safe as long as all used `id`s are distinct
+    void addRequest(long id, AppRequestRawData&& data) {
+        nodeIndex.at(id) = std::make_unique<DagNode>(std::move(data));
     }
 
-//todo: change this
-    DependencyGraph graph;
+    void buildDag() {
+        for (const auto& node: nodeIndex) {
+            if (node->getInDegree() == 0) zeroQueue.enqueue(node.get());
+
+            for (const auto adjID: node->adjacentNodes()) {
+                nodeIndex[adjID]->incrementInDegree();
+            }
+        }
+    }
+
+    explicit RequestScheduler(int_fast32_t totalRequestCount, heap::PageCache::ChunkIndex& heapIndex) :
+            heapIndex(heapIndex),
+            count(totalRequestCount),
+            nodeIndex(totalRequestCount) {}
+
 private:
     heap::PageCache::ChunkIndex& heapIndex;
     std::atomic<int_fast32_t> count;
     BlockingQueue<DagNode*> zeroQueue;
     std::vector<std::unique_ptr<DagNode>> nodeIndex;
+
+    void registerDependency(ReqIdType u, ReqIdType v) {
+        if (u > v) std::swap(u, v);
+        if (!nodeIndex[u]->isAdjacent(v)) throw BlockError("missing an edge in the dependency graph");
+        printf("[%ld->%ld]\n", u, v);
+    }
 };
 
 } // namespace ascee::runtime

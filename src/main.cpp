@@ -84,9 +84,9 @@ int main(int argc, char const* argv[]) {
     PageLoader pl;
     heap::PageCache c(pl);
     heap::PageCache::ChunkIndex ind(c, {{full_id(10, 100), true}}, {7878});
-    RequestScheduler rs(10, ind);
-    rs.addRequest(0, {});
-    rs.addRequest(1, {});
+    RequestScheduler rs(3, ind);
+    rs.addRequest(0, {.adjList = {1, 2}});
+    rs.addRequest(1, {.adjList={2}});
     rs.addRequest(2, {});
     rs.addMemoryAccessList(10, 100, {
             {-1, 1, 0, false},
@@ -97,8 +97,7 @@ int main(int argc, char const* argv[]) {
             {3,  4, 0, true},
     });
 
-
-
+    rs.buildDag();
 /*
     char cStr[20] = "abcdefgh";
     string str = string(cStr, 4);

@@ -28,7 +28,7 @@ public:
     BlockValidator(ascee::runtime::BlockLoader& blockLoader,
                    ascee::runtime::PageLoader& pageLoader) : blockLoader(blockLoader), cache(pageLoader) {}
 
-    void validate(const ascee::runtime::Block& current, const ascee::runtime::Block& previous);
+    void conditionalValidate(const ascee::runtime::Block& current, const ascee::runtime::Block& previous);
 
 private:
     ascee::runtime::Executor executor;

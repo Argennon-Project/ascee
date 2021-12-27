@@ -19,19 +19,29 @@
 #define ASCEE_BLOCK_LOADER_H
 
 #include <vector>
+#include <string>
+#include <unordered_set>
 #include "argc/primitives.h"
 
 namespace ascee::runtime {
 
 struct AppRequestRawData {
     using IdType = int_fast32_t;
-
+    IdType id;
+    long_id calledAppID;
+    std::string httpRequest;
+    int_fast32_t gas;
+    std::vector<long_id> appAccessList;
+    std::unordered_set<int_fast32_t> stackSizeFailures;
+    std::unordered_set<int_fast32_t> cpuTimeFailures;
+    std::unordered_set<IdType> adjList;
+    Digest headerDigest;
 };
 
 struct AccessBlock {
     int32 offset;
     int32 size;
-    AppRequestRawData::IdType txID;
+    AppRequestRawData::IdType reqID;
     bool writable;
 };
 
@@ -54,6 +64,7 @@ public:
 
     std::vector<long_id> getChunkAccessList(long_id appID) {};
 
+    /// it must check that the list is sorted
     const std::vector<AccessBlock> getBlockAccessList(long_id appID, long_id chunkID) {};
 
     int_fast32_t getNumOfRequests() {};

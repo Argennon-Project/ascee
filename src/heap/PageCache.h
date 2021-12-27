@@ -37,8 +37,7 @@ class PageCache {
 public:
     class ChunkIndex {
     public:
-        /// use std::move for passing requiredPages when possible.
-        ChunkIndex(PageCache& parent, std::vector<PageAccessType> requiredPages, const Block& block)
+        ChunkIndex(PageCache& parent, std::vector<PageAccessType>&& requiredPages, const Block& block)
                 : parent(parent), requiredPages(std::move(requiredPages)) {
             chunkIndex.reserve(this->requiredPages.size() * 12 / 10);
             parent.loader.loadBlock(block);
