@@ -46,44 +46,25 @@ void Modifier::loadChunk(long_id chunkID) {
 void Modifier::loadContext(long_id appID) {
     // When `appID` does not exist in the map, this function should not throw an exception. Smart contracts do not
     // call this function directly and failing can be problematic for `invoke_dispatcher` function.
-    chunks = &appsAccessMaps[appID];
+    try {
+        chunks = &appsAccessMaps.at(appID);
+    } catch (const std::out_of_range&) {
+        chunks = nullptr;
+    }
     currentChunk = nullptr;
-}
-
-/// When resizeable is true and newSize > 0 the chunk can only be expanded and the value of
-/// newSize indicates the upper bound of the settable size. If resizable == true and newSize <= 0 the chunk is only
-/// shrinkable and the magnitude of newSize indicates the lower bound of the chunk's new size.
-///
-/// When resizeable is false and newSize >= 0 the size of the chunk can only be read but if newSize < 0
-/// the size of the chunk is not accessible. (not readable nor writable)
-void Modifier::defineChunk(long_id ownerApp, long_id chunkID, Chunk* chunkOnHeap, int32 newSize, bool resizable) {
-    std::lock_guard<std::mutex> lock(writeMutex);
-    appsAccessMaps[ownerApp].emplace(std::piecewise_construct,
-                                     std::forward_as_tuple(chunkID),
-                                     std::forward_as_tuple(chunkOnHeap, newSize, resizable));
-}
-
-void Modifier::defineAccessBlock(long_id appID, long_id chunkID, int32 offset,
-                                 int32 size, bool writable) {
-    auto& chunk = appsAccessMaps.at(appID).at(chunkID);
-    std::lock_guard<std::mutex> lock(writeMutex);
-    chunk.accessTable.emplace(std::piecewise_construct,
-                              std::forward_as_tuple(offset),
-                              std::forward_as_tuple(chunk.ptr->getContentPointer(offset), size, writable));
 }
 
 void Modifier::writeToHeap() {
     if (currentVersion == 0) return;
 
-    for (auto& appMap: appsAccessMaps) {
-        for (auto& chunk64Map: appMap.second) {
-            auto& chunk = chunk64Map.second;
+    for (auto& appMap: appsAccessMaps.getValues()) {
+        for (auto& chunk: appMap.getValues()) {
             auto size = chunk.size.read<int32>(currentVersion);
             if (chunk.size.isWritable()) chunk.ptr->reSize(size);
             if (size > 0) {
-                for (auto& block: chunk.accessTable) {
+                for (auto& block: chunk.accessTable.getValues()) {
                     try {
-                        block.second.wrToHeap(currentVersion);
+                        block.wrToHeap(currentVersion);
                     } catch (const std::out_of_range&) {}
                 }
             }
@@ -114,7 +95,7 @@ byte* Modifier::AccessBlock::syncTo(int16_t version) {
         versionList.pop_back();
     }
 
-    return versionList.empty() ? heapLocation.get(size) : versionList.back().content;
+    return versionList.empty() ? heapLocation.get(size) : versionList.back().getContent();
 }
 
 byte* Modifier::AccessBlock::add(int16_t version) {
@@ -126,21 +107,19 @@ byte* Modifier::AccessBlock::add(int16_t version) {
         if (latestVersion == version) return nullptr;
     }
 
-    return versionList.emplace_back(version, size).content;
+    return versionList.emplace_back(version, size).getContent();
 }
 
 void Modifier::AccessBlock::wrToHeap(int16_t version) {
     syncTo(version);
     if (!versionList.empty()) {
-        memcpy(heapLocation.get(size), versionList.back().content, size);
+        memcpy(heapLocation.get(size), versionList.back().getContent(), size);
     }
 }
 
-Modifier::AccessBlock::AccessBlock(Chunk::Pointer heapLocation,
-                                   int32 size,
-                                   bool writable) : heapLocation(heapLocation),
-                                                    size(size),
-                                                    writable(writable) {}
+Modifier::AccessBlock::AccessBlock(Chunk::Pointer heapLocation, int32 size, bool writable) : heapLocation(heapLocation),
+                                                                                             size(size),
+                                                                                             writable(writable) {}
 
 void Modifier::AccessBlock::prepareToWrite(int16_t version, int writeSize) {
     if (writeSize > size) throw std::out_of_range("write size");

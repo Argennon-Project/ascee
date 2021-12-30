@@ -28,6 +28,7 @@ class Chunk {
 public:
     class Pointer {
     public:
+        Pointer() = default;
 
         explicit Pointer(byte* heapPtr, byte* lastValid) noexcept: heapPtr(heapPtr), boundary(lastValid) {}
 
@@ -41,8 +42,8 @@ public:
     private:
         // We are going to have a lot of copies of this object. So we try to optimize its memory usage and avoid
         // storing any unnecessary data in this class.
-        byte* const heapPtr;
-        byte* const boundary;
+        byte* const heapPtr = nullptr;
+        byte* const boundary = nullptr;
     };
 
     Chunk() noexcept = default;

@@ -24,9 +24,10 @@
 #include "argc/primitives.h"
 #include "util/FixedOrderedMap.hpp"
 
+
 namespace ascee::runtime {
 
-struct AccessBlock {
+struct BlockAccessInfo {
     int32 offset;
     int32 size;
     bool writable;
@@ -36,7 +37,7 @@ struct AccessBlock {
 struct AppRequestRawData {
     using IdType = int_fast32_t;
     using MemAccessMapType = util::FixedOrderedMap<long_id,
-            util::FixedOrderedMap<long_id, util::FixedOrderedMap<int32, AccessBlock>>>;
+            util::FixedOrderedMap<long_id, util::FixedOrderedMap<int32, BlockAccessInfo>>>;
     IdType id;
     long_id calledAppID;
     std::string httpRequest;
@@ -46,6 +47,7 @@ struct AppRequestRawData {
     std::unordered_set<int_fast32_t> cpuTimeFailures;
     MemAccessMapType memAccessMap;
     std::vector<long_id> attachments;
+    /// this list should be checked to make sure no id is out of range.
     std::unordered_set<IdType> adjList;
     Digest digest;
 };
@@ -70,7 +72,7 @@ public:
     std::vector<long_id> getChunkAccessList(long_id appID) {};
 
     /// it must check that the list is sorted
-    const std::vector<AccessBlock> getBlockAccessList(long_id appID, long_id chunkID) {};
+    const std::vector<BlockAccessInfo> getBlockAccessList(long_id appID, long_id chunkID) {};
 
     int_fast32_t getNumOfRequests() {};
 

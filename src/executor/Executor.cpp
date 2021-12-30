@@ -16,8 +16,6 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include <csignal>
-#include "heap/PageCache.h"
-#include <loader/AppLoader.h>
 #include <argc/functions.h>
 #include <thread>
 #include "Executor.h"
@@ -100,7 +98,7 @@ void* Executor::registerRecoveryStack() {
 }
 
 AppResponse Executor::executeOne(AppRequest* tx) {
-    AppResponse result{.txID = tx->id};
+    AppResponse result{.reqID = tx->id};
     session = nullptr;
     try {
         SessionInfo threadSession{

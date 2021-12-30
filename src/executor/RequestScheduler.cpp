@@ -19,6 +19,7 @@
 #include "loader/BlockLoader.h"
 
 using namespace ascee::runtime;
+using std::make_unique, std::vector;
 
 AppRequest* RequestScheduler::nextRequest() {
     try {
@@ -33,44 +34,111 @@ AppRequest* RequestScheduler::nextRequest() {
 
 void RequestScheduler::submitResult(const AppResponse& result) {
     // This function is thread-safe
-    auto& txNode = nodeIndex.at(result.txID);
-    for (const auto adjID: txNode->adjacentNodes()) {
-        if (nodeIndex[adjID]->decrementInDegree() == 0) {
-            zeroQueue.enqueue(nodeIndex[adjID].get());
+    auto& txNode = nodeIndex[result.reqID];
+    for (const auto id: txNode->adjacentNodes()) {
+        // We assume that adj list of all nodes are checked before, and always we have adjID < nodeIndex.size()
+        auto& adjNode = nodeIndex[id];
+        if (adjNode->decrementInDegree() == 0) {
+            zeroQueue.enqueue(adjNode.get());
         }
     }
-    // We don't use nodeIndex.erase(...) because if a rehash happens that would not be thread-safe.
     txNode.reset();
     --count;
     zeroQueue.removeProducer();
 }
 
-void RequestScheduler::addMemoryAccessList(ascee::long_id appID, ascee::long_id chunkID,
-                                           const std::vector<AccessBlock>& sortedAccessBlocks) {
-    auto chunkPtr = heapIndex.getChunk(full_id(appID, chunkID));
+void RequestScheduler::findCollisions(ascee::long_id appID, ascee::long_id chunkID) {
+    auto blocks = sortedAccessBlocks->at(appID).at(chunkID).getConstValues();
+    for (int i = 0; i < blocks.size(); ++i) {
+        auto& request = nodeIndex[blocks[i].requestID]->getAppRequest();
+        auto writable = blocks[i].writable;
+        auto offset = blocks[i].offset;
+        auto end = (offset == -1) ? 0 : blocks[i].offset + blocks[i].size;
 
-    for (int i = 0; i < sortedAccessBlocks.size(); ++i) {
-        auto& request = nodeIndex[sortedAccessBlocks[i].requestID]->getAppRequest();
-        auto end = sortedAccessBlocks[i].offset + sortedAccessBlocks[i].size;
-        auto writable = sortedAccessBlocks[i].writable;
-        auto offset = sortedAccessBlocks[i].offset;
-
-        if (writable && !chunkPtr->isWritable()) throw BlockError("trying to modify a readonly chunk");
-
-        if (offset == -1) {
-            auto newSize = sortedAccessBlocks[i].size;
-            request.modifier.defineChunk(appID, chunkID, chunkPtr, newSize, writable);
-            end = 0;
-        } else {
-            request.modifier.defineAccessBlock(appID, chunkID, offset,
-                                               sortedAccessBlocks[i].size, writable);
-        }
-
-        for (int j = i + 1; j < sortedAccessBlocks.size(); ++j) {
-            if (sortedAccessBlocks[j].offset < end && (writable || sortedAccessBlocks[j].writable)) {
-                registerDependency(sortedAccessBlocks[i].requestID, sortedAccessBlocks[j].requestID);
+        for (int j = i + 1; j < blocks.size(); ++j) {
+            if (blocks[j].offset < end && (writable || blocks[j].writable)) {
+                registerDependency(blocks[i].requestID, blocks[j].requestID);
             }
         }
     }
-
 }
+
+void RequestScheduler::addRequest(long id, AppRequestRawData&& data) {
+    memAccessMaps[id] = std::move(data.memAccessMap);
+    nodeIndex[id] = std::make_unique<DagNode>(std::move(data), this);
+}
+
+auto& RequestScheduler::requestAt(long id) {
+    return nodeIndex[id];
+}
+
+RequestScheduler::RequestScheduler(int_fast32_t totalRequestCount, heap::PageCache::ChunkIndex& heapIndex) :
+        heapIndex(heapIndex),
+        count(totalRequestCount),
+        nodeIndex(std::make_unique<std::unique_ptr<DagNode>[]>(totalRequestCount)),
+        memAccessMaps(totalRequestCount) {}
+
+heap::Modifier RequestScheduler::buildModifier(const AppRequestRawData::MemAccessMapType& rawAccessMap) const {
+    std::vector<heap::Modifier::ChunkMap64> chunkMapList;
+    chunkMapList.reserve(rawAccessMap.size());
+    for (int i = 0; i < rawAccessMap.size(); ++i) {
+        auto appID = rawAccessMap.getKeys()[i];
+        std::vector<heap::Modifier::ChunkInfo> chunkInfoList;
+        auto& chunkMap = rawAccessMap.getConstValues()[i];
+        chunkInfoList.reserve(chunkMap.size());
+        for (int j = 0; j < chunkMap.size(); ++j) {
+            auto chunkID = chunkMap.getKeys()[j];
+            auto chunkPtr = heapIndex.getChunk(full_id(appID, chunkID));
+
+            chunkInfoList.emplace_back(
+                    chunkPtr,
+                    chunkMap.getConstValues()[j].getConstValues()[0].size,
+                    chunkMap.getConstValues()[j].getConstValues()[0].writable,
+                    chunkMap.getConstValues()[j].getKeys(),
+                    chunkMap.getConstValues()[j].getConstValues()
+            );
+        }
+        chunkMapList.emplace_back(chunkMap.getKeys(), std::move(chunkInfoList));
+    }
+    return {rawAccessMap.getKeys(), std::move(chunkMapList)};
+}
+
+void RequestScheduler::registerDependency(AppRequest::IdType u, AppRequest::IdType v) {
+    if (u > v) std::swap(u, v);
+    if (!nodeIndex[u]->isAdjacent(v)) throw BlockError("missing an edge in the dependency graph");
+    printf("[%ld->%ld]\n", u, v);
+}
+
+void RequestScheduler::buildDag() {
+    for (int i = 0; i < count; ++i) {
+        auto& node = nodeIndex[i];
+        if (node->getInDegree() == 0) zeroQueue.enqueue(node.get());
+
+        for (const auto adjID: node->adjacentNodes()) {
+            nodeIndex[adjID]->incrementInDegree();
+        }
+    }
+
+    sortedAccessBlocks = make_unique<AppRequestRawData::MemAccessMapType>(
+            util::mergeAllParallel(std::move(memAccessMaps))
+    );
+
+    memAccessMaps.clear();
+}
+
+DagNode::DagNode(AppRequestRawData&& data, const RequestScheduler* scheduler) :
+        adjList(std::move(data.adjList)),
+        request{
+                .id = data.id,
+                .calledAppID = data.calledAppID,
+                .httpRequest = std::move(data.httpRequest),
+                .gas = data.gas,
+                .modifier = scheduler->buildModifierFor(data.id),
+                .appTable = AppLoader::global->createAppTable(data.appAccessList),
+                .failureManager = FailureManager(
+                        std::move(data.stackSizeFailures),
+                        std::move(data.cpuTimeFailures)
+                ),
+                .digest = std::move(data.digest)
+                // Members are initialized in left-to-right order as they appear in this class's base-specifier list.
+        } {}

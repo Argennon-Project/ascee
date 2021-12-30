@@ -87,20 +87,26 @@ int main(int argc, char const* argv[]) {
     heap::PageCache c(pl);
     heap::PageCache::ChunkIndex ind(c, {{full_id(10, 100), true}}, {7878});
     RequestScheduler rs(3, ind);
-    rs.addRequest(0, {.adjList = {1, 2}});
-    rs.addRequest(1, {.adjList={2}});
-    rs.addRequest(2, {});
-    rs.addMemoryAccessList(10, 100, {
-            {-1, 1, false, 0},
-            {-1, 1, false, 1},
-            {-1, 1, false, 2},
-            {2,  4, false, 1},
-            {2,  5, true,  2},
-            {3,  4, true,  0},
-    });
-
+    rs.addRequest(0, {.memAccessMap = {
+            {10},
+            {{{100}, {
+                             {{-1, 3}, {{-1, 1, false, 0}, {3, 4, true, 0}}},
+                     }}}},
+            .adjList = {1, 2}});
+    rs.addRequest(1, {.memAccessMap = {
+            {10},
+            {{{100}, {
+                             {{-1, 2}, {{-1, 1, false, 1}, {2, 4, false, 1}}},
+                     }}}},
+            .adjList={2}});
+    rs.addRequest(2, {.memAccessMap = {
+            {10},
+            {{{100}, {
+                             {{-1, 2}, {{-1, 1, false, 2}, {2, 5, true, 2}}},
+                     }}}}});
     rs.buildDag();
 
+    rs.findCollisions(10, 100);
 
     util::FixedOrderedMap<int, std::string> m1({10, 15, 24}, {"Hi", "Yo", "Bye"});
 

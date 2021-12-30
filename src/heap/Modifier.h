@@ -21,21 +21,18 @@
 #include <exception>
 #include <cstring>
 #include <mutex>
+#include <utility>
 #include <vector>
 #include "argc/primitives.h"
 #include "Chunk.h"
 #include "util/IdentifierTrie.h"
+#include "util/FixedOrderedMap.hpp"
+#include "loader/BlockLoader.h"
 
 namespace ascee::runtime::heap {
 
 class Modifier {
 public:
-    Modifier() = default;
-
-    Modifier(const Modifier&) { std::terminate(); }
-
-    Modifier(Modifier&&) = delete;
-
     template<typename T>
     inline
     T load(int32 offset) { return currentChunk->accessTable.at(offset).read<T>(currentVersion); }
@@ -78,20 +75,12 @@ public:
 
     void updateChunkSize(int32 newSize);
 
-    void
-    defineChunk(long_id ownerApp, long_id chunkID, Chunk* chunkOnHeap, int32 newSize, bool resizable);
-
-    void defineAccessBlock(long_id app, long_id chunk, int32 offset,
-                           int32 size, bool writable);
-
-
 private:
     class AccessBlock {
-
     public:
         AccessBlock(Chunk::Pointer heapLocation, int32 size, bool writable);
 
-        AccessBlock(const AccessBlock&) = delete;
+        //todo AccessBlock(const AccessBlock&) = delete;
 
         [[nodiscard]] bool isWritable() const {
             return writable;
@@ -132,7 +121,7 @@ private:
             int len;
             auto code = trie.encodeVarUInt(value, &len);
             prepareToWrite(version, len);
-            trie.writeBigEndian(versionList.back().content, code, len);
+            trie.writeBigEndian(versionList.back().getContent(), code, len);
             return len;
         }
 
@@ -141,7 +130,7 @@ private:
         inline
         void write(int16_t version, T value) {
             prepareToWrite(version, sizeof(value));
-            memcpy(versionList.back().content, (byte*) &value, sizeof(value));
+            memcpy(versionList.back().getContent(), (byte*) &value, sizeof(value));
         }
 
         void wrToHeap(int16_t version);
@@ -150,20 +139,12 @@ private:
     private:
         struct Version {
             const int16_t number;
-            byte* content;
+            std::unique_ptr<byte[]> content;
 
-            Version(int16_t version, int32 size) : number(version), content(new byte[size]) {}
+            inline
+            byte* getContent() { return content.get(); }
 
-            Version(const Version&) = delete;
-
-            Version(Version&& moved) noexcept: number(moved.number), content(moved.content) {
-                moved.content = nullptr;
-            }
-
-            ~Version() {
-                printf("deleted\n");
-                delete[] content;
-            }
+            Version(int16_t version, int32 size) : number(version), content(std::make_unique<byte[]>(size)) {}
         };
 
         Chunk::Pointer heapLocation;
@@ -182,9 +163,13 @@ private:
     // this is not efficient and can be improved
     std::mutex writeMutex;
 
-    typedef std::unordered_map<int32, AccessBlock> AccessTableMap;
+    typedef util::FixedOrderedMap <int32, AccessBlock> AccessTableMap;
 
-    struct ChunkInfo {
+public:
+    class ChunkInfo {
+        friend class Modifier;
+
+    private:
         AccessTableMap accessTable;
         AccessBlock size;
         /// When the size AccessBlock is writable and newSize > 0 the chunk can only be expanded and the value of
@@ -196,18 +181,52 @@ private:
         int32 initialSize;
         Chunk* ptr;
 
+        static std::vector<AccessBlock> toBlocks(Chunk* chunk, const std::vector<BlockAccessInfo>& accessInfoList) {
+            std::vector<AccessBlock> blocks;
+            blocks.reserve(accessInfoList.size());
+            for (const auto& info: accessInfoList) {
+                //todo change to std::invalid_argument?
+                if (info.writable && !chunk->isWritable()) throw BlockError("trying to modify a readonly chunk");
+                blocks.emplace_back(chunk->getContentPointer(info.offset), info.size, info.writable);
+            }
+            return blocks;
+        }
 
-        explicit ChunkInfo(Chunk* chunk, int32 newSize, bool resizable) :
-                size(Chunk::Pointer((byte * )(&initialSize), (byte * ) & initialSize + sizeof(initialSize)),
-                     sizeof(int32),
-                     resizable),
-                newSize(newSize), ptr(chunk) {
+    public:
+        /// When resizeable is true and newSize > 0 the chunk can only be expanded and the value of
+        /// newSize indicates the upper bound of the settable size. If resizable == true and newSize <= 0 the chunk is only
+        /// shrinkable and the magnitude of newSize indicates the lower bound of the chunk's new size.
+        ///
+        /// When resizeable is false and newSize >= 0 the size of the chunk can only be read but if newSize < 0
+        /// the size of the chunk is not accessible. (not readable nor writable)
+        explicit ChunkInfo(Chunk* chunk, int32 newSize, bool resizable,
+                           std::vector<int32> sortedAccessedOffsets,
+                           const std::vector<BlockAccessInfo>& accessInfoList) :
+                size(
+                        Chunk::Pointer((byte * )(&initialSize), (byte * ) & initialSize + sizeof(initialSize)),
+                        sizeof(int32),
+                        resizable
+                ),
+                newSize(newSize),
+                ptr(chunk),
+                accessTable(std::move(sortedAccessedOffsets), toBlocks(chunk, accessInfoList)) {
             initialSize = chunk->getsize();
         }
     };
 
-    typedef std::unordered_map<long_id, ChunkInfo> ChunkMap64;
-    typedef std::unordered_map<long_id, ChunkMap64> AppMap;
+    typedef util::FixedOrderedMap <long_id, ChunkInfo> ChunkMap64;
+
+    Modifier() = default;
+
+    Modifier(std::vector<long_id> apps, std::vector<ChunkMap64> chunkMaps) :
+            appsAccessMaps(std::move(apps), std::move(chunkMaps)) {}
+
+    Modifier(const Modifier&) { std::terminate(); }
+
+    Modifier(Modifier&&) = delete;
+
+private:
+    typedef util::FixedOrderedMap <long_id, ChunkMap64> AppMap;
 
     ChunkInfo* currentChunk = nullptr;
     ChunkMap64* chunks = nullptr;

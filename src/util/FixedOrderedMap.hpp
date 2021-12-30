@@ -31,7 +31,13 @@ class FixedOrderedMap {
 public:
     FixedOrderedMap() = default;
 
-    FixedOrderedMap(std::vector<K> keys, std::vector<V> values) : keys(std::move(keys)), values(std::move(values)) {}
+    FixedOrderedMap(std::vector<K> keys, std::vector<V> values) : keys(std::move(keys)), values(std::move(values)) {
+        if (this->keys.size() != this->values.size()) {
+            throw std::invalid_argument("size mismatch in keys and values");
+        }
+        this->keys.shrink_to_fit();
+        this->values.shrink_to_fit();
+    }
 
     V& at(const K& key) {
         std::size_t begin = 0, mid;
@@ -52,7 +58,11 @@ public:
         return keys;
     }
 
-    [[nodiscard]] const std::vector<V>& getValues() const {
+    [[nodiscard]] std::vector<V>& getValues() {
+        return values;
+    }
+
+    [[nodiscard]] const std::vector<V>& getConstValues() const {
         return values;
     }
 

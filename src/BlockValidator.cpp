@@ -62,7 +62,7 @@ void BlockValidator::loadMemoryAccessMap(RequestScheduler& scheduler) {
     for (const auto& appID: blockLoader.getAppAccessList()) {
         for (const auto& chunkID: blockLoader.getChunkAccessList(appID)) {
             pendingTasks.emplace_back(async([&] {
-                scheduler.addMemoryAccessList(appID, chunkID, blockLoader.getBlockAccessList(appID, chunkID));
+                scheduler.findCollisions(appID, chunkID);
             }));
         }
     }

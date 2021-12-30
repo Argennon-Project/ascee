@@ -50,6 +50,7 @@ public:
             }
         }
 
+        /// this function must be thread-safe
         Chunk* getChunk(full_id id) {
             try {
                 return chunkIndex.at(id);

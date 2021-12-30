@@ -32,10 +32,11 @@
 
 namespace ascee::runtime {
 
-using ReqIdType = AppRequestRawData::IdType;
+
 
 struct AppRequest {
-    ReqIdType id;
+    using IdType = AppRequestRawData::IdType;
+    IdType id;
     long_id calledAppID;
     std::string httpRequest;
     int_fast32_t gas;
@@ -46,10 +47,12 @@ struct AppRequest {
 };
 
 struct AppResponse {
-    ReqIdType txID;
+    AppRequest::IdType reqID;
     int statusCode;
     std::string response;
 };
+
+class RequestScheduler;
 
 class DagNode {
 public:
@@ -72,27 +75,15 @@ public:
         return adjList;
     }
 
-    bool isAdjacent(ReqIdType other) const {
+    bool isAdjacent(AppRequest::IdType other) const {
         return adjList.contains(other);
     }
 
-    // Members are initialized in left-to-right order as they appear in this class's base-specifier list.
-    explicit DagNode(AppRequestRawData&& data) :
-            adjList(std::move(data.adjList)),
-            request{
-                    .id = data.id,
-                    .calledAppID = data.calledAppID,
-                    .httpRequest = std::move(data.httpRequest),
-                    .gas  =data.gas,
-                    .appTable = AppLoader::global->createAppTable(data.appAccessList),
-                    .failureManager = FailureManager(std::move(data.stackSizeFailures),
-                                                     std::move(data.cpuTimeFailures)),
-                    .digest = std::move(data.digest)
-            } {}
+    explicit DagNode(AppRequestRawData&& data, const RequestScheduler* scheduler);
 
 private:
     AppRequest request;
-    const std::unordered_set<ReqIdType> adjList;
+    const std::unordered_set<AppRequest::IdType> adjList;
     std::atomic<int_fast32_t> inDegree = 0;
 };
 
@@ -103,44 +94,36 @@ public:
 
     void submitResult(const AppResponse& result);
 
-    void addMemoryAccessList(long_id appID, long_id chunkID, const std::vector<AccessBlock>& sortedAccessBlocks);
+    void findCollisions(long_id appID, long_id chunkID);
 
     /// this function is thread-safe as long as all used `id`s are distinct
-    auto& requestAt(long id) {
-        return nodeIndex.at(id);
-    }
+    auto& requestAt(long id);
 
     /// this function is thread-safe as long as all used `id`s are distinct
-    void addRequest(long id, AppRequestRawData&& data) {
-        nodeIndex.at(id) = std::make_unique<DagNode>(std::move(data));
+    void addRequest(long id, AppRequestRawData&& data);
+
+    void buildDag();
+
+    explicit RequestScheduler(int_fast32_t totalRequestCount, heap::PageCache::ChunkIndex& heapIndex);
+
+    [[nodiscard]]
+    heap::Modifier buildModifierFor(AppRequest::IdType requestID) const {
+        return buildModifier(memAccessMaps[requestID]);
     }
 
-    void buildDag() {
-        for (const auto& node: nodeIndex) {
-            if (node->getInDegree() == 0) zeroQueue.enqueue(node.get());
-
-            for (const auto adjID: node->adjacentNodes()) {
-                nodeIndex[adjID]->incrementInDegree();
-            }
-        }
-    }
-
-    explicit RequestScheduler(int_fast32_t totalRequestCount, heap::PageCache::ChunkIndex& heapIndex) :
-            heapIndex(heapIndex),
-            count(totalRequestCount),
-            nodeIndex(totalRequestCount) {}
+    [[nodiscard]]
+    heap::Modifier buildModifier(const AppRequestRawData::MemAccessMapType& rawAccessMap) const;
 
 private:
     heap::PageCache::ChunkIndex& heapIndex;
     std::atomic<int_fast32_t> count;
     BlockingQueue<DagNode*> zeroQueue;
-    std::vector<std::unique_ptr<DagNode>> nodeIndex;
+    std::unique_ptr<std::unique_ptr<DagNode>[]> nodeIndex;
+    std::vector<AppRequestRawData::MemAccessMapType> memAccessMaps;
+    std::unique_ptr<AppRequestRawData::MemAccessMapType> sortedAccessBlocks;
 
-    void registerDependency(ReqIdType u, ReqIdType v) {
-        if (u > v) std::swap(u, v);
-        if (!nodeIndex[u]->isAdjacent(v)) throw BlockError("missing an edge in the dependency graph");
-        printf("[%ld->%ld]\n", u, v);
-    }
+    void registerDependency(AppRequest::IdType u, AppRequest::IdType v);
+
 };
 
 } // namespace ascee::runtime
