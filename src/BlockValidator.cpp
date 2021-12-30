@@ -31,7 +31,7 @@ void waitForAll(const vector<future<void>>& pendingTasks) {
 void BlockValidator::conditionalValidate(const Block& current, const Block& previous) {
     blockLoader.loadBlock(current);
 
-    heap::PageCache::ChunkIndex index(cache, blockLoader.getRequiredPages(), previous);
+    heap::PageCache::ChunkIndex index(cache, blockLoader.getPageAccessList(), previous);
 
     RequestScheduler scheduler(blockLoader.getNumOfRequests(), index);
 
@@ -50,7 +50,7 @@ void BlockValidator::loadRequests(RequestScheduler& scheduler) {
     pendingTasks.reserve(numOfRequests);
     for (AppRequestRawData::IdType requestID = 0; requestID < numOfRequests; ++requestID) {
         pendingTasks.emplace_back(async([&] {
-            scheduler.requestAt(requestID) = make_unique<DagNode>(blockLoader.loadRequest(requestID));
+            scheduler.addRequest(requestID, blockLoader.loadRequest(requestID));
         }));
     }
 

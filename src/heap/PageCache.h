@@ -37,15 +37,15 @@ class PageCache {
 public:
     class ChunkIndex {
     public:
-        ChunkIndex(PageCache& parent, std::vector<PageAccessType>&& requiredPages, const Block& block)
-                : parent(parent), requiredPages(std::move(requiredPages)) {
-            chunkIndex.reserve(this->requiredPages.size() * 12 / 10);
+        ChunkIndex(PageCache& parent, std::vector<PageAccessInfo>&& requiredPagesList, const Block& block)
+                : parent(parent), pageAeccessList(std::move(requiredPagesList)) {
+            chunkIndex.reserve(this->pageAeccessList.size() * 12 / 10);
             parent.loader.loadBlock(block);
-            for (const auto& page: this->requiredPages) {
+            for (const auto& page: this->pageAeccessList) {
                 parent.loader.preparePage(page.id, parent.cache[page.id]);
             }
 
-            for (const auto& page: this->requiredPages) {
+            for (const auto& page: this->pageAeccessList) {
                 indexPage(page);
             }
         }
@@ -59,7 +59,7 @@ public:
         };
 
         void finalize() {
-            for (const auto& page: requiredPages) {
+            for (const auto& page: pageAeccessList) {
                 if (page.isWritable) {
                     parent.loader.updateDigest(page.id, parent.cache.at(page.id).getDigest());
                 }
@@ -70,10 +70,10 @@ public:
 
     private:
         PageCache& parent;
-        std::vector<PageAccessType> requiredPages;
+        std::vector<PageAccessInfo> pageAeccessList;
         std::unordered_map<int128, Chunk*> chunkIndex;
 
-        void indexPage(const PageAccessType& accessInfo) {
+        void indexPage(const PageAccessInfo& accessInfo) {
             auto& page = parent.cache[accessInfo.id];
             parent.loader.loadPage(accessInfo.id, page);
             chunkIndex.emplace(accessInfo.id, page.getNative(accessInfo.isWritable));

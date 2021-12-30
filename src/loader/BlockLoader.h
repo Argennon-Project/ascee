@@ -22,11 +22,21 @@
 #include <string>
 #include <unordered_set>
 #include "argc/primitives.h"
+#include "util/FixedOrderedMap.hpp"
 
 namespace ascee::runtime {
 
+struct AccessBlock {
+    int32 offset;
+    int32 size;
+    bool writable;
+    int_fast32_t requestID;
+};
+
 struct AppRequestRawData {
     using IdType = int_fast32_t;
+    using MemAccessMapType = util::FixedOrderedMap<long_id,
+            util::FixedOrderedMap<long_id, util::FixedOrderedMap<int32, AccessBlock>>>;
     IdType id;
     long_id calledAppID;
     std::string httpRequest;
@@ -34,18 +44,13 @@ struct AppRequestRawData {
     std::vector<long_id> appAccessList;
     std::unordered_set<int_fast32_t> stackSizeFailures;
     std::unordered_set<int_fast32_t> cpuTimeFailures;
+    MemAccessMapType memAccessMap;
+    std::vector<long_id> attachments;
     std::unordered_set<IdType> adjList;
-    Digest headerDigest;
+    Digest digest;
 };
 
-struct AccessBlock {
-    int32 offset;
-    int32 size;
-    AppRequestRawData::IdType reqID;
-    bool writable;
-};
-
-struct PageAccessType {
+struct PageAccessInfo {
     full_id id;
     bool isWritable;
 };
@@ -69,7 +74,7 @@ public:
 
     int_fast32_t getNumOfRequests() {};
 
-    std::vector<PageAccessType> getRequiredPages() {};
+    std::vector<PageAccessInfo> getPageAccessList() {};
 };
 
 } // namespace ascee::runtime

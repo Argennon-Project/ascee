@@ -15,10 +15,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#include <future>
 #include "RequestScheduler.h"
 #include "loader/BlockLoader.h"
-#include "Executor.h"
 
 using namespace ascee::runtime;
 
@@ -52,7 +50,7 @@ void RequestScheduler::addMemoryAccessList(ascee::long_id appID, ascee::long_id 
     auto chunkPtr = heapIndex.getChunk(full_id(appID, chunkID));
 
     for (int i = 0; i < sortedAccessBlocks.size(); ++i) {
-        auto& request = nodeIndex[sortedAccessBlocks[i].reqID]->getAppRequest();
+        auto& request = nodeIndex[sortedAccessBlocks[i].requestID]->getAppRequest();
         auto end = sortedAccessBlocks[i].offset + sortedAccessBlocks[i].size;
         auto writable = sortedAccessBlocks[i].writable;
         auto offset = sortedAccessBlocks[i].offset;
@@ -70,7 +68,7 @@ void RequestScheduler::addMemoryAccessList(ascee::long_id appID, ascee::long_id 
 
         for (int j = i + 1; j < sortedAccessBlocks.size(); ++j) {
             if (sortedAccessBlocks[j].offset < end && (writable || sortedAccessBlocks[j].writable)) {
-                registerDependency(sortedAccessBlocks[i].reqID, sortedAccessBlocks[j].reqID);
+                registerDependency(sortedAccessBlocks[i].requestID, sortedAccessBlocks[j].requestID);
             }
         }
     }

@@ -42,8 +42,7 @@ struct AppRequest {
     heap::Modifier modifier;
     std::unordered_map<long_id, dispatcher_ptr> appTable;
     FailureManager failureManager;
-    Digest headerDigest;
-    Digest fullDigest;
+    Digest digest;
 };
 
 struct AppResponse {
@@ -81,14 +80,14 @@ public:
     explicit DagNode(AppRequestRawData&& data) :
             adjList(std::move(data.adjList)),
             request{
-                    data.id,
-                    data.calledAppID,
-                    std::move(data.httpRequest),
-                    data.gas,
-                    {},
-                    AppLoader::global->createAppTable(data.appAccessList),
-                    FailureManager(std::move(data.stackSizeFailures), std::move(data.cpuTimeFailures)),
-                    std::move(data.headerDigest)
+                    .id = data.id,
+                    .calledAppID = data.calledAppID,
+                    .httpRequest = std::move(data.httpRequest),
+                    .gas  =data.gas,
+                    .appTable = AppLoader::global->createAppTable(data.appAccessList),
+                    .failureManager = FailureManager(std::move(data.stackSizeFailures),
+                                                     std::move(data.cpuTimeFailures)),
+                    .digest = std::move(data.digest)
             } {}
 
 private:

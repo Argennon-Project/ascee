@@ -21,6 +21,8 @@
 #include <iostream>
 #include <loader/AppLoader.h>
 #include <util/StaticArray.h>
+#include <string>
+#include "util/FixedOrderedMap.hpp"
 
 using namespace ascee;
 using namespace ascee::runtime;
@@ -89,15 +91,38 @@ int main(int argc, char const* argv[]) {
     rs.addRequest(1, {.adjList={2}});
     rs.addRequest(2, {});
     rs.addMemoryAccessList(10, 100, {
-            {-1, 1, 0, false},
-            {-1, 1, 1, false},
-            {-1, 1, 2, false},
-            {2,  4, 1, false},
-            {2,  5, 2, true},
-            {3,  4, 0, true},
+            {-1, 1, false, 0},
+            {-1, 1, false, 1},
+            {-1, 1, false, 2},
+            {2,  4, false, 1},
+            {2,  5, true,  2},
+            {3,  4, true,  0},
     });
 
     rs.buildDag();
+
+
+    util::FixedOrderedMap<int, std::string> m1({10, 15, 24}, {"Hi", "Yo", "Bye"});
+
+    util::FixedOrderedMap<int, std::string> m2({10, 16, 26}, {"Hi", "Yo2", "Bye2"});
+
+    util::FixedOrderedMap<int, util::FixedOrderedMap<int, std::string>> m3({100}, {m1});
+    util::FixedOrderedMap<int, util::FixedOrderedMap<int, std::string>> m4({100}, {m2});
+
+    auto m = util::mergeAllParallel<int, std::string>(
+            {
+                    {{5, 6, 10},     {"5", "6", "10"}},
+                    {{7, 10},        {"7", "10"}},
+                    {{4, 5, 9},      {"4", "5", "9"}},
+                    {{8},            {"8"}},
+                    {{2, 5, 11, 12}, {"2", "5", "11", "12"}}
+            });
+
+    for (const auto& item: m.getKeys()) {
+        std::cout << item << ",";
+    }
+    std::cout << std::endl;
+
 /*
     char cStr[20] = "abcdefgh";
     string str = string(cStr, 4);
