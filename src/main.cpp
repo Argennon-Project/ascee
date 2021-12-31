@@ -104,7 +104,8 @@ int main(int argc, char const* argv[]) {
             {{{100}, {
                              {{-1, 2}, {{-1, 1, false, 2}, {2, 5, true, 2}}},
                      }}}}});
-    rs.buildDag();
+
+    rs.sortAccessBlocks();
 
     rs.findCollisions(10, 100);
 

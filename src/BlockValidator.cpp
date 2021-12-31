@@ -18,9 +18,11 @@
 #include <future>
 #include "BlockValidator.h"
 
+#define RUN_TASK(lambda) std::async(lambda)
+
 using namespace node::validator;
 using namespace ascee::runtime;
-using namespace std;
+using std::vector, std::future;
 
 void waitForAll(const vector<future<void>>& pendingTasks) {
     for (const auto& task: pendingTasks) {
@@ -37,9 +39,7 @@ void BlockValidator::conditionalValidate(const Block& current, const Block& prev
 
     loadRequests(scheduler);
 
-    scheduler.buildDag();
-
-    loadMemoryAccessMap(scheduler);
+    buildMemoryAccessMap(scheduler);
 
     executeRequests(scheduler);
 }
@@ -47,21 +47,32 @@ void BlockValidator::conditionalValidate(const Block& current, const Block& prev
 void BlockValidator::loadRequests(RequestScheduler& scheduler) {
     vector<future<void>> pendingTasks;
     auto numOfRequests = blockLoader.getNumOfRequests();
+
     pendingTasks.reserve(numOfRequests);
     for (AppRequestRawData::IdType requestID = 0; requestID < numOfRequests; ++requestID) {
-        pendingTasks.emplace_back(async([&] {
+        pendingTasks.emplace_back(RUN_TASK([&] {
             scheduler.addRequest(requestID, blockLoader.loadRequest(requestID));
         }));
     }
+    waitForAll(pendingTasks);
 
+    pendingTasks.clear();
+    for (AppRequestRawData::IdType requestID = 0; requestID < numOfRequests; ++requestID) {
+        pendingTasks.emplace_back(RUN_TASK([&] {
+            scheduler.finalizeRequest(requestID);
+        }));
+    }
     waitForAll(pendingTasks);
 }
 
-void BlockValidator::loadMemoryAccessMap(RequestScheduler& scheduler) {
+void BlockValidator::buildMemoryAccessMap(RequestScheduler& scheduler) {
+    scheduler.sortAccessBlocks();
+
+    //todo needs change?
     vector<future<void>> pendingTasks;
     for (const auto& appID: blockLoader.getAppAccessList()) {
         for (const auto& chunkID: blockLoader.getChunkAccessList(appID)) {
-            pendingTasks.emplace_back(async([&] {
+            pendingTasks.emplace_back(RUN_TASK([&] {
                 scheduler.findCollisions(appID, chunkID);
             }));
         }
@@ -71,11 +82,12 @@ void BlockValidator::loadMemoryAccessMap(RequestScheduler& scheduler) {
 }
 
 void BlockValidator::executeRequests(RequestScheduler& scheduler, int workersCount) {
-    workersCount = workersCount == -1 ? (int) thread::hardware_concurrency() : workersCount;
+    scheduler.buildExecDag();
 
-    thread pool[workersCount];
+    workersCount = workersCount == -1 ? (int) std::thread::hardware_concurrency() : workersCount;
+    std::thread pool[workersCount];
     for (auto& worker: pool) {
-        worker = thread([&] {
+        worker = std::thread([&] {
             while (auto* request = scheduler.nextRequest()) {
                 scheduler.submitResult(executor.executeOne(request));
             }

@@ -45,10 +45,11 @@ struct AppRequestRawData {
     std::vector<long_id> appAccessList;
     std::unordered_set<int_fast32_t> stackSizeFailures;
     std::unordered_set<int_fast32_t> cpuTimeFailures;
+    /// it must check that the list is sorted
     MemAccessMapType memAccessMap;
-    std::vector<long_id> attachments;
     /// this list should be checked to make sure no id is out of range.
     std::unordered_set<IdType> adjList;
+    std::vector<long_id> attachments;
     Digest digest;
 };
 
@@ -65,19 +66,16 @@ class BlockLoader {
 public:
     void loadBlock(const Block& b) {};
 
-    AppRequestRawData loadRequest(AppRequestRawData::IdType id) {};
+    AppRequestRawData loadRequest(AppRequestRawData::IdType id) { return AppRequestRawData(); };
 
-    std::vector<long_id> getAppAccessList() {};
+    std::vector<long_id> getAppAccessList() { return std::vector<long_id>(); };
 
-    std::vector<long_id> getChunkAccessList(long_id appID) {};
+    std::vector<long_id> getChunkAccessList(long_id appID) { return std::vector<long_id>(); };
 
-    /// it must check that the list is sorted
-    const std::vector<BlockAccessInfo> getBlockAccessList(long_id appID, long_id chunkID) {};
+    int_fast32_t getNumOfRequests() { return 0; };
 
-    int_fast32_t getNumOfRequests() {};
-
-    std::vector<PageAccessInfo> getPageAccessList() {};
+    std::vector<PageAccessInfo> getPageAccessList() { return std::vector<PageAccessInfo>(); };
 };
 
 } // namespace ascee::runtime
-#endif // ASCEE_BLOCKLOADER_H
+#endif // ASCEE_BLOCK_LOADER_H

@@ -37,7 +37,7 @@ private:
 
     void loadRequests(ascee::runtime::RequestScheduler& scheduler);
 
-    void loadMemoryAccessMap(ascee::runtime::RequestScheduler& scheduler);
+    void buildMemoryAccessMap(ascee::runtime::RequestScheduler& scheduler);
 
     void executeRequests(ascee::runtime::RequestScheduler& scheduler, int workersCount = -1);
 };

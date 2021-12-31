@@ -33,7 +33,6 @@
 namespace ascee::runtime {
 
 
-
 struct AppRequest {
     using IdType = AppRequestRawData::IdType;
     IdType id;
@@ -43,6 +42,7 @@ struct AppRequest {
     heap::Modifier modifier;
     std::unordered_map<long_id, dispatcher_ptr> appTable;
     FailureManager failureManager;
+    std::vector<long_id> attachments;
     Digest digest;
 };
 
@@ -97,12 +97,17 @@ public:
     void findCollisions(long_id appID, long_id chunkID);
 
     /// this function is thread-safe as long as all used `id`s are distinct
-    auto& requestAt(long id);
+    auto& requestAt(AppRequest::IdType id);
 
     /// this function is thread-safe as long as all used `id`s are distinct
-    void addRequest(long id, AppRequestRawData&& data);
+    void addRequest(AppRequest::IdType id, AppRequestRawData&& data);
 
-    void buildDag();
+    /// this function should be called after all requests are added. (using addRequest() or requestAt())
+    void finalizeRequest(AppRequest::IdType id);
+
+    void buildExecDag();
+
+    void sortAccessBlocks();
 
     explicit RequestScheduler(int_fast32_t totalRequestCount, heap::PageCache::ChunkIndex& heapIndex);
 
@@ -123,6 +128,8 @@ private:
     std::unique_ptr<AppRequestRawData::MemAccessMapType> sortedAccessBlocks;
 
     void registerDependency(AppRequest::IdType u, AppRequest::IdType v);
+
+    void injectDigest(Digest digest, std::string& httpRequest) {}
 
 };
 

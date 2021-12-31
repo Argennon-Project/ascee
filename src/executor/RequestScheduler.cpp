@@ -63,12 +63,12 @@ void RequestScheduler::findCollisions(ascee::long_id appID, ascee::long_id chunk
     }
 }
 
-void RequestScheduler::addRequest(long id, AppRequestRawData&& data) {
+void RequestScheduler::addRequest(AppRequest::IdType id, AppRequestRawData&& data) {
     memAccessMaps[id] = std::move(data.memAccessMap);
     nodeIndex[id] = std::make_unique<DagNode>(std::move(data), this);
 }
 
-auto& RequestScheduler::requestAt(long id) {
+auto& RequestScheduler::requestAt(AppRequest::IdType id) {
     return nodeIndex[id];
 }
 
@@ -103,27 +103,40 @@ heap::Modifier RequestScheduler::buildModifier(const AppRequestRawData::MemAcces
     return {rawAccessMap.getKeys(), std::move(chunkMapList)};
 }
 
+void RequestScheduler::buildExecDag() {
+    for (int i = 0; i < count; ++i) {
+        if (nodeIndex[i]->getInDegree() == 0) {
+            zeroQueue.enqueue(nodeIndex[i].get());
+        }
+    }
+}
+
+void RequestScheduler::sortAccessBlocks() {
+    sortedAccessBlocks = make_unique<AppRequestRawData::MemAccessMapType>(
+            util::mergeAllParallel(std::move(memAccessMaps))
+    );
+    memAccessMaps.clear();
+}
+
+void RequestScheduler::finalizeRequest(AppRequest::IdType id) {
+    auto& node = nodeIndex[id];
+    for (const auto adjID: node->adjacentNodes()) {
+        nodeIndex[adjID]->incrementInDegree();
+    }
+
+    // Correct fee payment requests
+    for (const auto reqID: node->getAppRequest().attachments) {
+        injectDigest(nodeIndex[reqID]->getAppRequest().digest, node->getAppRequest().httpRequest);
+    }
+
+    // we don't need attachments anymore
+    node->getAppRequest().attachments.clear();
+}
+
 void RequestScheduler::registerDependency(AppRequest::IdType u, AppRequest::IdType v) {
     if (u > v) std::swap(u, v);
     if (!nodeIndex[u]->isAdjacent(v)) throw BlockError("missing an edge in the dependency graph");
     printf("[%ld->%ld]\n", u, v);
-}
-
-void RequestScheduler::buildDag() {
-    for (int i = 0; i < count; ++i) {
-        auto& node = nodeIndex[i];
-        if (node->getInDegree() == 0) zeroQueue.enqueue(node.get());
-
-        for (const auto adjID: node->adjacentNodes()) {
-            nodeIndex[adjID]->incrementInDegree();
-        }
-    }
-
-    sortedAccessBlocks = make_unique<AppRequestRawData::MemAccessMapType>(
-            util::mergeAllParallel(std::move(memAccessMaps))
-    );
-
-    memAccessMaps.clear();
 }
 
 DagNode::DagNode(AppRequestRawData&& data, const RequestScheduler* scheduler) :
@@ -139,6 +152,7 @@ DagNode::DagNode(AppRequestRawData&& data, const RequestScheduler* scheduler) :
                         std::move(data.stackSizeFailures),
                         std::move(data.cpuTimeFailures)
                 ),
+                .attachments = std::move(data.attachments),
                 .digest = std::move(data.digest)
                 // Members are initialized in left-to-right order as they appear in this class's base-specifier list.
         } {}
