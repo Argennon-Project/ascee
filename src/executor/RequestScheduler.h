@@ -28,7 +28,6 @@
 #include "loader/BlockLoader.h"
 #include "loader/AppLoader.h"
 #include <atomic>
-#include <utility>
 
 namespace ascee::runtime {
 
@@ -94,7 +93,7 @@ public:
 
     void submitResult(const AppResponse& result);
 
-    void findCollisions(long_id appID, long_id chunkID);
+    void findCollisions(const std::vector<BlockAccessInfo>& blocks);
 
     /// this function is thread-safe as long as all used `id`s are distinct
     auto& requestAt(AppRequest::IdType id);
@@ -107,30 +106,27 @@ public:
 
     void buildExecDag();
 
-    void sortAccessBlocks();
+    [[nodiscard]]
+    AppRequestRawData::AccessMapType sortAccessBlocks();
 
     explicit RequestScheduler(int_fast32_t totalRequestCount, heap::PageCache::ChunkIndex& heapIndex);
 
     [[nodiscard]]
-    heap::Modifier buildModifierFor(AppRequest::IdType requestID) const {
-        return buildModifier(memAccessMaps[requestID]);
-    }
+    heap::Modifier buildModifierFor(AppRequest::IdType requestID) const;
 
     [[nodiscard]]
-    heap::Modifier buildModifier(const AppRequestRawData::MemAccessMapType& rawAccessMap) const;
+    heap::Modifier buildModifier(const AppRequestRawData::AccessMapType& rawAccessMap) const;
 
 private:
     heap::PageCache::ChunkIndex& heapIndex;
     std::atomic<int_fast32_t> count;
     BlockingQueue<DagNode*> zeroQueue;
     std::unique_ptr<std::unique_ptr<DagNode>[]> nodeIndex;
-    std::vector<AppRequestRawData::MemAccessMapType> memAccessMaps;
-    std::unique_ptr<AppRequestRawData::MemAccessMapType> sortedAccessBlocks;
+    std::vector<AppRequestRawData::AccessMapType> memoryAccessMaps;
 
     void registerDependency(AppRequest::IdType u, AppRequest::IdType v);
 
     void injectDigest(Digest digest, std::string& httpRequest) {}
-
 };
 
 } // namespace ascee::runtime

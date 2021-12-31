@@ -16,12 +16,10 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include <pbc.h>
-#include <openssl/evp.h>
 #include <executor/Executor.h>
 #include <iostream>
 #include <loader/AppLoader.h>
 #include <util/StaticArray.h>
-#include <string>
 #include "util/FixedOrderedMap.hpp"
 
 using namespace ascee;
@@ -87,27 +85,28 @@ int main(int argc, char const* argv[]) {
     heap::PageCache c(pl);
     heap::PageCache::ChunkIndex ind(c, {{full_id(10, 100), true}}, {7878});
     RequestScheduler rs(3, ind);
-    rs.addRequest(0, {.memAccessMap = {
+    rs.addRequest(0, {.memoryAccessMap = {
             {10},
             {{{100}, {
                              {{-1, 3}, {{-1, 1, false, 0}, {3, 4, true, 0}}},
                      }}}},
             .adjList = {1, 2}});
-    rs.addRequest(1, {.memAccessMap = {
+    rs.addRequest(1, {.memoryAccessMap = {
             {10},
             {{{100}, {
                              {{-1, 2}, {{-1, 1, false, 1}, {2, 4, false, 1}}},
                      }}}},
             .adjList={2}});
-    rs.addRequest(2, {.memAccessMap = {
+    rs.addRequest(2, {.memoryAccessMap = {
             {10},
             {{{100}, {
                              {{-1, 2}, {{-1, 1, false, 2}, {2, 5, true, 2}}},
                      }}}}});
 
-    rs.sortAccessBlocks();
+    ;
 
-    rs.findCollisions(10, 100);
+    auto temp = rs.sortAccessBlocks().at(10).at(100);
+    rs.findCollisions(temp.getConstValues());
 
     util::FixedOrderedMap<int, std::string> m1({10, 15, 24}, {"Hi", "Yo", "Bye"});
 
@@ -122,7 +121,7 @@ int main(int argc, char const* argv[]) {
                     {{7, 10},        {"7", "10"}},
                     {{4, 5, 9},      {"4", "5", "9"}},
                     {{8},            {"8"}},
-                    {{2, 5, 11, 12}, {"2", "5", "11", "12"}}
+                    {{2, 7, 11, 12}, {"2", "5", "11", "12"}}
             });
 
     for (const auto& item: m.getKeys()) {

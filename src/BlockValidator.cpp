@@ -39,7 +39,7 @@ void BlockValidator::conditionalValidate(const Block& current, const Block& prev
 
     loadRequests(scheduler);
 
-    buildMemoryAccessMap(scheduler);
+    buildDependencyGraph(scheduler);
 
     executeRequests(scheduler);
 }
@@ -54,6 +54,7 @@ void BlockValidator::loadRequests(RequestScheduler& scheduler) {
             scheduler.addRequest(requestID, blockLoader.loadRequest(requestID));
         }));
     }
+
     waitForAll(pendingTasks);
 
     pendingTasks.clear();
@@ -62,18 +63,18 @@ void BlockValidator::loadRequests(RequestScheduler& scheduler) {
             scheduler.finalizeRequest(requestID);
         }));
     }
+
     waitForAll(pendingTasks);
 }
 
-void BlockValidator::buildMemoryAccessMap(RequestScheduler& scheduler) {
-    scheduler.sortAccessBlocks();
+void BlockValidator::buildDependencyGraph(RequestScheduler& scheduler) {
+    auto sortedMap = scheduler.sortAccessBlocks();
 
-    //todo needs change?
     vector<future<void>> pendingTasks;
-    for (const auto& appID: blockLoader.getAppAccessList()) {
-        for (const auto& chunkID: blockLoader.getChunkAccessList(appID)) {
+    for (const auto& chunkList: sortedMap.getConstValues()) {
+        for (const auto& blocks: chunkList.getConstValues()) {
             pendingTasks.emplace_back(RUN_TASK([&] {
-                scheduler.findCollisions(appID, chunkID);
+                scheduler.findCollisions(blocks.getConstValues());
             }));
         }
     }

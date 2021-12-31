@@ -11,9 +11,31 @@ add_subdirectory(tests)
 add_library(app1 SHARED app1.cpp)
 add_library(app2 SHARED app2.cpp)
 
-add_library(argcrt SHARED src/argc/runtime/string.cpp src/argc/runtime/invoke.cpp src/heap/PageCache.h src/heap/Modifier.cpp src/argc/runtime/heapAccess.cpp src/heap/PageCache.cpp src/argc/runtime/float.cpp src/crypto/CryptoSystem.cpp src/crypto/CryptoSystem.h src/executor/FailureManager.cpp src/executor/FailureManager.h src/heap/Chunk.cpp src/heap/Chunk.h src/heap/Page.cpp src/heap/Page.h src/util/IdentifierTrie.h src/util/StringBuffer.h src/util/StringBuffer.cpp src/util/StaticArray.h src/util/VirtualSigManager.cpp src/util/VirtualSigManager.h src/argc/runtime/auth.cpp src/crypto/Keys.h src/util/BlockingQueue.cpp src/util/BlockingQueue.h src/heap/Modifier.h src/crypto/DigestCalculator.cpp src/crypto/DigestCalculator.h src/util/FixedOrderedMap.hpp)
-target_link_libraries(argcrt pthread rt stdc++ crypto gmp pbc)
+add_executable(ascee
+        src/main.cpp
+        src/BlockValidator.cpp
+        src/executor/ThreadCpuTimer.cpp
+        src/executor/Executor.cpp
+        src/executor/RequestScheduler.cpp
+        src/executor/FailureManager.cpp
+        src/loader/AppLoader.cpp
+        src/loader/BlockLoader.cpp
+        src/loader/PageLoader.cpp
+        src/argc/runtime/string.cpp
+        src/argc/runtime/invoke.cpp
+        src/argc/runtime/auth.cpp
+        src/argc/runtime/float.cpp
+        src/argc/runtime/heapAccess.cpp
+        src/heap/Chunk.cpp
+        src/heap/Modifier.cpp
+        src/heap/PageCache.cpp
+        src/heap/Page.cpp
+        src/crypto/CryptoSystem.cpp
+        src/crypto/DigestCalculator.cpp
+        src/util/StringBuffer.cpp
+        src/util/VirtualSigManager.cpp
+        src/util/BlockingQueue.cpp
+        )
 
-add_executable(ascee src/main.cpp src/loader/AppLoader.cpp src/loader/AppLoader.h include/argc/types.h src/executor/ThreadCpuTimer.cpp src/executor/ThreadCpuTimer.h src/executor/Executor.cpp src/executor/Executor.h src/executor/RequestScheduler.cpp src/executor/RequestScheduler.h src/loader/BlockLoader.cpp src/loader/BlockLoader.h src/BlockValidator.cpp src/BlockValidator.h src/loader/PageLoader.cpp src/loader/PageLoader.h)
-target_link_libraries(ascee pbc gmp crypto dl stdc++ argcrt app1 app2)
+target_link_libraries(ascee stdc++ pthread rt pbc gmp crypto dl app1 app2)
 

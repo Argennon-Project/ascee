@@ -21,4 +21,5 @@ int dispatcher(string_c request) {
     //while(1);
     //foo();
     //return invoke_dispatcher(250, 1, req);
+    return ret;
 };

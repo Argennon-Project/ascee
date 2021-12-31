@@ -34,26 +34,30 @@ AppRequest* RequestScheduler::nextRequest() {
 
 void RequestScheduler::submitResult(const AppResponse& result) {
     // This function is thread-safe
-    auto& txNode = nodeIndex[result.reqID];
-    for (const auto id: txNode->adjacentNodes()) {
+    auto& reqNode = nodeIndex[result.reqID];
+
+    if (result.statusCode > 400 && !reqNode->getAppRequest().attachments.empty()) {
+        throw BlockError("block contains a failed fee payment");
+    }
+
+    for (const auto id: reqNode->adjacentNodes()) {
         // We assume that adj list of all nodes are checked before, and always we have adjID < nodeIndex.size()
         auto& adjNode = nodeIndex[id];
         if (adjNode->decrementInDegree() == 0) {
             zeroQueue.enqueue(adjNode.get());
         }
     }
-    txNode.reset();
+    reqNode.reset();
     --count;
     zeroQueue.removeProducer();
 }
 
-void RequestScheduler::findCollisions(ascee::long_id appID, ascee::long_id chunkID) {
-    auto blocks = sortedAccessBlocks->at(appID).at(chunkID).getConstValues();
+void RequestScheduler::findCollisions(const vector<BlockAccessInfo>& blocks) {
     for (int i = 0; i < blocks.size(); ++i) {
         auto& request = nodeIndex[blocks[i].requestID]->getAppRequest();
         auto writable = blocks[i].writable;
         auto offset = blocks[i].offset;
-        auto end = (offset == -1) ? 0 : blocks[i].offset + blocks[i].size;
+        auto end = (offset == -1) ? 0 : offset + blocks[i].size;
 
         for (int j = i + 1; j < blocks.size(); ++j) {
             if (blocks[j].offset < end && (writable || blocks[j].writable)) {
@@ -64,7 +68,7 @@ void RequestScheduler::findCollisions(ascee::long_id appID, ascee::long_id chunk
 }
 
 void RequestScheduler::addRequest(AppRequest::IdType id, AppRequestRawData&& data) {
-    memAccessMaps[id] = std::move(data.memAccessMap);
+    memoryAccessMaps[id] = std::move(data.memoryAccessMap);
     nodeIndex[id] = std::make_unique<DagNode>(std::move(data), this);
 }
 
@@ -76,9 +80,9 @@ RequestScheduler::RequestScheduler(int_fast32_t totalRequestCount, heap::PageCac
         heapIndex(heapIndex),
         count(totalRequestCount),
         nodeIndex(std::make_unique<std::unique_ptr<DagNode>[]>(totalRequestCount)),
-        memAccessMaps(totalRequestCount) {}
+        memoryAccessMaps(totalRequestCount) {}
 
-heap::Modifier RequestScheduler::buildModifier(const AppRequestRawData::MemAccessMapType& rawAccessMap) const {
+heap::Modifier RequestScheduler::buildModifier(const AppRequestRawData::AccessMapType& rawAccessMap) const {
     std::vector<heap::Modifier::ChunkMap64> chunkMapList;
     chunkMapList.reserve(rawAccessMap.size());
     for (int i = 0; i < rawAccessMap.size(); ++i) {
@@ -111,11 +115,8 @@ void RequestScheduler::buildExecDag() {
     }
 }
 
-void RequestScheduler::sortAccessBlocks() {
-    sortedAccessBlocks = make_unique<AppRequestRawData::MemAccessMapType>(
-            util::mergeAllParallel(std::move(memAccessMaps))
-    );
-    memAccessMaps.clear();
+AppRequestRawData::AccessMapType RequestScheduler::sortAccessBlocks() {
+    return util::mergeAllParallel(std::move(memoryAccessMaps));
 }
 
 void RequestScheduler::finalizeRequest(AppRequest::IdType id) {
@@ -124,19 +125,20 @@ void RequestScheduler::finalizeRequest(AppRequest::IdType id) {
         nodeIndex[adjID]->incrementInDegree();
     }
 
-    // Correct fee payment requests
+    // add digest to fee payment requests
     for (const auto reqID: node->getAppRequest().attachments) {
         injectDigest(nodeIndex[reqID]->getAppRequest().digest, node->getAppRequest().httpRequest);
     }
-
-    // we don't need attachments anymore
-    node->getAppRequest().attachments.clear();
 }
 
 void RequestScheduler::registerDependency(AppRequest::IdType u, AppRequest::IdType v) {
     if (u > v) std::swap(u, v);
     if (!nodeIndex[u]->isAdjacent(v)) throw BlockError("missing an edge in the dependency graph");
     printf("[%ld->%ld]\n", u, v);
+}
+
+heap::Modifier RequestScheduler::buildModifierFor(AppRequest::IdType requestID) const {
+    return buildModifier(memoryAccessMaps[requestID]);
 }
 
 DagNode::DagNode(AppRequestRawData&& data, const RequestScheduler* scheduler) :

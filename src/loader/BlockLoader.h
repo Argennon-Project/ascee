@@ -36,17 +36,17 @@ struct BlockAccessInfo {
 
 struct AppRequestRawData {
     using IdType = int_fast32_t;
-    using MemAccessMapType = util::FixedOrderedMap<long_id,
+    using AccessMapType = util::FixedOrderedMap<long_id,
             util::FixedOrderedMap<long_id, util::FixedOrderedMap<int32, BlockAccessInfo>>>;
-    IdType id;
-    long_id calledAppID;
+    IdType id = 0;
+    long_id calledAppID = -1;
     std::string httpRequest;
-    int_fast32_t gas;
+    int_fast32_t gas = 0;
     std::vector<long_id> appAccessList;
     std::unordered_set<int_fast32_t> stackSizeFailures;
     std::unordered_set<int_fast32_t> cpuTimeFailures;
     /// it must check that the list is sorted
-    MemAccessMapType memAccessMap;
+    AccessMapType memoryAccessMap;
     /// this list should be checked to make sure no id is out of range.
     std::unordered_set<IdType> adjList;
     std::vector<long_id> attachments;
