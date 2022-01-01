@@ -1,6 +1,6 @@
-// Copyright (c) 2021 aybehrouz <behrouz_ayati@yahoo.com>. All rights reserved.
-// This file is part of the C++ implementation of the Argennon smart contract
-// Execution Environment (AscEE).
+// Copyright (c) 2021-2022 aybehrouz <behrouz_ayati@yahoo.com>. All rights
+// reserved. This file is part of the C++ implementation of the Argennon smart
+// contract Execution Environment (AscEE).
 //
 // This program is free software: you can redistribute it and/or modify it under
 // the terms of the GNU Affero General Public License as published by the Free
