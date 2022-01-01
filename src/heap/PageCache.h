@@ -37,15 +37,15 @@ class PageCache {
 public:
     class ChunkIndex {
     public:
-        ChunkIndex(PageCache& parent, std::vector<PageAccessInfo>&& requiredPagesList, const Block& block)
-                : parent(parent), pageAeccessList(std::move(requiredPagesList)) {
-            chunkIndex.reserve(this->pageAeccessList.size() * 12 / 10);
-            parent.loader.loadBlock(block);
-            for (const auto& page: this->pageAeccessList) {
+        ChunkIndex(PageCache& parent, std::vector<PageAccessInfo>&& requiredPagesList, const BlockHeader& block)
+                : parent(parent), pageAccessList(std::move(requiredPagesList)) {
+            chunkIndex.reserve(this->pageAccessList.size() * 12 / 10);
+            parent.loader.setBlockInfo(block);
+            for (const auto& page: this->pageAccessList) {
                 parent.loader.preparePage(page.id, parent.cache[page.id]);
             }
 
-            for (const auto& page: this->pageAeccessList) {
+            for (const auto& page: this->pageAccessList) {
                 indexPage(page);
             }
         }
@@ -60,7 +60,7 @@ public:
         };
 
         void finalize() {
-            for (const auto& page: pageAeccessList) {
+            for (const auto& page: pageAccessList) {
                 if (page.isWritable) {
                     parent.loader.updateDigest(page.id, parent.cache.at(page.id).getDigest());
                 }
@@ -71,7 +71,7 @@ public:
 
     private:
         PageCache& parent;
-        std::vector<PageAccessInfo> pageAeccessList;
+        std::vector<PageAccessInfo> pageAccessList;
         std::unordered_map<int128, Chunk*> chunkIndex;
 
         void indexPage(const PageAccessInfo& accessInfo) {

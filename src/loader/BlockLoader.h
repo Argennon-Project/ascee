@@ -34,11 +34,12 @@ struct BlockAccessInfo {
     int_fast32_t requestID;
 };
 
+using AppRequestIdType = int_fast32_t;
+
 struct AppRequestRawData {
-    using IdType = int_fast32_t;
     using AccessMapType = util::FixedOrderedMap<long_id,
             util::FixedOrderedMap<long_id, util::FixedOrderedMap<int32, BlockAccessInfo>>>;
-    IdType id = 0;
+    AppRequestIdType id = 0;
     long_id calledAppID = -1;
     std::string httpRequest;
     int_fast32_t gas = 0;
@@ -48,7 +49,7 @@ struct AppRequestRawData {
     /// it must check that the list is sorted
     AccessMapType memoryAccessMap;
     /// this list should be checked to make sure no id is out of range.
-    std::unordered_set<IdType> adjList;
+    std::unordered_set<AppRequestIdType> adjList;
     std::vector<long_id> attachments;
     Digest digest;
 };
@@ -58,19 +59,15 @@ struct PageAccessInfo {
     bool isWritable;
 };
 
-struct Block {
+struct BlockHeader {
     int_fast64_t blockNumber;
 };
 
 class BlockLoader {
 public:
-    void loadBlock(const Block& b) {};
+    void setCurrentBlock(const BlockHeader& b) {};
 
-    AppRequestRawData loadRequest(AppRequestRawData::IdType id) { return AppRequestRawData(); };
-
-    std::vector<long_id> getAppAccessList() { return std::vector<long_id>(); };
-
-    std::vector<long_id> getChunkAccessList(long_id appID) { return std::vector<long_id>(); };
+    AppRequestRawData loadRequest(AppRequestIdType id) { return AppRequestRawData(); };
 
     int_fast32_t getNumOfRequests() { return 0; };
 

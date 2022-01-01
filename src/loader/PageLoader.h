@@ -52,12 +52,12 @@ public:
     }
 
     //todo: make sure this is efficient
-    void loadBlock(const ascee::runtime::Block& block) {
+    void setBlockInfo(const ascee::runtime::BlockHeader& block) {
         previousBlock = block;
     };
 
 private:
-    Block previousBlock;
+    BlockHeader previousBlock;
 
     void submitDownloadRequest(full_id pageID, int_fast64_t from, int_fast64_t to) {
 

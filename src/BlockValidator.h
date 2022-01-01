@@ -25,21 +25,25 @@ namespace node::validator {
 
 class BlockValidator {
 public:
-    BlockValidator(ascee::runtime::BlockLoader& blockLoader,
-                   ascee::runtime::PageLoader& pageLoader) : blockLoader(blockLoader), cache(pageLoader) {}
+    BlockValidator(
+            ascee::runtime::heap::PageCache& cache,
+            ascee::runtime::BlockLoader& blockLoader,
+            int workersCount = -1
+    );
 
-    void conditionalValidate(const ascee::runtime::Block& current, const ascee::runtime::Block& previous);
+    bool conditionalValidate(const ascee::runtime::BlockHeader& current, const ascee::runtime::BlockHeader& previous);
 
 private:
     ascee::runtime::Executor executor;
-    ascee::runtime::heap::PageCache cache;
+    ascee::runtime::heap::PageCache& cache;
     ascee::runtime::BlockLoader& blockLoader;
+    int workersCount = -1;
 
     void loadRequests(ascee::runtime::RequestScheduler& scheduler);
 
     void buildDependencyGraph(ascee::runtime::RequestScheduler& scheduler);
 
-    void executeRequests(ascee::runtime::RequestScheduler& scheduler, int workersCount = -1);
+    void executeRequests(ascee::runtime::RequestScheduler& scheduler);
 };
 
 } // namespace node::validator

@@ -52,27 +52,27 @@ void RequestScheduler::submitResult(const AppResponse& result) {
     zeroQueue.removeProducer();
 }
 
-void RequestScheduler::findCollisions(const vector<BlockAccessInfo>& blocks) {
-    for (int i = 0; i < blocks.size(); ++i) {
-        auto& request = nodeIndex[blocks[i].requestID]->getAppRequest();
-        auto writable = blocks[i].writable;
-        auto offset = blocks[i].offset;
-        auto end = (offset == -1) ? 0 : offset + blocks[i].size;
+void RequestScheduler::findCollisions(const vector<BlockAccessInfo>& accessBlocks) {
+    for (int i = 0; i < accessBlocks.size(); ++i) {
+        auto& request = nodeIndex[accessBlocks[i].requestID]->getAppRequest();
+        auto writable = accessBlocks[i].writable;
+        auto offset = accessBlocks[i].offset;
+        auto end = (offset == -1) ? 0 : offset + accessBlocks[i].size;
 
-        for (int j = i + 1; j < blocks.size(); ++j) {
-            if (blocks[j].offset < end && (writable || blocks[j].writable)) {
-                registerDependency(blocks[i].requestID, blocks[j].requestID);
+        for (int j = i + 1; j < accessBlocks.size(); ++j) {
+            if (accessBlocks[j].offset < end && (writable || accessBlocks[j].writable)) {
+                registerDependency(accessBlocks[i].requestID, accessBlocks[j].requestID);
             }
         }
     }
 }
 
-void RequestScheduler::addRequest(AppRequest::IdType id, AppRequestRawData&& data) {
+void RequestScheduler::addRequest(AppRequestIdType id, AppRequestRawData&& data) {
     memoryAccessMaps[id] = std::move(data.memoryAccessMap);
     nodeIndex[id] = std::make_unique<DagNode>(std::move(data), this);
 }
 
-auto& RequestScheduler::requestAt(AppRequest::IdType id) {
+auto& RequestScheduler::requestAt(AppRequestIdType id) {
     return nodeIndex[id];
 }
 
@@ -119,7 +119,7 @@ AppRequestRawData::AccessMapType RequestScheduler::sortAccessBlocks() {
     return util::mergeAllParallel(std::move(memoryAccessMaps));
 }
 
-void RequestScheduler::finalizeRequest(AppRequest::IdType id) {
+void RequestScheduler::finalizeRequest(AppRequestIdType id) {
     auto& node = nodeIndex[id];
     for (const auto adjID: node->adjacentNodes()) {
         nodeIndex[adjID]->incrementInDegree();
@@ -131,13 +131,13 @@ void RequestScheduler::finalizeRequest(AppRequest::IdType id) {
     }
 }
 
-void RequestScheduler::registerDependency(AppRequest::IdType u, AppRequest::IdType v) {
+void RequestScheduler::registerDependency(AppRequestIdType u, AppRequestIdType v) {
     if (u > v) std::swap(u, v);
     if (!nodeIndex[u]->isAdjacent(v)) throw BlockError("missing an edge in the dependency graph");
     printf("[%ld->%ld]\n", u, v);
 }
 
-heap::Modifier RequestScheduler::buildModifierFor(AppRequest::IdType requestID) const {
+heap::Modifier RequestScheduler::buildModifierFor(AppRequestIdType requestID) const {
     return buildModifier(memoryAccessMaps[requestID]);
 }
 

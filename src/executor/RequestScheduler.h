@@ -33,8 +33,7 @@ namespace ascee::runtime {
 
 
 struct AppRequest {
-    using IdType = AppRequestRawData::IdType;
-    IdType id;
+    AppRequestIdType id;
     long_id calledAppID;
     std::string httpRequest;
     int_fast32_t gas;
@@ -46,7 +45,7 @@ struct AppRequest {
 };
 
 struct AppResponse {
-    AppRequest::IdType reqID;
+    AppRequestIdType reqID;
     int statusCode;
     std::string response;
 };
@@ -74,7 +73,7 @@ public:
         return adjList;
     }
 
-    bool isAdjacent(AppRequest::IdType other) const {
+    bool isAdjacent(AppRequestIdType other) const {
         return adjList.contains(other);
     }
 
@@ -82,7 +81,7 @@ public:
 
 private:
     AppRequest request;
-    const std::unordered_set<AppRequest::IdType> adjList;
+    const std::unordered_set<AppRequestIdType> adjList;
     std::atomic<int_fast32_t> inDegree = 0;
 };
 
@@ -93,16 +92,16 @@ public:
 
     void submitResult(const AppResponse& result);
 
-    void findCollisions(const std::vector<BlockAccessInfo>& blocks);
+    void findCollisions(const std::vector<BlockAccessInfo>& accessBlocks);
 
     /// this function is thread-safe as long as all used `id`s are distinct
-    auto& requestAt(AppRequest::IdType id);
+    auto& requestAt(AppRequestIdType id);
 
     /// this function is thread-safe as long as all used `id`s are distinct
-    void addRequest(AppRequest::IdType id, AppRequestRawData&& data);
+    void addRequest(AppRequestIdType id, AppRequestRawData&& data);
 
     /// this function should be called after all requests are added. (using addRequest() or requestAt())
-    void finalizeRequest(AppRequest::IdType id);
+    void finalizeRequest(AppRequestIdType id);
 
     void buildExecDag();
 
@@ -112,7 +111,7 @@ public:
     explicit RequestScheduler(int_fast32_t totalRequestCount, heap::PageCache::ChunkIndex& heapIndex);
 
     [[nodiscard]]
-    heap::Modifier buildModifierFor(AppRequest::IdType requestID) const;
+    heap::Modifier buildModifierFor(AppRequestIdType requestID) const;
 
     [[nodiscard]]
     heap::Modifier buildModifier(const AppRequestRawData::AccessMapType& rawAccessMap) const;
@@ -124,7 +123,7 @@ private:
     std::unique_ptr<std::unique_ptr<DagNode>[]> nodeIndex;
     std::vector<AppRequestRawData::AccessMapType> memoryAccessMaps;
 
-    void registerDependency(AppRequest::IdType u, AppRequest::IdType v);
+    void registerDependency(AppRequestIdType u, AppRequestIdType v);
 
     void injectDigest(Digest digest, std::string& httpRequest) {}
 };

@@ -30,8 +30,11 @@ void waitForAll(const vector<future<void>>& pendingTasks) {
     }
 }
 
-void BlockValidator::conditionalValidate(const Block& current, const Block& previous) {
-    blockLoader.loadBlock(current);
+/// Conditionally validates a block: valid(current | previous). Returns true when the block is valid and false
+/// if the block is not valid.
+/// Throwing an exception indicates that due to an internal error checking the validity of the block was not possible.
+bool BlockValidator::conditionalValidate(const BlockHeader& current, const BlockHeader& previous) {
+    blockLoader.setCurrentBlock(current);
 
     heap::PageCache::ChunkIndex index(cache, blockLoader.getPageAccessList(), previous);
 
@@ -42,14 +45,16 @@ void BlockValidator::conditionalValidate(const Block& current, const Block& prev
     buildDependencyGraph(scheduler);
 
     executeRequests(scheduler);
+
+    return true;
 }
 
 void BlockValidator::loadRequests(RequestScheduler& scheduler) {
-    vector<future<void>> pendingTasks;
     auto numOfRequests = blockLoader.getNumOfRequests();
 
+    vector<future<void>> pendingTasks;
     pendingTasks.reserve(numOfRequests);
-    for (AppRequestRawData::IdType requestID = 0; requestID < numOfRequests; ++requestID) {
+    for (AppRequestIdType requestID = 0; requestID < numOfRequests; ++requestID) {
         pendingTasks.emplace_back(RUN_TASK([&] {
             scheduler.addRequest(requestID, blockLoader.loadRequest(requestID));
         }));
@@ -58,7 +63,7 @@ void BlockValidator::loadRequests(RequestScheduler& scheduler) {
     waitForAll(pendingTasks);
 
     pendingTasks.clear();
-    for (AppRequestRawData::IdType requestID = 0; requestID < numOfRequests; ++requestID) {
+    for (AppRequestIdType requestID = 0; requestID < numOfRequests; ++requestID) {
         pendingTasks.emplace_back(RUN_TASK([&] {
             scheduler.finalizeRequest(requestID);
         }));
@@ -82,10 +87,16 @@ void BlockValidator::buildDependencyGraph(RequestScheduler& scheduler) {
     waitForAll(pendingTasks);
 }
 
-void BlockValidator::executeRequests(RequestScheduler& scheduler, int workersCount) {
+BlockValidator::BlockValidator(
+        heap::PageCache& cache,
+        BlockLoader& blockLoader,
+        int workersCount) : cache(cache), blockLoader(blockLoader) {
+    this->workersCount = workersCount == -1 ? (int) std::thread::hardware_concurrency() : workersCount;
+}
+
+void BlockValidator::executeRequests(RequestScheduler& scheduler) {
     scheduler.buildExecDag();
 
-    workersCount = workersCount == -1 ? (int) std::thread::hardware_concurrency() : workersCount;
     std::thread pool[workersCount];
     for (auto& worker: pool) {
         worker = std::thread([&] {

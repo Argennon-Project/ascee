@@ -37,5 +37,5 @@ add_executable(ascee
         src/util/BlockingQueue.cpp
         )
 
-target_link_libraries(ascee stdc++ pthread rt pbc gmp crypto dl app1 app2)
+target_link_libraries(ascee stdc++ pthread rt pbc gmp crypto dl)
 
