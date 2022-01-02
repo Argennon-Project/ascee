@@ -11,8 +11,11 @@ add_subdirectory(tests)
 add_library(app1 SHARED app1.cpp)
 add_library(app2 SHARED app2.cpp)
 
-add_executable(ascee
-        src/main.cpp
+set_target_properties(app1 app2
+        PROPERTIES LIBRARY_OUTPUT_DIRECTORY compiled)
+
+# Should be compiled as shared lib so apps can find argc functions.
+add_library(ascee SHARED
         src/BlockValidator.cpp
         src/executor/ThreadCpuTimer.cpp
         src/executor/Executor.cpp
@@ -37,5 +40,11 @@ add_executable(ascee
         src/util/BlockingQueue.cpp
         )
 
+add_executable(ascee_run
+        src/main.cpp
+        )
+
 target_link_libraries(ascee stdc++ pthread rt pbc gmp crypto dl)
+
+target_link_libraries(ascee_run ascee)
 

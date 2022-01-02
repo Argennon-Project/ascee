@@ -1,8 +1,11 @@
+# 'test' is the subproject name
 project(tests)
+
+# 'lib' is the folder with Google Test sources
 add_subdirectory(lib)
 include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_C_STANDARD 99)
 
 add_library(app10 SHARED appFiles/single-thread/timeout/app10.cpp)
@@ -26,16 +29,16 @@ add_library(app22 SHARED appFiles/single-thread/reentrancy/app22.cpp)
 add_library(app23 SHARED appFiles/single-thread/reentrancy/app23.cpp)
 
 
-set_target_properties(app10 app11 app12 app13 app14 app15 app16 app17 app18 app19 app20 app21 app22 app23 PROPERTIES LIBRARY_OUTPUT_DIRECTORY appFiles/compiled)
-
+set_target_properties(app10 app11 app12 app13 app14 app15 app16 app17 app18 app19 app20 app21 app22 app23
+        PROPERTIES LIBRARY_OUTPUT_DIRECTORY appFiles/compiled)
 
 # adding the Google_Tests_run target
 add_executable(Google_Tests_run
         ArgcStringTest.cpp
         AsceeExecutorTest.cpp
-        HeapModifierDeathTest.cpp
+        HeapModifierTest.cpp
         ArgcFloatTest.cpp
-        AsceeHeapDeathTest.cpp
+        #AsceeHeapDeathTest.cpp
         AsceeIdentifiersTest.cpp
         AsceeCryptoTest.cpp
         AsceeVSigManagerTest.cpp
@@ -43,4 +46,5 @@ add_executable(Google_Tests_run
 
 # linking Google_Tests_run with libraries
 
-target_link_libraries(Google_Tests_run gtest gtest_main stdc++ m argcrt dl)
+target_link_libraries(Google_Tests_run gtest gtest_main m dl ascee)
+

@@ -34,7 +34,7 @@ protected:
     ascee::runtime::Executor executor;
 public:
     AsceeExecutorTest() {
-        AppLoader::global = std::make_unique<AppLoader>("appfiles/compiled");
+        AppLoader::global = std::make_unique<AppLoader>("appFiles/compiled");
     }
 };
 
