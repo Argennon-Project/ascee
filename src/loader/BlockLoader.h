@@ -50,6 +50,9 @@ struct AppRequestRawData {
     /// this list should be checked to make sure no id is out of range.
     std::unordered_set<AppRequestIdType> adjList;
     std::vector<long_id> attachments;
+    /// this list will not include all chunks. Only expandable chunks and accessed non-existent chunks should be
+    /// included.
+    std::vector<std::pair<long_id, int32>> chunkCapacities;
     Digest digest;
 };
 

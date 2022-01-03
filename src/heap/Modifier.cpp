@@ -61,13 +61,14 @@ void Modifier::writeToHeap() {
 
     for (auto& appMap: appsAccessMaps.getValues()) {
         for (auto& chunk: appMap.getValues()) {
-            auto size = chunk.size.read<int32>(currentVersion);
-            if (chunk.size.isWritable()) chunk.ptr->setSize(size);
-            if (size > 0) {
-                for (auto& block: chunk.accessTable.getValues()) {
-                    try {
-                        block.wrToHeap(currentVersion);
-                    } catch (const std::out_of_range&) {}
+            auto chunkSize = chunk.size.read<int32>(currentVersion);
+            if (chunk.size.isWritable()) chunk.ptr->setSize(chunkSize);
+            if (chunkSize > 0) {
+                for (int i = 0; i < chunk.accessTable.size(); ++i) {
+                    auto offset = chunk.accessTable.getKeys()[i];
+                    if (offset >= chunkSize) break;     // since offsets are sorted.
+                    // We should make sure that we never write outside the chunk.
+                    chunk.accessTable.getValues()[i].wrToHeap(currentVersion, chunkSize - offset);
                 }
             }
         }
@@ -87,7 +88,7 @@ void Modifier::updateChunkSize(int32 newSize) {
 
 int32 Modifier::getChunkSize() {
     if (!currentChunk->size.isWritable() && currentChunk->newSize < 0) {
-        throw std::out_of_range("size is not accessible");
+        throw std::out_of_range("chunkSize is not accessible");
     }
     return currentChunk->size.read<int32>(currentVersion);
 }
@@ -112,10 +113,10 @@ byte* Modifier::AccessBlock::add(int16_t version) {
     return versionList.emplace_back(version, size).getContent();
 }
 
-void Modifier::AccessBlock::wrToHeap(int16_t version) {
+void Modifier::AccessBlock::wrToHeap(int16_t version, int32 maxWriteSize) {
     syncTo(version);
     if (!versionList.empty()) {
-        memcpy(heapLocation.get(size), versionList.back().getContent(), size);
+        memcpy(heapLocation.get(size), versionList.back().getContent(), std::min(size, maxWriteSize));
     }
 }
 
@@ -144,15 +145,13 @@ Modifier::ChunkInfo::ChunkInfo(
 ) :
 // todo: explain why we use initialSize member
         size(
-                Chunk::Pointer((byte*) (&initialSize)),
-                sizeof(int32),
+                Chunk::Pointer((byte*) (&initialSize), sizeof(initialSize)),
+                sizeof(initialSize),
                 resizable
         ),
         newSize(newSize),
         ptr(chunk),
         accessTable(std::move(sortedAccessedOffsets), toBlocks(chunk, sortedAccessedOffsets, accessInfoList)) {
-    // Here resize must not perform any reallocation. As long as sizeof(int32) is less than the capacity of the chunk
-    // this should not happen.
     initialSize = chunk->getsize();
 }
 
@@ -168,7 +167,7 @@ vector<Modifier::AccessBlock> Modifier::ChunkInfo::toBlocks(
             throw BlockError("trying to modify a readonly chunk");
         }
         blocks.emplace_back(
-                chunk->getContentPointer(offsets[i]),
+                chunk->getContentPointer(offsets[i], accessInfoList[i].size),
                 accessInfoList[i].size,
                 accessInfoList[i].writable
         );

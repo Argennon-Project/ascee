@@ -36,7 +36,7 @@ set_target_properties(app10 app11 app12 app13 app14 app15 app16 app17 app18 app1
 add_executable(Google_Tests_run
         ArgcStringTest.cpp
         AsceeExecutorTest.cpp
-        HeapModifierTest.cpp
+        HeapModifierDeathTest.cpp
         ArgcFloatTest.cpp
         #AsceeHeapDeathTest.cpp
         AsceeIdentifiersTest.cpp

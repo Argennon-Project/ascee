@@ -28,34 +28,19 @@ namespace ascee::runtime::heap {
 class Chunk {
 public:
     static constexpr int initialCapacity = 32;
-    static constexpr int maxCapacity = 64 * 1024;
+    static constexpr int maxAllowedCapacity = 64 * 1024;
 
     class Pointer {
     public:
-        // We want this function to be thread-safe. That's why we let invalid pointers (pointers outside a chunk) be
-        // created. We check these pointers later when they are accessed. We should also note that the size of the
-        // chunk can be changed after a pointer is created.
-        Pointer(Chunk* chunk, int32 offset);
-
-        explicit Pointer(byte* ptr) : location(ptr) {}
+        Pointer(byte* ptr, int32) : location(ptr) {}
 
         inline bool isNull() { return location == nullptr; }
 
         inline byte* get(int32 accessSize) {
-            if (parent != nullptr && location + accessSize > parent->content.get() + parent->chunkSize) {
-                throw std::out_of_range("out of chunk");
-            }
-            return location;
-        }
-
-        inline byte* getUnsafe() {
             return location;
         }
 
     private:
-        // We are going to have a lot of copies of this object. So we try to optimize its memory usage and avoid
-        // storing any unnecessary data in this class.
-        Chunk* parent = nullptr;
         byte* const location = nullptr;
     };
 
@@ -67,23 +52,29 @@ public:
 
     void setSize(int32 newSize);;
 
-    bool reserveSpace(int32 size);;
+    /// This function should only be called at the start of block validation.
+    bool reserveSpace(int32 newCapacity);
 
+    /// This function should only be called at the end of block validation.
     bool shrinkToFit();
 
     [[nodiscard]] bool isWritable() const {
         return writable;
     };
 
-    [[nodiscard]] bool isTransient() const;
+    Pointer getContentPointer(int32 offset, int32 size);
 
-    Pointer getContentPointer(int32 offset);
-
+    /// This is used to indicate that a chunk will not be modified in a block. Knowing that a chunk is not modified
+    /// in the block helps in efficient calculation of commitments.
     void setWritable(bool writable);
 
 private:
     std::unique_ptr<byte[]> content;
-    int32 chunkSize = 0;
+    // chunkSize must be atomic because there is a possibility for concurrent access, when for example the chunk is
+    // going to be expanded and a request wants to load the chunk to read the start of the chunk.
+    // In other words, when the chunkSize is going to be modified the scheduler may still allow some readers of
+    // chunkSize to be run concurrently. but concurrent writes can not happen.
+    std::atomic<int32> chunkSize = 0;
     int32 capacity = 0;
     bool writable = true;
 

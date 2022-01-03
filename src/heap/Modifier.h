@@ -135,7 +135,7 @@ private:
             memcpy(versionList.back().getContent(), (byte*) &value, sizeof(value));
         }
 
-        void wrToHeap(int16_t version);
+        void wrToHeap(int16_t version, int32 maxWriteSize);
 
 
     private:
@@ -185,8 +185,8 @@ public:
 
     public:
         /// When resizeable is true and newSize > 0 the chunk can only be expanded and the value of
-        /// newSize indicates the upper bound of the settable size. If resizable == true and newSize <= 0 the chunk is
-        /// only shrinkable and the magnitude of newSize indicates the lower bound of the chunk's new size.
+        /// newSize indicates the upper-bound of the settable size. If resizable == true and newSize <= 0 the chunk is
+        /// only shrinkable and the magnitude of newSize indicates the lower-bound of the chunk's new size.
         ///
         /// When resizeable is false and newSize >= 0 the size of the chunk can only be read but if newSize < 0
         /// the size of the chunk is not accessible. (not readable nor writable)
@@ -201,8 +201,8 @@ public:
         ChunkInfo(const ChunkInfo&) = delete;
 
         [[nodiscard]] int32 getInitialSize() const {
-            // initial size chunk will not be modified as long as wrToHeap function is not called. All changes are only
-            // made to the version array. So we can obtain the initial size this way.
+            // initial sizeChunk will not be modified as long as wrToHeap function is not called, all changes are only
+            // made to the version array. Therefor we can obtain the initial size this way.
             return initialSize;
         }
     };
