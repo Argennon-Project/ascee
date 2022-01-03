@@ -29,15 +29,15 @@ using namespace ascee::runtime;
 using std::unique_ptr, std::vector, std::unordered_map, std::string, std::string_view;
 
 string_buffer_c<RESPONSE_MAX_SIZE>& argc::response_buffer() {
-    return Executor::getSession()->response;
+    return Executor::getSession()->httpResponse;
 }
 
 static inline
 void addDefaultResponse(int statusCode) {
     char response[256];
     int n = sprintf(response, "HTTP/1.1 %d %s", statusCode, "OK");
-    Executor::getSession()->response.clear();
-    Executor::getSession()->response.append(string_c(response, n));
+    Executor::getSession()->httpResponse.clear();
+    Executor::getSession()->httpResponse.append(string_c(response, n));
 }
 
 void argc::enter_area() {
@@ -88,7 +88,7 @@ int argc::dependant_call(long_id app_id, string_c request) {
         throw Executor::GenericError("app does not exist", StatusCode::not_found);
     }
 
-    Executor::getSession()->response.clear();
+    Executor::getSession()->httpResponse.clear();
     Executor::CallInfoContext callContext(app_id);
 
     Executor::unBlockSignals();
@@ -103,15 +103,15 @@ int argc::dependant_call(long_id app_id, string_c request) {
 
     if (!callContext.deferredCalls.empty()) {
         // Here we use heap memory for keeping a copy of the main response.
-        string mainResponse(string_c(Executor::getSession()->response));
+        string mainResponse(string_c(Executor::getSession()->httpResponse));
         for (const auto& dCall: callContext.deferredCalls) {
             int temp = argc::dependant_call(dCall.appID, StringView(dCall.request));
             printf("** deferred call returns: %d\n", temp);
         }
 
         // Discarding the responses of deferred calls and restoring the original response
-        Executor::getSession()->response.clear();
-        Executor::getSession()->response.append(StringView(mainResponse));
+        Executor::getSession()->httpResponse.clear();
+        Executor::getSession()->httpResponse.append(StringView(mainResponse));
     }
     return ret;
 }
@@ -128,7 +128,7 @@ int invoke_noexcept(long_id app_id, string_c request) {
     } catch (const Executor::GenericError& ee) {
         Executor::blockSignals();
         ret = ee.errorCode();
-        ee.toHttpResponse(Executor::getSession()->response.clear());
+        ee.toHttpResponse(Executor::getSession()->httpResponse.clear());
     }
     return ret;
 }
@@ -144,7 +144,7 @@ int argc::invoke_dispatcher(byte forwarded_gas, long_id app_id, string_c request
         if (ret < 400) resourceContext.complete();
     } catch (const ApplicationError& ae) {
         ret = ae.errorCode();
-        Executor::GenericError(ae).toHttpResponse(Executor::getSession()->response.clear());
+        Executor::GenericError(ae).toHttpResponse(Executor::getSession()->httpResponse.clear());
     }
 
     // unBlockSignals() should be called here, in case resourceContext's constructor throws an exception.

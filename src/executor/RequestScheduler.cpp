@@ -52,15 +52,15 @@ void RequestScheduler::submitResult(const AppResponse& result) {
     zeroQueue.removeProducer();
 }
 
-void RequestScheduler::findCollisions(const vector<BlockAccessInfo>& accessBlocks) {
+void RequestScheduler::findCollisions(const vector<int32>& sortedOffsets, const vector<BlockAccessInfo>& accessBlocks) {
     for (int i = 0; i < accessBlocks.size(); ++i) {
         auto& request = nodeIndex[accessBlocks[i].requestID]->getAppRequest();
         auto writable = accessBlocks[i].writable;
-        auto offset = accessBlocks[i].offset;
+        auto offset = sortedOffsets[i];
         auto end = (offset == -1) ? 0 : offset + accessBlocks[i].size;
 
         for (int j = i + 1; j < accessBlocks.size(); ++j) {
-            if (accessBlocks[j].offset < end && (writable || accessBlocks[j].writable)) {
+            if (sortedOffsets[j] < end && (writable || accessBlocks[j].writable)) {
                 registerDependency(accessBlocks[i].requestID, accessBlocks[j].requestID);
             }
         }
@@ -87,8 +87,8 @@ heap::Modifier RequestScheduler::buildModifier(const AppRequestRawData::AccessMa
     chunkMapList.reserve(rawAccessMap.size());
     for (int i = 0; i < rawAccessMap.size(); ++i) {
         auto appID = rawAccessMap.getKeys()[i];
-        std::vector<heap::Modifier::ChunkInfo> chunkInfoList;
         auto& chunkMap = rawAccessMap.getConstValues()[i];
+        std::vector<heap::Modifier::ChunkInfo> chunkInfoList;
         chunkInfoList.reserve(chunkMap.size());
         for (int j = 0; j < chunkMap.size(); ++j) {
             auto chunkID = chunkMap.getKeys()[j];

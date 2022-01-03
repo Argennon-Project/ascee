@@ -28,7 +28,6 @@
 namespace ascee::runtime {
 
 struct BlockAccessInfo {
-    int32 offset;
     int32 size;
     bool writable;
     int_fast32_t requestID;

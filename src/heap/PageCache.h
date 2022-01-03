@@ -32,14 +32,17 @@
 
 namespace ascee::runtime::heap {
 
+
 //TODO: Heap must be signal-safe but it does not need to be thread-safe
 class PageCache {
 public:
+    static constexpr int pageAvgLoadFactor = 120;
+
     class ChunkIndex {
     public:
         ChunkIndex(PageCache& parent, std::vector<PageAccessInfo>&& requiredPagesList, const BlockHeader& block)
                 : parent(parent), pageAccessList(std::move(requiredPagesList)) {
-            chunkIndex.reserve(this->pageAccessList.size() * 12 / 10);
+            chunkIndex.reserve(this->pageAccessList.size() * pageAvgLoadFactor / 100);
             parent.loader.setBlockInfo(block);
             for (const auto& page: this->pageAccessList) {
                 parent.loader.preparePage(page.id, parent.cache[page.id]);

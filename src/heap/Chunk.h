@@ -24,36 +24,52 @@
 
 namespace ascee::runtime::heap {
 
+
 class Chunk {
 public:
+    static constexpr int initialCapacity = 32;
+    static constexpr int maxCapacity = 64 * 1024;
+
     class Pointer {
     public:
-        Pointer() = default;
+        // We want this function to be thread-safe. That's why we let invalid pointers (pointers outside a chunk) be
+        // created. We check these pointers later when they are accessed. We should also note that the size of the
+        // chunk can be changed after a pointer is created.
+        Pointer(Chunk* chunk, int32 offset);
 
-        explicit Pointer(byte* heapPtr, byte* lastValid) noexcept: heapPtr(heapPtr), boundary(lastValid) {}
+        explicit Pointer(byte* ptr) : location(ptr) {}
 
-        inline bool isNull() { return heapPtr == nullptr; }
+        inline bool isNull() { return location == nullptr; }
 
         inline byte* get(int32 accessSize) {
-            if (heapPtr + accessSize >= boundary) throw std::out_of_range("out of chunk");
-            return heapPtr;
+            if (parent != nullptr && location + accessSize > parent->content.get() + parent->chunkSize) {
+                throw std::out_of_range("out of chunk");
+            }
+            return location;
+        }
+
+        inline byte* getUnsafe() {
+            return location;
         }
 
     private:
         // We are going to have a lot of copies of this object. So we try to optimize its memory usage and avoid
         // storing any unnecessary data in this class.
-        byte* const heapPtr = nullptr;
-        byte* const boundary = nullptr;
+        Chunk* parent = nullptr;
+        byte* const location = nullptr;
     };
 
-    Chunk() noexcept = default;
+    explicit Chunk(int32 capacity = initialCapacity);
 
-    explicit Chunk(int32 capacity);
+    Chunk(const Chunk&) = delete;
 
     [[nodiscard]] int32 getsize() const;
 
-    void reSize(int newSize);
+    void setSize(int32 newSize);;
 
+    bool reserveSpace(int32 size);;
+
+    bool shrinkToFit();
 
     [[nodiscard]] bool isWritable() const {
         return writable;
@@ -67,11 +83,11 @@ public:
 
 private:
     std::unique_ptr<byte[]> content;
-    std::atomic<int32> chunkSize = 0;
+    int32 chunkSize = 0;
     int32 capacity = 0;
-    bool writable = false;
+    bool writable = true;
 
-    bool isValid(const byte* ptr) const;
+    void resize(int32 newCapacity);
 };
 
 } // namespace ascee::runtime::heap

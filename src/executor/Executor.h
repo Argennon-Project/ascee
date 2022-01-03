@@ -18,20 +18,15 @@
 #ifndef ASCEE_EXECUTOR_H
 #define ASCEE_EXECUTOR_H
 
-
-#include <pthread.h>
-#include <csetjmp>
 #include <csignal>
 
 #include <string>
 #include <unordered_map>
 #include <memory>
-#include <utility>
 #include <vector>
 
 #include <executor/FailureManager.h>
 #include <argc/primitives.h>
-#include "heap/PageCache.h"
 #include "ThreadCpuTimer.h"
 #include "RequestScheduler.h"
 #include "heap/Modifier.h"
@@ -48,9 +43,10 @@ class Executor {
 public:
     class GenericError : public ApplicationError {
     public:
-        explicit GenericError(const ApplicationError& ae, long_id app = session->currentCall->appID) : ApplicationError(
-                ae),
-                                                                                                       app(app) {}
+        explicit GenericError(
+                const ApplicationError& ae,
+                long_id app = session->currentCall->appID
+        ) : ApplicationError(ae), app(app) {}
 
         explicit GenericError(
                 const std::string& msg,
@@ -123,7 +119,7 @@ public:
         std::unordered_map<long_id, bool> isLocked;
         VirtualSigManager virtualSigner;
 
-        string_buffer_c<RESPONSE_MAX_SIZE> response;
+        string_buffer_c<RESPONSE_MAX_SIZE> httpResponse;
 
         CallInfoContext* currentCall = nullptr;
         CallResourceContext* currentResources = nullptr;
@@ -133,22 +129,21 @@ public:
 
     Executor();
 
-    static void* registerRecoveryStack();
-
-    inline
-    static SessionInfo* getSession() { return session; }
+    inline static SessionInfo* getSession() { return session; }
 
     static void blockSignals();
 
     static void unBlockSignals();
 
-    AppResponse executeOne(AppRequest* tx);
+    AppResponse executeOne(AppRequest* req);
 
     static
     int controlledExec(int (* invoker)(long_id, string_c), long_id app_id, string_c request,
                        int_fast64_t execTime, size_t stackSize);
 
 private:
+    static void* registerRecoveryStack();
+
     static thread_local SessionInfo* session;
 
     static void sig_handler(int sig, siginfo_t* info, void* ucontext);

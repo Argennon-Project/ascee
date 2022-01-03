@@ -15,8 +15,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef ASCEE_THREADCPUTIMER_H
-#define ASCEE_THREADCPUTIMER_H
+#ifndef ASCEE_THREAD_CPU_TIMER_H
+#define ASCEE_THREAD_CPU_TIMER_H
 
 #include <ctime>
 #include <pthread.h>
@@ -37,4 +37,4 @@ public:
 
 } // namespace ascee::runtime
 
-#endif // ASCEE_THREADCPUTIMER_H
+#endif // ASCEE_THREAD_CPU_TIMER_H

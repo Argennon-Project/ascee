@@ -34,18 +34,22 @@ void waitForAll(const vector<future<void>>& pendingTasks) {
 /// if the block is not valid.
 /// Throwing an exception indicates that due to an internal error checking the validity of the block was not possible.
 bool BlockValidator::conditionalValidate(const BlockHeader& current, const BlockHeader& previous) {
-    blockLoader.setCurrentBlock(current);
+    try {
+        blockLoader.setCurrentBlock(current);
 
-    heap::PageCache::ChunkIndex index(cache, blockLoader.getPageAccessList(), previous);
+        heap::PageCache::ChunkIndex index(cache, blockLoader.getPageAccessList(), previous);
 
-    RequestScheduler scheduler(blockLoader.getNumOfRequests(), index);
+        RequestScheduler scheduler(blockLoader.getNumOfRequests(), index);
 
-    loadRequests(scheduler);
+        loadRequests(scheduler);
 
-    buildDependencyGraph(scheduler);
+        buildDependencyGraph(scheduler);
 
-    executeRequests(scheduler);
-
+        executeRequests(scheduler);
+    } catch (const ascee::BlockError& err) {
+        std::cout << err.message << std::endl;
+        return false;
+    }
     return true;
 }
 
@@ -79,7 +83,7 @@ void BlockValidator::buildDependencyGraph(RequestScheduler& scheduler) {
     for (const auto& chunkList: sortedMap.getConstValues()) {
         for (const auto& blocks: chunkList.getConstValues()) {
             pendingTasks.emplace_back(RUN_TASK([&] {
-                scheduler.findCollisions(blocks.getConstValues());
+                scheduler.findCollisions(blocks.getKeys(), blocks.getConstValues());
             }));
         }
     }

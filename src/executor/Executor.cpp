@@ -15,6 +15,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+#include <pthread.h>
 #include <csignal>
 #include <argc/functions.h>
 #include <thread>
@@ -97,20 +98,20 @@ void* Executor::registerRecoveryStack() {
     return sig_stack.ss_sp;
 }
 
-AppResponse Executor::executeOne(AppRequest* tx) {
-    AppResponse result{.reqID = tx->id};
+AppResponse Executor::executeOne(AppRequest* req) {
+    AppResponse result{.reqID = req->id};
     session = nullptr;
     try {
         SessionInfo threadSession{
-                .request = tx,
+                .request = req,
         };
         session = &threadSession;
 
-        CallResourceContext rootResourceCtx(tx->gas);
+        CallResourceContext rootResourceCtx(req->gas);
         CallInfoContext rootInfoCtx;
-        result.statusCode = argc::invoke_dispatcher(255, tx->calledAppID, string_c(tx->httpRequest));
+        result.statusCode = argc::invoke_dispatcher(255, req->calledAppID, string_c(req->httpRequest));
         // here, string's assignment operator makes a copy of the buffer.
-        result.response = StringView(session->response);
+        result.response = StringView(session->httpResponse);
         rootResourceCtx.complete();
         session->heapModifier.writeToHeap();
     } catch (const std::out_of_range& err) {

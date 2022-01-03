@@ -18,11 +18,13 @@
 #include "Modifier.h"
 // #define NDEBUG
 #include <cassert>
+#include <utility>
 
 #define MAX_VERSION 30000
 
 using namespace ascee;
 using namespace ascee::runtime::heap;
+using std::vector;
 
 int16_t Modifier::saveVersion() {
     if (currentVersion == MAX_VERSION) throw ApplicationError("version limit reached", StatusCode::limit_exceeded);
@@ -60,7 +62,7 @@ void Modifier::writeToHeap() {
     for (auto& appMap: appsAccessMaps.getValues()) {
         for (auto& chunk: appMap.getValues()) {
             auto size = chunk.size.read<int32>(currentVersion);
-            if (chunk.size.isWritable()) chunk.ptr->reSize(size);
+            if (chunk.size.isWritable()) chunk.ptr->setSize(size);
             if (size > 0) {
                 for (auto& block: chunk.accessTable.getValues()) {
                     try {
@@ -74,10 +76,10 @@ void Modifier::writeToHeap() {
 
 void Modifier::updateChunkSize(int32 newSize) {
     if (currentChunk->newSize > 0) {
-        if (newSize < currentChunk->initialSize || newSize > currentChunk->newSize) {
+        if (newSize < currentChunk->getInitialSize() || newSize > currentChunk->newSize) {
             throw std::out_of_range("invalid chunk size");
         }
-    } else if (newSize > currentChunk->initialSize || newSize < -currentChunk->newSize) {
+    } else if (newSize > currentChunk->getInitialSize() || newSize < -currentChunk->newSize) {
         throw std::out_of_range("invalid chunk size");
     }
     currentChunk->size.write(currentVersion, newSize);
@@ -117,9 +119,11 @@ void Modifier::AccessBlock::wrToHeap(int16_t version) {
     }
 }
 
-Modifier::AccessBlock::AccessBlock(Chunk::Pointer heapLocation, int32 size, bool writable) : heapLocation(heapLocation),
-                                                                                             size(size),
-                                                                                             writable(writable) {}
+Modifier::AccessBlock::AccessBlock(const Chunk::Pointer& heapLocation,
+                                   int32 size,
+                                   bool writable) : heapLocation(heapLocation),
+                                                    size(size),
+                                                    writable(writable) {}
 
 void Modifier::AccessBlock::prepareToWrite(int16_t version, int writeSize) {
     if (writeSize > size) throw std::out_of_range("write size");
@@ -131,4 +135,43 @@ void Modifier::AccessBlock::prepareToWrite(int16_t version, int writeSize) {
     }
     // Here we don't return the pointer to `content`. It would be better if the caller always finds the end of the
     // version list using back().content. That way content of the heap would not be modified accidentally.
+}
+
+Modifier::ChunkInfo::ChunkInfo(
+        Chunk* chunk, int32 newSize, bool resizable,
+        std::vector<int32> sortedAccessedOffsets,
+        const std::vector<BlockAccessInfo>& accessInfoList
+) :
+// todo: explain why we use initialSize member
+        size(
+                Chunk::Pointer((byte*) (&initialSize)),
+                sizeof(int32),
+                resizable
+        ),
+        newSize(newSize),
+        ptr(chunk),
+        accessTable(std::move(sortedAccessedOffsets), toBlocks(chunk, sortedAccessedOffsets, accessInfoList)) {
+    // Here resize must not perform any reallocation. As long as sizeof(int32) is less than the capacity of the chunk
+    // this should not happen.
+    initialSize = chunk->getsize();
+}
+
+vector<Modifier::AccessBlock> Modifier::ChunkInfo::toBlocks(
+        Chunk* chunk,
+        const vector<int32>& offsets,
+        const vector<BlockAccessInfo>& accessInfoList
+) {
+    vector<AccessBlock> blocks;
+    blocks.reserve(offsets.size());
+    for (int i = 0; i < offsets.size(); ++i) {
+        if (accessInfoList[i].writable && !chunk->isWritable()) {
+            throw BlockError("trying to modify a readonly chunk");
+        }
+        blocks.emplace_back(
+                chunk->getContentPointer(offsets[i]),
+                accessInfoList[i].size,
+                accessInfoList[i].writable
+        );
+    }
+    return blocks;
 }

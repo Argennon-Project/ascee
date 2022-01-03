@@ -92,7 +92,7 @@ public:
 
     void submitResult(const AppResponse& result);
 
-    void findCollisions(const std::vector<BlockAccessInfo>& accessBlocks);
+    void findCollisions(const std::vector<int32>& sortedOffsets, const std::vector<BlockAccessInfo>& accessBlocks);
 
     /// this function is thread-safe as long as all used `id`s are distinct
     auto& requestAt(AppRequestIdType id);

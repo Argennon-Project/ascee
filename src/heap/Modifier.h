@@ -78,9 +78,11 @@ public:
 private:
     class AccessBlock {
     public:
-        AccessBlock(Chunk::Pointer heapLocation, int32 size, bool writable);
+        AccessBlock(AccessBlock&&) = default;
 
-        //todo AccessBlock(const AccessBlock&) = delete;
+        AccessBlock(const AccessBlock&) = delete;
+
+        AccessBlock(const Chunk::Pointer& heapLocation, int32 size, bool writable);
 
         [[nodiscard]] bool isWritable() const {
             return writable;
@@ -141,15 +143,14 @@ private:
             const int16_t number;
             std::unique_ptr<byte[]> content;
 
-            inline
-            byte* getContent() { return content.get(); }
+            inline byte* getContent() { return content.get(); } // NOLINT(readability-make-member-function-const)
 
             Version(int16_t version, int32 size) : number(version), content(std::make_unique<byte[]>(size)) {}
         };
 
         Chunk::Pointer heapLocation;
-        int32 size;
-        bool writable;
+        int32 size{};
+        bool writable = false;
         std::vector<Version> versionList;
 
         byte* syncTo(int16_t version);
@@ -159,12 +160,7 @@ private:
         void prepareToWrite(int16_t version, int writeSize);
     };
 
-    int16_t currentVersion = 0;
-    // this is not efficient and can be improved
-    std::mutex writeMutex;
-
     typedef util::FixedOrderedMap <int32, AccessBlock> AccessTableMap;
-
 public:
     class ChunkInfo {
         friend class Modifier;
@@ -174,64 +170,63 @@ public:
         AccessBlock size;
         /// When the size AccessBlock is writable and newSize > 0 the chunk can only be expanded and the value of
         /// newSize indicates the upper bound of the settable size. If newSize <= 0 the chunk is only shrinkable and
-        /// the magnitude of newSize indicates the lower bound of chunk's new size.
-        /// When the size block is not writable. newSize >= 0 indicates that size block is readable but if newSize < 0
-        /// the size block is not accessible.
-        const int32 newSize;
+        /// the magnitude of newSize indicates the lower bound of the chunk's new size.
+        /// When the size AccessBlock is not writable, newSize >= 0 indicates that size block is readable but
+        /// if newSize < 0 the size block is not accessible.
+        const int32 newSize = -1;
+        Chunk* ptr{};
         int32 initialSize;
-        Chunk* ptr;
 
-        static std::vector<AccessBlock> toBlocks(Chunk* chunk, const std::vector<BlockAccessInfo>& accessInfoList) {
-            std::vector<AccessBlock> blocks;
-            blocks.reserve(accessInfoList.size());
-            for (const auto& info: accessInfoList) {
-                //todo change to std::invalid_argument?
-                if (info.writable && !chunk->isWritable()) throw BlockError("trying to modify a readonly chunk");
-                blocks.emplace_back(chunk->getContentPointer(info.offset), info.size, info.writable);
-            }
-            return blocks;
-        }
+        static std::vector<AccessBlock> toBlocks(
+                Chunk* chunk,
+                const std::vector<int32>& offsets,
+                const std::vector<BlockAccessInfo>& accessInfoList
+        );
 
     public:
         /// When resizeable is true and newSize > 0 the chunk can only be expanded and the value of
-        /// newSize indicates the upper bound of the settable size. If resizable == true and newSize <= 0 the chunk is only
-        /// shrinkable and the magnitude of newSize indicates the lower bound of the chunk's new size.
+        /// newSize indicates the upper bound of the settable size. If resizable == true and newSize <= 0 the chunk is
+        /// only shrinkable and the magnitude of newSize indicates the lower bound of the chunk's new size.
         ///
         /// When resizeable is false and newSize >= 0 the size of the chunk can only be read but if newSize < 0
         /// the size of the chunk is not accessible. (not readable nor writable)
-        explicit ChunkInfo(Chunk* chunk, int32 newSize, bool resizable,
-                           std::vector<int32> sortedAccessedOffsets,
-                           const std::vector<BlockAccessInfo>& accessInfoList) :
-                size(
-                        Chunk::Pointer((byte * )(&initialSize), (byte * ) & initialSize + sizeof(initialSize)),
-                        sizeof(int32),
-                        resizable
-                ),
-                newSize(newSize),
-                ptr(chunk),
-                accessTable(std::move(sortedAccessedOffsets), toBlocks(chunk, accessInfoList)) {
-            initialSize = chunk->getsize();
+        ChunkInfo(
+                Chunk* chunk, int32 newSize, bool resizable,
+                std::vector<int32> sortedAccessedOffsets,
+                const std::vector<BlockAccessInfo>& accessInfoList
+        );
+
+        ChunkInfo(ChunkInfo&&) = default;
+
+        ChunkInfo(const ChunkInfo&) = delete;
+
+        [[nodiscard]] int32 getInitialSize() const {
+            // initial size chunk will not be modified as long as wrToHeap function is not called. All changes are only
+            // made to the version array. So we can obtain the initial size this way.
+            return initialSize;
         }
     };
 
     typedef util::FixedOrderedMap <long_id, ChunkInfo> ChunkMap64;
 
-    Modifier() = default;
-
     Modifier(std::vector<long_id> apps, std::vector<ChunkMap64> chunkMaps) :
             appsAccessMaps(std::move(apps), std::move(chunkMaps)) {}
 
-    Modifier(const Modifier&) { std::terminate(); }
+    Modifier() = default;
+
+    Modifier(const Modifier&) = delete;
 
     Modifier(Modifier&&) = delete;
 
 private:
     typedef util::FixedOrderedMap <long_id, ChunkMap64> AppMap;
 
+    int16_t currentVersion = 0;
     ChunkInfo* currentChunk = nullptr;
     ChunkMap64* chunks = nullptr;
     AppMap appsAccessMaps;
 };
+
 
 } // namespace ascee::runtime::heap
 #endif // ASCEE_HEAP_MODIFIER_H

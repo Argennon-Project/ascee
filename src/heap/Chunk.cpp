@@ -16,19 +16,20 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include <cstring>
+#include <cassert>
 #include "Chunk.h"
-
-#define MAX_CHUNK_SIZE (32*1024)
 
 using namespace ascee;
 using namespace ascee::runtime::heap;
+using std::unique_ptr, std::make_unique;
 
-/// new chunks always have a size of zero. Their size usually should be changed through the pointer obtainable by
-/// getSizePointer function.
+/// new chunks always have a size of zero. Their size usually should be changed by using reSize() function.
 /// The chunk will be zero initialized. This is important to make sure that smart contracts
 /// behave deterministically and validators will agree on the result of executing a smart contact.
-Chunk::Chunk(int capacity) : capacity(capacity), content(new byte[capacity]()) {
-    if (capacity > MAX_CHUNK_SIZE) throw std::out_of_range("max chunk size exceeded");
+Chunk::Chunk(int capacity) : capacity(capacity), chunkSize(0) {
+    if (capacity > maxCapacity) throw std::out_of_range("max chunk size exceeded");
+    content = make_unique<byte[]>(capacity);
+    // arrays created by make_unique are value initialized.
 }
 
 int32 Chunk::getsize() const {
@@ -40,38 +41,44 @@ bool Chunk::isTransient() const {
 }
 
 Chunk::Pointer Chunk::getContentPointer(int32 offset) {
-    return Pointer(content.get() + offset, content.get() + chunkSize);
-}
-
-void Chunk::reSize(int newSize) {
-    if (newSize > MAX_CHUNK_SIZE || newSize < 0) throw std::out_of_range("invalid chunk size");
-
-    if (newSize < chunkSize) {
-        if (newSize == 0) {
-            content = std::make_unique<byte[]>(0);
-            capacity = 0;
-        } else {
-            memset(content.get() + newSize, 0, chunkSize - newSize);
-        }
-    }
-
-    chunkSize = newSize;
-
-    if (newSize <= capacity) return;
-
-    auto newCapacity = std::min(MAX_CHUNK_SIZE, 2 * newSize);
-
-    // memory must be zero initialized.
-    auto* newContent = new byte[newCapacity]();
-    memcpy(newContent, content.get(), chunkSize);
-    content = std::unique_ptr<byte[]>(newContent);
-    capacity = newCapacity;
-}
-
-bool Chunk::isValid(const byte* ptr) const {
-    return ptr < content.get() + chunkSize || ptr == (byte*) &chunkSize;
+    return {this, offset};
 }
 
 void Chunk::setWritable(bool wr) {
     writable = wr;
+}
+
+void Chunk::setSize(int32 newSize) {
+    assert(newSize <= capacity && newSize >= 0);
+    chunkSize = newSize;
+    // We do not zero memory when the chunk is shrinking, since locations outside the chunk can not be accessed
+    // in the current implementation.
+}
+
+void Chunk::resize(int32 newCapacity) {
+    // memory must be zero initialized only when we are expanding the chunk
+    auto* newContent = newCapacity > chunkSize ? new byte[newCapacity]() : new byte[newCapacity];
+    memcpy(newContent, content.get(), chunkSize);
+    content.reset(newContent);
+    capacity = newCapacity;
+}
+
+bool Chunk::reserveSpace(int32 size) {
+    assert(size <= maxCapacity && size >= 0);
+
+    if (size <= capacity) return false;
+
+    resize(std::min(maxCapacity, 2 * size));
+    return true;
+}
+
+bool Chunk::shrinkToFit() {
+    if (chunkSize == capacity) return false;
+    resize(chunkSize);
+    return true;
+}
+
+Chunk::Pointer::Pointer(Chunk* chunk, int32 offset) : parent(chunk),
+                                                      location(chunk->content.get() + offset) {
+    assert(offset >= 0);
 }
