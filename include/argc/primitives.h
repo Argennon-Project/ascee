@@ -26,7 +26,9 @@ namespace ascee {
 typedef uint8_t byte;
 typedef uint16_t uint16;
 typedef int32_t int32;
+typedef int_fast32_t int32_fast;
 typedef int64_t int64;
+typedef int_fast64_t int64_fast;
 typedef __int128_t int128;
 typedef double float64;
 typedef __float128 float128;

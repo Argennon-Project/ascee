@@ -63,8 +63,9 @@ void RequestScheduler::findCollisions(
         const vector<BlockAccessInfo>& accessBlocks
 ) {
     bool inSizeWriterList = false;
-    int_fast32_t sizeWritersBegin = 0, sizeWritersEnd = 0;
-    for (int_fast32_t i = 0; i < accessBlocks.size(); ++i) {
+    int32_fast sizeWritersBegin = 0, sizeWritersEnd = 0;
+    int32_fast lowerBound = 0, upperBound = 0;
+    for (int32_fast i = 0; i < accessBlocks.size(); ++i) {
         auto writable = accessBlocks[i].writable;
         auto offset = sortedOffsets[i];
 
@@ -75,7 +76,7 @@ void RequestScheduler::findCollisions(
         auto& request = nodeIndex[accessBlocks[i].requestID]->getAppRequest();
         auto end = (offset == -1) ? 0 : offset + accessBlocks[i].size;
 
-        for (int_fast32_t j = i + 1; j < accessBlocks.size(); ++j) {
+        for (int32_fast j = i + 1; j < accessBlocks.size(); ++j) {
             if (sortedOffsets[j] < end && (writable || accessBlocks[j].writable)) {
                 registerDependency(accessBlocks[i].requestID, accessBlocks[j].requestID);
             }
@@ -88,13 +89,17 @@ void RequestScheduler::findCollisions(
         } else if (inSizeWriterList && !(offset == -1 && writable)) {
             inSizeWriterList = false;
             sizeWritersEnd = i;
+            lowerBound = sizeBoundsInfo.at(chunkID).sizeLowerBound;
+            upperBound = sizeBoundsInfo.at(chunkID).sizeUpperBound;
         }
 
-        if (sizeWritersEnd != 0 && end > sizeBoundsInfo.at(chunkID).sizeUpperBound) {
-            for (int_fast32_t j = sizeWritersBegin; j < sizeWritersEnd; ++j) {
-                if (offset < accessBlocks[j].size) {
-                    registerDependency(accessBlocks[i].requestID, accessBlocks[j].requestID);
-                }
+        if (sizeWritersEnd != 0 && end > lowerBound) {
+            for (int32_fast j = sizeWritersBegin; j < sizeWritersEnd; ++j) {
+                bool collision = accessBlocks[j].size > 0 ?
+                                 (end > lowerBound && offset < accessBlocks[j].size) :
+                                 (end > -accessBlocks[j].size && offset < upperBound);
+
+                if (collision) registerDependency(accessBlocks[i].requestID, accessBlocks[j].requestID);
             }
         }
     }

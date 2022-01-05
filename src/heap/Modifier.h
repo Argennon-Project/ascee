@@ -72,7 +72,12 @@ public:
 
     void writeToHeap();
 
-    bool isValid(int32 offset) {
+    bool isValid(int32 offset, int32 size) {
+        // we need to make sure that the access block is defined. Otherwise, scheduler can not guarantee that
+        // isValid is properly parallelized with chunk resizing requests.
+        if (size > currentChunk->accessTable.at(offset).getSize()) {
+            throw std::out_of_range("isValid size");
+        }
         // we can't use getChunkSize() here
         return offset < currentChunk->size.read<int32>(currentVersion);
     }
