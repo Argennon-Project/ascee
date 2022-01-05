@@ -90,12 +90,12 @@ void BlockValidator::buildDependencyGraph(RequestScheduler& scheduler) {
     vector<future<void>> pendingTasks;
     for (long i = 0; i < sortedMap.size(); ++i) {
         auto appID = sortedMap.getKeys()[i];
-        const auto& chunkList = sortedMap.getConstValues()[i];
+        const auto& chunkList = sortedMap.getValues()[i];
         for (long j = 0; j < chunkList.size(); ++j) {
             auto chunkID = chunkList.getKeys()[j];
-            const auto& blocks = chunkList.getConstValues()[j];
+            const auto& blocks = chunkList.getValues()[j];
             pendingTasks.emplace_back(RUN_TASK([&] {
-                scheduler.findCollisions(full_id(appID, chunkID), blocks.getKeys(), blocks.getConstValues());
+                scheduler.findCollisions(full_id(appID, chunkID), blocks.getKeys(), blocks.getValues());
             }));
         }
     }

@@ -40,22 +40,20 @@ public:
     }
 
     V& at(const K& key) {
-        std::size_t begin = 0, mid;
-        auto end = keys.size();
-        while ((mid = (begin + end) >> 1) < end) {
-            if (key == keys[mid]) return values[mid];
-            else if (key < keys[mid]) end = mid;
-            else begin = mid + 1;
-        }
-        throw std::out_of_range("key not found");
+        return values[find(keys, key)];
     }
 
     const V& at(const K& key) const {
+        return values[find(keys, key)];
+    }
+
+    static
+    std::size_t find(const std::vector<K>& sortedKeys, const K& key) {
         std::size_t begin = 0, mid;
-        auto end = keys.size();
+        auto end = sortedKeys.size();
         while ((mid = (begin + end) >> 1) < end) {
-            if (key == keys[mid]) return values[mid];
-            else if (key < keys[mid]) end = mid;
+            if (key == sortedKeys[mid]) return mid;
+            else if (key < sortedKeys[mid]) end = mid;
             else begin = mid + 1;
         }
         throw std::out_of_range("key not found");
@@ -73,7 +71,7 @@ public:
         return values;
     }
 
-    [[nodiscard]] const std::vector<V>& getConstValues() const {
+    [[nodiscard]] const std::vector<V>& getValues() const {
         return values;
     }
 

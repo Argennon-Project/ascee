@@ -108,7 +108,7 @@ int main(int argc, char const* argv[]) {
     ;
 
     auto temp = rs.sortAccessBlocks().at(10).at(100);
-    rs.findCollisions(full_id(10, 100), temp.getKeys(), temp.getConstValues());
+    rs.findCollisions(full_id(10, 100), temp.getKeys(), temp.getValues());
 
     util::FixedOrderedMap<int, std::string> m1({10, 15, 24}, {"Hi", "Yo", "Bye"});
 

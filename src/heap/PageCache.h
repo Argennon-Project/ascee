@@ -60,7 +60,7 @@ public:
             // after indexing requiredPages all chunks are added to chunkIndex, including accessed non-existent chunks.
             // getChunk() will throw the right exception when chunk is not found.
             for (int i = 0; i < chunkBounds.size(); ++i) {
-                getChunk(chunkBounds.getKeys()[i])->reserveSpace(chunkBounds.getConstValues()[i].sizeUpperBound);
+                getChunk(chunkBounds.getKeys()[i])->reserveSpace(chunkBounds.getValues()[i].sizeUpperBound);
             }
         }
 

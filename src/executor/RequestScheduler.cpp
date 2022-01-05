@@ -127,15 +127,15 @@ heap::Modifier RequestScheduler::buildModifier(const AppRequestRawData::AccessMa
     chunkMapList.reserve(rawAccessMap.size());
     for (long i = 0; i < rawAccessMap.size(); ++i) {
         auto appID = rawAccessMap.getKeys()[i];
-        auto& chunkMap = rawAccessMap.getConstValues()[i];
+        auto& chunkMap = rawAccessMap.getValues()[i];
         std::vector<heap::Modifier::ChunkInfo> chunkInfoList;
         chunkInfoList.reserve(chunkMap.size());
         for (long j = 0; j < chunkMap.size(); ++j) {
             auto chunkID = chunkMap.getKeys()[j];
             // When the chunk is not found getChunk throws a BlockError exception.
             auto* chunkPtr = heapIndex.getChunk(full_id(appID, chunkID));
-            auto chunkNewSize = chunkMap.getConstValues()[j].getConstValues()[0].size;
-            bool resizable = chunkMap.getConstValues()[j].getConstValues()[0].writable;
+            auto chunkNewSize = chunkMap.getValues()[j].getValues()[0].size;
+            bool resizable = chunkMap.getValues()[j].getValues()[0].writable;
 
             if (resizable) {
                 try {
@@ -157,8 +157,8 @@ heap::Modifier RequestScheduler::buildModifier(const AppRequestRawData::AccessMa
                     chunkPtr,
                     chunkNewSize,
                     resizable,
-                    chunkMap.getConstValues()[j].getKeys(),
-                    chunkMap.getConstValues()[j].getConstValues()
+                    chunkMap.getValues()[j].getKeys(),
+                    chunkMap.getValues()[j].getValues()
             );
         }
         chunkMapList.emplace_back(chunkMap.getKeys(), std::move(chunkInfoList));
