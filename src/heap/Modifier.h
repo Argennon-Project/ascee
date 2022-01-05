@@ -61,6 +61,7 @@ public:
 
     void loadChunk(short_id chunkID);
 
+
     void loadChunk(long_id chunkID);
 
     void loadContext(long_id appID);
@@ -71,6 +72,11 @@ public:
 
     void writeToHeap();
 
+    bool isValid(int32 offset) {
+        // we can't use getChunkSize() here
+        return offset < currentChunk->size.read<int32>(currentVersion);
+    }
+
     int32 getChunkSize();
 
     void updateChunkSize(int32 newSize);
@@ -78,6 +84,8 @@ public:
 private:
     class AccessBlock {
     public:
+        AccessBlock() = default;
+
         AccessBlock(AccessBlock&&) = default;
 
         AccessBlock(const AccessBlock&) = delete;
@@ -149,7 +157,7 @@ private:
         };
 
         Chunk::Pointer heapLocation;
-        int32 size{};
+        int32 size = 0;
         bool writable = false;
         std::vector<Version> versionList;
 
@@ -171,9 +179,9 @@ public:
         /// When the size AccessBlock is writable and newSize > 0 the chunk can only be expanded and the value of
         /// newSize indicates the upper bound of the settable size. If newSize <= 0 the chunk is only shrinkable and
         /// the magnitude of newSize indicates the lower bound of the chunk's new size.
-        /// When the size AccessBlock is not writable, newSize >= 0 indicates that size block is readable but
-        /// if newSize < 0 the size block is not accessible.
-        const int32 newSize = -1;
+        /// When the size AccessBlock is not writable, newSize != 0 indicates that the size block is readable and
+        /// newSize == 0 indicates that the size block is not accessible.
+        const int32 newSize = 0;
         Chunk* ptr{};
         int32 initialSize;
 
@@ -184,12 +192,6 @@ public:
         );
 
     public:
-        /// When resizeable is true and newSize > 0 the chunk can only be expanded and the value of
-        /// newSize indicates the upper-bound of the settable size. If resizable == true and newSize <= 0 the chunk is
-        /// only shrinkable and the magnitude of newSize indicates the lower-bound of the chunk's new size.
-        ///
-        /// When resizeable is false and newSize >= 0 the size of the chunk can only be read but if newSize < 0
-        /// the size of the chunk is not accessible. (not readable nor writable)
         ChunkInfo(
                 Chunk* chunk, int32 newSize, bool resizable,
                 std::vector<int32> sortedAccessedOffsets,

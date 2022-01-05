@@ -83,8 +83,10 @@ int main(int argc, char const* argv[]) {
 
     PageLoader pl;
     heap::PageCache c(pl);
-    heap::PageCache::ChunkIndex ind(c, {{full_id(10, 100), true}}, {7878});
-    RequestScheduler rs(3, ind);
+
+    BlockLoader bl;
+    heap::PageCache::ChunkIndex ind(c, {7878}, {{full_id(10, 100), true}}, bl.getProposedSizeBounds());
+    RequestScheduler rs(3, ind, bl.getProposedSizeBounds());
     rs.addRequest(0, {.memoryAccessMap = {
             {10},
             {{{100}, {
@@ -106,7 +108,7 @@ int main(int argc, char const* argv[]) {
     ;
 
     auto temp = rs.sortAccessBlocks().at(10).at(100);
-    rs.findCollisions(temp.getKeys(), temp.getConstValues());
+    rs.findCollisions(full_id(10, 100), temp.getKeys(), temp.getConstValues());
 
     util::FixedOrderedMap<int, std::string> m1({10, 15, 24}, {"Hi", "Yo", "Bye"});
 

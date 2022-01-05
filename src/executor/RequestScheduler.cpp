@@ -52,16 +52,49 @@ void RequestScheduler::submitResult(const AppResponse& result) {
     zeroQueue.removeProducer();
 }
 
-void RequestScheduler::findCollisions(const vector<int32>& sortedOffsets, const vector<BlockAccessInfo>& accessBlocks) {
-    for (int i = 0; i < accessBlocks.size(); ++i) {
-        auto& request = nodeIndex[accessBlocks[i].requestID]->getAppRequest();
+/// sortedOffsets needs to be sorted and AccessBlocks are corresponding BlockAccessInfos with those offsets.
+/// sorting order when offset == -1: (!writable && size == 0) < !writable < writable
+///
+/// sizeLowerBound is the minimum allowed size of the chunk and it is
+/// inclusive. (i.e. it is the mathematical lower bound of chunkSize and we require chunkSize >= sizeLowerBound)
+void RequestScheduler::findCollisions(
+        full_id chunkID,
+        const vector<int32>& sortedOffsets,
+        const vector<BlockAccessInfo>& accessBlocks
+) {
+    bool inSizeWriterList = false;
+    int_fast32_t sizeWritersBegin = 0, sizeWritersEnd = 0;
+    for (int_fast32_t i = 0; i < accessBlocks.size(); ++i) {
         auto writable = accessBlocks[i].writable;
         auto offset = sortedOffsets[i];
+
+        // we can skip non-accessible size blocks because based on the sorting order they will always be at the start
+        // of the list.
+        if (offset == -1 && !writable && accessBlocks[i].size == 0) continue;
+
+        auto& request = nodeIndex[accessBlocks[i].requestID]->getAppRequest();
         auto end = (offset == -1) ? 0 : offset + accessBlocks[i].size;
 
-        for (int j = i + 1; j < accessBlocks.size(); ++j) {
+        for (int_fast32_t j = i + 1; j < accessBlocks.size(); ++j) {
             if (sortedOffsets[j] < end && (writable || accessBlocks[j].writable)) {
                 registerDependency(accessBlocks[i].requestID, accessBlocks[j].requestID);
+            }
+        }
+
+        // finding the index interval of chunk resizing info blocks
+        if (!inSizeWriterList && offset == -1 && writable) {
+            inSizeWriterList = true;
+            sizeWritersBegin = i;
+        } else if (inSizeWriterList && !(offset == -1 && writable)) {
+            inSizeWriterList = false;
+            sizeWritersEnd = i;
+        }
+
+        if (sizeWritersEnd != 0 && end > sizeBoundsInfo.at(chunkID).sizeUpperBound) {
+            for (int_fast32_t j = sizeWritersBegin; j < sizeWritersEnd; ++j) {
+                if (offset < accessBlocks[j].size) {
+                    registerDependency(accessBlocks[i].requestID, accessBlocks[j].requestID);
+                }
             }
         }
     }
@@ -76,28 +109,49 @@ auto& RequestScheduler::requestAt(AppRequestIdType id) {
     return nodeIndex[id];
 }
 
-RequestScheduler::RequestScheduler(int_fast32_t totalRequestCount, heap::PageCache::ChunkIndex& heapIndex) :
+RequestScheduler::RequestScheduler(int_fast32_t totalRequestCount, heap::PageCache::ChunkIndex& heapIndex,
+                                   util::FixedOrderedMap<full_id, ChunkSizeBounds> sizeBounds) :
         heapIndex(heapIndex),
         count(totalRequestCount),
         nodeIndex(std::make_unique<std::unique_ptr<DagNode>[]>(totalRequestCount)),
-        memoryAccessMaps(totalRequestCount) {}
+        memoryAccessMaps(totalRequestCount),
+        sizeBoundsInfo(std::move(sizeBounds)) {}
 
 heap::Modifier RequestScheduler::buildModifier(const AppRequestRawData::AccessMapType& rawAccessMap) const {
     std::vector<heap::Modifier::ChunkMap64> chunkMapList;
     chunkMapList.reserve(rawAccessMap.size());
-    for (int i = 0; i < rawAccessMap.size(); ++i) {
+    for (long i = 0; i < rawAccessMap.size(); ++i) {
         auto appID = rawAccessMap.getKeys()[i];
         auto& chunkMap = rawAccessMap.getConstValues()[i];
         std::vector<heap::Modifier::ChunkInfo> chunkInfoList;
         chunkInfoList.reserve(chunkMap.size());
-        for (int j = 0; j < chunkMap.size(); ++j) {
+        for (long j = 0; j < chunkMap.size(); ++j) {
             auto chunkID = chunkMap.getKeys()[j];
-            auto chunkPtr = heapIndex.getChunk(full_id(appID, chunkID));
+            // When the chunk is not found getChunk throws a BlockError exception.
+            auto* chunkPtr = heapIndex.getChunk(full_id(appID, chunkID));
+            auto chunkNewSize = chunkMap.getConstValues()[j].getConstValues()[0].size;
+            bool resizable = chunkMap.getConstValues()[j].getConstValues()[0].writable;
+
+            if (resizable) {
+                try {
+                    auto& chunkBounds = sizeBoundsInfo.at(full_id(appID, chunkID));
+                    if (chunkPtr->getsize() < chunkBounds.sizeLowerBound ||
+                        chunkPtr->getsize() > chunkBounds.sizeUpperBound ||
+                        chunkNewSize > 0 && chunkNewSize > chunkBounds.sizeUpperBound ||
+                        chunkNewSize <= 0 && -chunkNewSize < chunkBounds.sizeLowerBound) {
+                        throw BlockError("invalid sizeBounds for chunk ["
+                                         + std::to_string(appID) + "::" + std::to_string(chunkID) + "]");
+                    }
+                } catch (const std::out_of_range&) {
+                    throw BlockError("missing sizeBounds for chunk ["
+                                     + std::to_string(appID) + "::" + std::to_string(chunkID) + "]");
+                }
+            }
 
             chunkInfoList.emplace_back(
                     chunkPtr,
-                    chunkMap.getConstValues()[j].getConstValues()[0].size,
-                    chunkMap.getConstValues()[j].getConstValues()[0].writable,
+                    chunkNewSize,
+                    resizable,
                     chunkMap.getConstValues()[j].getKeys(),
                     chunkMap.getConstValues()[j].getConstValues()
             );
@@ -141,7 +195,8 @@ heap::Modifier RequestScheduler::buildModifierFor(AppRequestIdType requestID) co
     return buildModifier(memoryAccessMaps[requestID]);
 }
 
-DagNode::DagNode(AppRequestRawData&& data, const RequestScheduler* scheduler) :
+DagNode::DagNode(AppRequestRawData&& data,
+                 const RequestScheduler* scheduler) :
         adjList(std::move(data.adjList)),
         request{
                 .id = data.id,

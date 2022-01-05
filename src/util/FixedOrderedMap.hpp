@@ -50,6 +50,17 @@ public:
         throw std::out_of_range("key not found");
     }
 
+    const V& at(const K& key) const {
+        std::size_t begin = 0, mid;
+        auto end = keys.size();
+        while ((mid = (begin + end) >> 1) < end) {
+            if (key == keys[mid]) return values[mid];
+            else if (key < keys[mid]) end = mid;
+            else begin = mid + 1;
+        }
+        throw std::out_of_range("key not found");
+    }
+
     [[nodiscard]] long size() const {
         return (long) keys.size();
     }

@@ -29,7 +29,7 @@ class PageLoader {
 public:
     void preparePage(full_id pageID, const heap::Page& page) {
         assert(page.getBlockNumber() < previousBlock.blockNumber);
-        submitDownloadRequest(pageID, page.getBlockNumber(), previousBlock.blockNumber);
+        submitGetDeltaRequest(pageID, page.getBlockNumber(), previousBlock.blockNumber);
     }
 
     heap::Delta getDelta(full_id pageID, int_fast64_t from, int_fast64_t to, int tries) {
@@ -39,6 +39,7 @@ public:
     void loadPage(full_id pageID, heap::Page& page) {
         int tries = 0;
         while (true) {
+            // submitGetDeltaRequest() needs to be called before.
             auto delta = getDelta(pageID, page.getBlockNumber(), previousBlock.blockNumber, tries++);
             page.applyDelta(delta, previousBlock.blockNumber);
 
@@ -52,14 +53,14 @@ public:
     }
 
     //todo: make sure this is efficient
-    void setBlockInfo(const ascee::runtime::BlockHeader& block) {
+    void setCurrentBlock(const ascee::runtime::BlockHeader& block) {
         previousBlock = block;
     };
 
 private:
     BlockHeader previousBlock;
 
-    void submitDownloadRequest(full_id pageID, int_fast64_t from, int_fast64_t to) {
+    void submitGetDeltaRequest(full_id pageID, int_fast64_t from, int_fast64_t to) {
 
     }
 

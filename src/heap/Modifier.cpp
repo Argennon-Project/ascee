@@ -64,7 +64,8 @@ void Modifier::writeToHeap() {
             auto chunkSize = chunk.size.read<int32>(currentVersion);
             if (chunk.size.isWritable()) chunk.ptr->setSize(chunkSize);
             if (chunkSize > 0) {
-                for (int i = 0; i < chunk.accessTable.size(); ++i) {
+                // offset[0] == -1 and we should skip it.
+                for (long i = 1; i < chunk.accessTable.size(); ++i) {
                     auto offset = chunk.accessTable.getKeys()[i];
                     if (offset >= chunkSize) break;     // since offsets are sorted.
                     // We should make sure that we never write outside the chunk.
@@ -87,7 +88,7 @@ void Modifier::updateChunkSize(int32 newSize) {
 }
 
 int32 Modifier::getChunkSize() {
-    if (!currentChunk->size.isWritable() && currentChunk->newSize < 0) {
+    if (!currentChunk->size.isWritable() && currentChunk->newSize == 0) {
         throw std::out_of_range("chunkSize is not accessible");
     }
     return currentChunk->size.read<int32>(currentVersion);
@@ -138,6 +139,12 @@ void Modifier::AccessBlock::prepareToWrite(int16_t version, int writeSize) {
     // version list using back().content. That way content of the heap would not be modified accidentally.
 }
 
+/// When resizeable is true and newSize > 0 the chunk can only be expanded and the value of
+/// newSize indicates the upper-bound of the settable size. If resizable == true and newSize <= 0 the chunk is
+/// only shrinkable and the magnitude of newSize indicates the lower-bound of the chunk's new size.
+///
+/// When resizeable is false and newSize != 0 the size of the chunk can only be read but if newSize == 0
+/// the size of the chunk is not accessible. (not readable nor writable)
 Modifier::ChunkInfo::ChunkInfo(
         Chunk* chunk, int32 newSize, bool resizable,
         std::vector<int32> sortedAccessedOffsets,
@@ -166,11 +173,16 @@ vector<Modifier::AccessBlock> Modifier::ChunkInfo::toBlocks(
         if (accessInfoList[i].writable && !chunk->isWritable()) {
             throw BlockError("trying to modify a readonly chunk");
         }
-        blocks.emplace_back(
-                chunk->getContentPointer(offsets[i], accessInfoList[i].size),
-                accessInfoList[i].size,
-                accessInfoList[i].writable
-        );
+
+        if (offsets[i] < 0) {
+            blocks.emplace_back();
+        } else {
+            blocks.emplace_back(
+                    chunk->getContentPointer(offsets[i], accessInfoList[i].size),
+                    accessInfoList[i].size,
+                    accessInfoList[i].writable
+            );
+        }
     }
     return blocks;
 }

@@ -45,20 +45,22 @@ struct AppRequestRawData {
     std::vector<long_id> appAccessList;
     std::unordered_set<int_fast32_t> stackSizeFailures;
     std::unordered_set<int_fast32_t> cpuTimeFailures;
-    /// it must check that the list is sorted
+    /// It must check that the list is sorted
     AccessMapType memoryAccessMap;
-    /// this list should be checked to make sure no id is out of range.
+    /// This list should be checked to make sure no id is out of range.
     std::unordered_set<AppRequestIdType> adjList;
     std::vector<long_id> attachments;
-    /// this list will not include all chunks. Only expandable chunks and accessed non-existent chunks should be
-    /// included.
-    std::vector<std::pair<long_id, int32>> chunkCapacities;
     Digest digest;
 };
 
 struct PageAccessInfo {
     full_id id;
     bool isWritable;
+};
+
+struct ChunkSizeBounds {
+    int32 sizeUpperBound;
+    int32 sizeLowerBound;
 };
 
 struct BlockHeader {
@@ -69,11 +71,18 @@ class BlockLoader {
 public:
     void setCurrentBlock(const BlockHeader& b) {};
 
-    AppRequestRawData loadRequest(AppRequestIdType id) { return AppRequestRawData(); };
+    AppRequestRawData loadRequest(AppRequestIdType id) { return {}; };
 
     int_fast32_t getNumOfRequests() { return 0; };
 
-    std::vector<PageAccessInfo> getPageAccessList() { return std::vector<PageAccessInfo>(); };
+    /// This list includes:
+    ///     1) The id of pages that contain at least one chunk needed for validating the block
+    ///     2) The id of non-existent chunks that are accessed by at least one request.
+    std::vector<PageAccessInfo> getPageAccessList() { return {}; };
+
+    /// This list will not include all chunks. Only expandable chunks and accessed non-existent chunks should be
+    /// included.
+    util::FixedOrderedMap<full_id, ChunkSizeBounds> getProposedSizeBounds() { return {}; };
 };
 
 } // namespace ascee::runtime

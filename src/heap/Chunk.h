@@ -32,6 +32,8 @@ public:
 
     class Pointer {
     public:
+        Pointer() = default;
+
         Pointer(byte* ptr, int32) : location(ptr) {}
 
         inline bool isNull() { return location == nullptr; }

@@ -22,6 +22,7 @@
 
 using namespace node::validator;
 using namespace ascee::runtime;
+using namespace ascee;
 using std::vector, std::future;
 
 void waitForAll(const vector<future<void>>& pendingTasks) {
@@ -37,9 +38,16 @@ bool BlockValidator::conditionalValidate(const BlockHeader& current, const Block
     try {
         blockLoader.setCurrentBlock(current);
 
-        heap::PageCache::ChunkIndex index(cache, blockLoader.getPageAccessList(), previous);
+        auto sizeBounds = blockLoader.getProposedSizeBounds();
 
-        RequestScheduler scheduler(blockLoader.getNumOfRequests(), index);
+        heap::PageCache::ChunkIndex index(
+                cache,
+                previous,
+                blockLoader.getPageAccessList(),
+                sizeBounds
+        );
+
+        RequestScheduler scheduler(blockLoader.getNumOfRequests(), index, std::move(sizeBounds));
 
         loadRequests(scheduler);
 
@@ -80,10 +88,14 @@ void BlockValidator::buildDependencyGraph(RequestScheduler& scheduler) {
     auto sortedMap = scheduler.sortAccessBlocks();
 
     vector<future<void>> pendingTasks;
-    for (const auto& chunkList: sortedMap.getConstValues()) {
-        for (const auto& blocks: chunkList.getConstValues()) {
+    for (long i = 0; i < sortedMap.size(); ++i) {
+        auto appID = sortedMap.getKeys()[i];
+        const auto& chunkList = sortedMap.getConstValues()[i];
+        for (long j = 0; j < chunkList.size(); ++j) {
+            auto chunkID = chunkList.getKeys()[j];
+            const auto& blocks = chunkList.getConstValues()[j];
             pendingTasks.emplace_back(RUN_TASK([&] {
-                scheduler.findCollisions(blocks.getKeys(), blocks.getConstValues());
+                scheduler.findCollisions(full_id(appID, chunkID), blocks.getKeys(), blocks.getConstValues());
             }));
         }
     }

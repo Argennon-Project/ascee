@@ -40,16 +40,27 @@ public:
 
     class ChunkIndex {
     public:
-        ChunkIndex(PageCache& parent, std::vector<PageAccessInfo>&& requiredPagesList, const BlockHeader& block)
-                : parent(parent), pageAccessList(std::move(requiredPagesList)) {
+        ChunkIndex(
+                PageCache& parent,
+                const BlockHeader& block,
+                std::vector<PageAccessInfo>&& requiredPages,
+                const util::FixedOrderedMap<full_id, ChunkSizeBounds>& chunkBounds
+        ) : parent(parent), pageAccessList(std::move(requiredPages)) {
             chunkIndex.reserve(this->pageAccessList.size() * pageAvgLoadFactor / 100);
-            parent.loader.setBlockInfo(block);
+            parent.loader.setCurrentBlock(block);
             for (const auto& page: this->pageAccessList) {
+                // note that since we've used [] if the page doesn't exist in the cache an empty page will be created.
                 parent.loader.preparePage(page.id, parent.cache[page.id]);
             }
 
             for (const auto& page: this->pageAccessList) {
                 indexPage(page);
+            }
+
+            // after indexing requiredPages all chunks are added to chunkIndex, including accessed non-existent chunks.
+            // getChunk() will throw the right exception when chunk is not found.
+            for (int i = 0; i < chunkBounds.size(); ++i) {
+                getChunk(chunkBounds.getKeys()[i])->reserveSpace(chunkBounds.getConstValues()[i].sizeUpperBound);
             }
         }
 
@@ -58,7 +69,7 @@ public:
             try {
                 return chunkIndex.at(id);
             } catch (const std::out_of_range&) {
-                throw BlockError("missing chunk");
+                throw BlockError("missing proof of non-existent chunk");
             }
         };
 
