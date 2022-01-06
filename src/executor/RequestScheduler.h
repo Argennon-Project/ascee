@@ -94,7 +94,8 @@ public:
     void submitResult(const AppResponse& result);
 
     void findCollisions(full_id chunkID,
-                        const std::vector<int32>& sortedOffsets, const std::vector<BlockAccessInfo>& accessBlocks);
+                        const std::vector<int32>& sortedOffsets,
+                        const std::vector<BlockAccessInfo>& accessBlocks);
 
     /// this function is thread-safe as long as all used `id`s are distinct
     auto& requestAt(AppRequestIdType id);
@@ -110,15 +111,10 @@ public:
     [[nodiscard]]
     AppRequestRawData::AccessMapType sortAccessBlocks();
 
-    explicit RequestScheduler(int_fast32_t totalRequestCount,
-                              heap::PageCache::ChunkIndex& heapIndex,
-                              util::FixedOrderedMap<full_id, ChunkSizeBounds> sizeBounds);
+    explicit RequestScheduler(int_fast32_t totalRequestCount, heap::PageCache::ChunkIndex& heapIndex);
 
     [[nodiscard]]
-    heap::Modifier buildModifierFor(AppRequestIdType requestID) const;
-
-    [[nodiscard]]
-    heap::Modifier buildModifier(const AppRequestRawData::AccessMapType& rawAccessMap) const;
+    heap::Modifier getModifierFor(AppRequestIdType requestID) const;
 
 private:
     heap::PageCache::ChunkIndex& heapIndex;
@@ -126,7 +122,7 @@ private:
     BlockingQueue<DagNode*> zeroQueue;
     std::unique_ptr<std::unique_ptr<DagNode>[]> nodeIndex;
     std::vector<AppRequestRawData::AccessMapType> memoryAccessMaps;
-    util::FixedOrderedMap<full_id, ChunkSizeBounds> sizeBoundsInfo;
+
 
     void registerDependency(AppRequestIdType u, AppRequestIdType v);
 

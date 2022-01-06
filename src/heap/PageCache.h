@@ -29,6 +29,7 @@
 #include "Page.h"
 #include "loader/PageLoader.h"
 #include "loader/BlockLoader.h"
+#include "Modifier.h"
 
 namespace ascee::runtime::heap {
 
@@ -44,32 +45,23 @@ public:
                 PageCache& parent,
                 const BlockHeader& block,
                 std::vector<PageAccessInfo>&& requiredPages,
-                const util::FixedOrderedMap<full_id, ChunkSizeBounds>& chunkBounds
-        ) : parent(parent), pageAccessList(std::move(requiredPages)) {
-            chunkIndex.reserve(this->pageAccessList.size() * pageAvgLoadFactor / 100);
-            parent.loader.setCurrentBlock(block);
-            for (const auto& page: this->pageAccessList) {
-                // note that since we've used [] if the page doesn't exist in the cache an empty page will be created.
-                parent.loader.preparePage(page.id, parent.cache[page.id]);
-            }
-
-            for (const auto& page: this->pageAccessList) {
-                indexPage(page);
-            }
-
-            // after indexing requiredPages all chunks are added to chunkIndex, including accessed non-existent chunks.
-            // getChunk() will throw the right exception when chunk is not found.
-            for (int i = 0; i < chunkBounds.size(); ++i) {
-                getChunk(chunkBounds.getKeys()[i])->reserveSpace(chunkBounds.getValues()[i].sizeUpperBound);
-            }
-        }
+                util::FixedOrderedMap<full_id, ChunkSizeBounds> chunkBounds
+        );
 
         /// this function must be thread-safe
         Chunk* getChunk(full_id id) {
             try {
                 return chunkIndex.at(id);
             } catch (const std::out_of_range&) {
-                throw BlockError("missing proof of non-existent chunk");
+                throw BlockError("missing proof of non-existence");
+            }
+        };
+
+        int32_fast getSizeLowerBound(full_id chunkID) {
+            try {
+                return sizeBoundsInfo.at(chunkID).sizeLowerBound;
+            } catch (const std::out_of_range&) {
+                throw BlockError("missing chunk size bounds");
             }
         };
 
@@ -81,12 +73,17 @@ public:
             }
         };
 
+        Modifier buildModifier(const AppRequestRawData::AccessMapType& rawAccessMap);
+
         void migrateChunk(full_id id, full_id fromPage, full_id toPage);
 
     private:
         PageCache& parent;
         std::vector<PageAccessInfo> pageAccessList;
         std::unordered_map<int128, Chunk*> chunkIndex;
+
+        // this map usually is small. That's why we didn't merge it with chunkIndex.
+        util::FixedOrderedMap<full_id, ChunkSizeBounds> sizeBoundsInfo;
 
         void indexPage(const PageAccessInfo& accessInfo) {
             auto& page = parent.cache[accessInfo.id];

@@ -42,7 +42,7 @@ add_executable(Google_Tests_run
         AsceeIdentifiersTest.cpp
         AsceeCryptoTest.cpp
         AsceeVSigManagerTest.cpp
-        )
+        SchedulerTest.cpp)
 
 # linking Google_Tests_run with libraries
 

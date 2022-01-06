@@ -52,7 +52,7 @@ void RequestScheduler::submitResult(const AppResponse& result) {
     zeroQueue.removeProducer();
 }
 
-/// sortedOffsets needs to be sorted and AccessBlocks are corresponding BlockAccessInfos with those offsets.
+/// sortedOffsets needs to be sorted, and AccessBlocks are corresponding BlockAccessInfos with those offsets.
 /// sorting order when offset == -1: (!writable && size == 0) < !writable < writable
 ///
 /// sizeLowerBound is the minimum allowed size of the chunk and it is
@@ -64,7 +64,7 @@ void RequestScheduler::findCollisions(
 ) {
     bool inSizeWriterList = false;
     int32_fast sizeWritersBegin = 0, sizeWritersEnd = 0;
-    int32_fast lowerBound = 0, upperBound = 0;
+    int32_fast lowerBound = 0;
     for (int32_fast i = 0; i < accessBlocks.size(); ++i) {
         auto writable = accessBlocks[i].writable;
         auto offset = sortedOffsets[i];
@@ -89,16 +89,13 @@ void RequestScheduler::findCollisions(
         } else if (inSizeWriterList && !(offset == -1 && writable)) {
             inSizeWriterList = false;
             sizeWritersEnd = i;
-            lowerBound = sizeBoundsInfo.at(chunkID).sizeLowerBound;
-            upperBound = sizeBoundsInfo.at(chunkID).sizeUpperBound;
+            lowerBound = heapIndex.getSizeLowerBound(chunkID);
         }
 
         if (sizeWritersEnd != 0 && end > lowerBound) {
             for (int32_fast j = sizeWritersBegin; j < sizeWritersEnd; ++j) {
-                bool collision = accessBlocks[j].size > 0 ?
-                                 (end > lowerBound && offset < accessBlocks[j].size) :
-                                 (end > -accessBlocks[j].size && offset < upperBound);
-
+                auto newSize = accessBlocks[j].size;
+                bool collision = newSize > 0 ? offset < newSize : end > -newSize;
                 if (collision) registerDependency(accessBlocks[i].requestID, accessBlocks[j].requestID);
             }
         }
@@ -114,57 +111,14 @@ auto& RequestScheduler::requestAt(AppRequestIdType id) {
     return nodeIndex[id];
 }
 
-RequestScheduler::RequestScheduler(int_fast32_t totalRequestCount, heap::PageCache::ChunkIndex& heapIndex,
-                                   util::FixedOrderedMap<full_id, ChunkSizeBounds> sizeBounds) :
+RequestScheduler::RequestScheduler(
+        int_fast32_t totalRequestCount,
+        heap::PageCache::ChunkIndex& heapIndex
+) :
         heapIndex(heapIndex),
         count(totalRequestCount),
         nodeIndex(std::make_unique<std::unique_ptr<DagNode>[]>(totalRequestCount)),
-        memoryAccessMaps(totalRequestCount),
-        sizeBoundsInfo(std::move(sizeBounds)) {}
-
-heap::Modifier RequestScheduler::buildModifier(const AppRequestRawData::AccessMapType& rawAccessMap) const {
-    std::vector<heap::Modifier::ChunkMap64> chunkMapList;
-    chunkMapList.reserve(rawAccessMap.size());
-    for (long i = 0; i < rawAccessMap.size(); ++i) {
-        auto appID = rawAccessMap.getKeys()[i];
-        auto& chunkMap = rawAccessMap.getValues()[i];
-        std::vector<heap::Modifier::ChunkInfo> chunkInfoList;
-        chunkInfoList.reserve(chunkMap.size());
-        for (long j = 0; j < chunkMap.size(); ++j) {
-            auto chunkID = chunkMap.getKeys()[j];
-            // When the chunk is not found getChunk throws a BlockError exception.
-            auto* chunkPtr = heapIndex.getChunk(full_id(appID, chunkID));
-            auto chunkNewSize = chunkMap.getValues()[j].getValues()[0].size;
-            bool resizable = chunkMap.getValues()[j].getValues()[0].writable;
-
-            if (resizable) {
-                try {
-                    auto& chunkBounds = sizeBoundsInfo.at(full_id(appID, chunkID));
-                    if (chunkPtr->getsize() < chunkBounds.sizeLowerBound ||
-                        chunkPtr->getsize() > chunkBounds.sizeUpperBound ||
-                        chunkNewSize > 0 && chunkNewSize > chunkBounds.sizeUpperBound ||
-                        chunkNewSize <= 0 && -chunkNewSize < chunkBounds.sizeLowerBound) {
-                        throw BlockError("invalid sizeBounds for chunk ["
-                                         + std::to_string(appID) + "::" + std::to_string(chunkID) + "]");
-                    }
-                } catch (const std::out_of_range&) {
-                    throw BlockError("missing sizeBounds for chunk ["
-                                     + std::to_string(appID) + "::" + std::to_string(chunkID) + "]");
-                }
-            }
-
-            chunkInfoList.emplace_back(
-                    chunkPtr,
-                    chunkNewSize,
-                    resizable,
-                    chunkMap.getValues()[j].getKeys(),
-                    chunkMap.getValues()[j].getValues()
-            );
-        }
-        chunkMapList.emplace_back(chunkMap.getKeys(), std::move(chunkInfoList));
-    }
-    return {rawAccessMap.getKeys(), std::move(chunkMapList)};
-}
+        memoryAccessMaps(totalRequestCount) {}
 
 void RequestScheduler::buildExecDag() {
     for (int i = 0; i < count; ++i) {
@@ -196,8 +150,8 @@ void RequestScheduler::registerDependency(AppRequestIdType u, AppRequestIdType v
     printf("[%ld->%ld]\n", u, v);
 }
 
-heap::Modifier RequestScheduler::buildModifierFor(AppRequestIdType requestID) const {
-    return buildModifier(memoryAccessMaps[requestID]);
+heap::Modifier RequestScheduler::getModifierFor(AppRequestIdType requestID) const {
+    return heapIndex.buildModifier(memoryAccessMaps[requestID]);
 }
 
 DagNode::DagNode(AppRequestRawData&& data,
@@ -208,7 +162,7 @@ DagNode::DagNode(AppRequestRawData&& data,
                 .calledAppID = data.calledAppID,
                 .httpRequest = std::move(data.httpRequest),
                 .gas = data.gas,
-                .modifier = scheduler->buildModifierFor(data.id),
+                .modifier = scheduler->getModifierFor(data.id),
                 .appTable = AppLoader::global->createAppTable(data.appAccessList),
                 .failureManager = FailureManager(
                         std::move(data.stackSizeFailures),

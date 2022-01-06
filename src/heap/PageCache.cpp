@@ -16,7 +16,6 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include "PageCache.h"
-#include "Chunk.h"
 
 using namespace ascee;
 using namespace ascee::runtime::heap;
@@ -34,4 +33,72 @@ bool isLittleEndian() {
 
 PageCache::PageCache(runtime::PageLoader& loader) : loader(loader) {
     if (!isLittleEndian()) throw std::runtime_error("platform not supported");
+}
+
+Modifier PageCache::ChunkIndex::buildModifier(const AppRequestRawData::AccessMapType& rawAccessMap) {
+    std::vector<heap::Modifier::ChunkMap64> chunkMapList;
+    chunkMapList.reserve(rawAccessMap.size());
+    for (long i = 0; i < rawAccessMap.size(); ++i) {
+        auto appID = rawAccessMap.getKeys()[i];
+        auto& chunkMap = rawAccessMap.getValues()[i];
+        std::vector<heap::Modifier::ChunkInfo> chunkInfoList;
+        chunkInfoList.reserve(chunkMap.size());
+        for (long j = 0; j < chunkMap.size(); ++j) {
+            auto chunkID = chunkMap.getKeys()[j];
+            // When the chunk is not found getChunk throws a BlockError exception.
+            auto* chunkPtr = getChunk(full_id(appID, chunkID));
+            auto chunkNewSize = chunkMap.getValues()[j].getValues()[0].size;
+            bool resizable = chunkMap.getValues()[j].getValues()[0].writable;
+
+            if (resizable) {
+                try {
+                    auto& chunkBounds = sizeBoundsInfo.at(full_id(appID, chunkID));
+                    if (chunkPtr->getsize() < chunkBounds.sizeLowerBound ||
+                        chunkPtr->getsize() > chunkBounds.sizeUpperBound ||
+                        chunkNewSize > 0 && chunkNewSize > chunkBounds.sizeUpperBound ||
+                        chunkNewSize <= 0 && -chunkNewSize < chunkBounds.sizeLowerBound) {
+                        throw BlockError("invalid sizeBounds for chunk ["
+                                         + std::to_string(appID) + "::" + std::to_string(chunkID) + "]");
+                    }
+                } catch (const std::out_of_range&) {
+                    throw BlockError("missing sizeBounds for chunk ["
+                                     + std::to_string(appID) + "::" + std::to_string(chunkID) + "]");
+                }
+            }
+
+            chunkInfoList.emplace_back(
+                    chunkPtr,
+                    chunkNewSize,
+                    resizable,
+                    chunkMap.getValues()[j].getKeys(),
+                    chunkMap.getValues()[j].getValues()
+            );
+        }
+        chunkMapList.emplace_back(chunkMap.getKeys(), std::move(chunkInfoList));
+    }
+    return {rawAccessMap.getKeys(), std::move(chunkMapList)};
+}
+
+PageCache::ChunkIndex::ChunkIndex(
+        PageCache& parent,
+        const runtime::BlockHeader& block,
+        std::vector<PageAccessInfo>&& requiredPages,
+        util::FixedOrderedMap<full_id, ChunkSizeBounds> chunkBounds
+) : parent(parent), pageAccessList(std::move(requiredPages)), sizeBoundsInfo(std::move(chunkBounds)) {
+    chunkIndex.reserve(this->pageAccessList.size() * pageAvgLoadFactor / 100);
+    parent.loader.setCurrentBlock(block);
+    for (const auto& page: this->pageAccessList) {
+        // note that since we've used [] if the page doesn't exist in the cache an empty page will be created.
+        parent.loader.preparePage(page.id, parent.cache[page.id]);
+    }
+
+    for (const auto& page: this->pageAccessList) {
+        indexPage(page);
+    }
+
+    // after indexing requiredPages all chunks are added to chunkIndex, including accessed non-existent chunks.
+    // getChunk() will throw the right exception when chunk is not found.
+    for (int i = 0; i < chunkBounds.size(); ++i) {
+        getChunk(chunkBounds.getKeys()[i])->reserveSpace(chunkBounds.getValues()[i].sizeUpperBound);
+    }
 }

@@ -86,7 +86,7 @@ int main(int argc, char const* argv[]) {
 
     BlockLoader bl;
     heap::PageCache::ChunkIndex ind(c, {7878}, {{full_id(10, 100), true}}, bl.getProposedSizeBounds());
-    RequestScheduler rs(3, ind, bl.getProposedSizeBounds());
+    RequestScheduler rs(3, ind);
     rs.addRequest(0, {.memoryAccessMap = {
             {10},
             {{{100}, {

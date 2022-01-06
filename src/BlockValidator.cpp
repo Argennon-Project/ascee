@@ -38,16 +38,14 @@ bool BlockValidator::conditionalValidate(const BlockHeader& current, const Block
     try {
         blockLoader.setCurrentBlock(current);
 
-        auto sizeBounds = blockLoader.getProposedSizeBounds();
-
         heap::PageCache::ChunkIndex index(
                 cache,
                 previous,
                 blockLoader.getPageAccessList(),
-                sizeBounds
+                blockLoader.getProposedSizeBounds()
         );
 
-        RequestScheduler scheduler(blockLoader.getNumOfRequests(), index, std::move(sizeBounds));
+        RequestScheduler scheduler(blockLoader.getNumOfRequests(), index);
 
         loadRequests(scheduler);
 
