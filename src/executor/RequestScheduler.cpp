@@ -53,7 +53,8 @@ void RequestScheduler::submitResult(const AppResponse& result) {
 }
 
 /// sortedOffsets needs to be sorted, and AccessBlocks are corresponding BlockAccessInfos with those offsets.
-/// sorting order when offset == -1: (!writable && size == 0) < !writable < writable
+/// we must have offset == -3 for blocks(!writable && size == 0) and offset == -2 for blocks(!writable && size != 0)
+/// and offset == -1 for blocks(writable)
 ///
 /// sizeLowerBound is the minimum allowed size of the chunk and it is
 /// inclusive. (i.e. it is the mathematical lower bound of chunkSize and we require chunkSize >= sizeLowerBound)
@@ -69,12 +70,12 @@ void RequestScheduler::findCollisions(
         auto writable = accessBlocks[i].writable;
         auto offset = sortedOffsets[i];
 
-        // we can skip non-accessible size blocks because based on the sorting order they will always be at the start
+        // we can skip non-accessible size blocks because based on their offset they will always be at the start
         // of the list.
-        if (offset == -1 && !writable && accessBlocks[i].size == 0) continue;
+        if (offset == -3) continue;
 
         auto& request = nodeIndex[accessBlocks[i].requestID]->getAppRequest();
-        auto end = (offset == -1) ? 0 : offset + accessBlocks[i].size;
+        auto end = (offset == -1 || offset == -2) ? 0 : offset + accessBlocks[i].size;
 
         for (int32_fast j = i + 1; j < accessBlocks.size(); ++j) {
             if (sortedOffsets[j] < end && (writable || accessBlocks[j].writable)) {
@@ -82,16 +83,17 @@ void RequestScheduler::findCollisions(
             }
         }
 
-        // finding the index interval of chunk resizing info blocks
-        if (!inSizeWriterList && offset == -1 && writable) {
+        // finding the index interval of chunk resizing info blocks: for all of them we have offset == -1
+        if (!inSizeWriterList && offset == -1) {
             inSizeWriterList = true;
             sizeWritersBegin = i;
-        } else if (inSizeWriterList && !(offset == -1 && writable)) {
+        } else if (inSizeWriterList && offset != -1) {
             inSizeWriterList = false;
             sizeWritersEnd = i;
             lowerBound = heapIndex.getSizeLowerBound(chunkID);
         }
 
+        // end > upperBound will never occur, since those transactions must not be included in a block.
         if (sizeWritersEnd != 0 && end > lowerBound) {
             for (int32_fast j = sizeWritersBegin; j < sizeWritersEnd; ++j) {
                 auto newSize = accessBlocks[j].size;
@@ -146,8 +148,10 @@ void RequestScheduler::finalizeRequest(AppRequestIdType id) {
 
 void RequestScheduler::registerDependency(AppRequestIdType u, AppRequestIdType v) {
     if (u > v) std::swap(u, v);
-    if (!nodeIndex[u]->isAdjacent(v)) throw BlockError("missing an edge in the dependency graph");
-    printf("[%ld->%ld]\n", u, v);
+    if (!nodeIndex[u]->isAdjacent(v)) {
+        throw BlockError("missing [" + std::to_string(u) + "," + std::to_string(v) + "] edge in the dependency graph");
+    }
+    printf("[%ld->%ld] ", u, v);
 }
 
 heap::Modifier RequestScheduler::getModifierFor(AppRequestIdType requestID) const {

@@ -60,7 +60,7 @@ void Chunk::setSize(int32 newSize) {
 void Chunk::resize(int32 newCapacity) {
     // zero initialization is needed only when we are expanding the chunk
     auto* newContent = newCapacity > chunkSize ? new byte[newCapacity]() : new byte[newCapacity];
-    memcpy(newContent, content.get(), chunkSize);
+    if (chunkSize > 0) memcpy(newContent, content.get(), chunkSize);
     content.reset(newContent);
     capacity = newCapacity;
 }

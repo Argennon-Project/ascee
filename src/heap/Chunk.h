@@ -27,7 +27,6 @@ namespace ascee::runtime::heap {
 
 class Chunk {
 public:
-    static constexpr int initialCapacity = 32;
     static constexpr int maxAllowedCapacity = 64 * 1024;
 
     class Pointer {
@@ -46,7 +45,9 @@ public:
         byte* const location = nullptr;
     };
 
-    explicit Chunk(int32 capacity = initialCapacity);
+    Chunk() = default;
+
+    explicit Chunk(int32 capacity);
 
     Chunk(const Chunk&) = delete;
 

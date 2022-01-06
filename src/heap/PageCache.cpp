@@ -57,8 +57,8 @@ Modifier PageCache::ChunkIndex::buildModifier(const AppRequestRawData::AccessMap
                         chunkPtr->getsize() > chunkBounds.sizeUpperBound ||
                         chunkNewSize > 0 && chunkNewSize > chunkBounds.sizeUpperBound ||
                         chunkNewSize <= 0 && -chunkNewSize < chunkBounds.sizeLowerBound) {
-                        throw BlockError("invalid sizeBounds for chunk ["
-                                         + std::to_string(appID) + "::" + std::to_string(chunkID) + "]");
+                        throw BlockError("invalid sizeBounds for chunk [" +
+                                         std::to_string(appID) + "::" + std::to_string(chunkID) + "]");
                     }
                 } catch (const std::out_of_range&) {
                     throw BlockError("missing sizeBounds for chunk ["
@@ -98,7 +98,7 @@ PageCache::ChunkIndex::ChunkIndex(
 
     // after indexing requiredPages all chunks are added to chunkIndex, including accessed non-existent chunks.
     // getChunk() will throw the right exception when chunk is not found.
-    for (int i = 0; i < chunkBounds.size(); ++i) {
-        getChunk(chunkBounds.getKeys()[i])->reserveSpace(chunkBounds.getValues()[i].sizeUpperBound);
+    for (int i = 0; i < sizeBoundsInfo.size(); ++i) {
+        getChunk(sizeBoundsInfo.getKeys()[i])->reserveSpace(sizeBoundsInfo.getValues()[i].sizeUpperBound);
     }
 }
