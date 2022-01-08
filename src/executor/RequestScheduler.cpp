@@ -127,8 +127,11 @@ void RequestScheduler::buildExecDag() {
     for (int i = 0; i < count; ++i) {
         if (nodeIndex[i]->getInDegree() == 0) {
             zeroQueue.enqueue(nodeIndex[i].get());
+        } else {
+            break;
         }
     }
+    if (zeroQueue.isEmpty()) throw BlockError("source node of the execution DAG is missing");
 }
 
 AppRequestRawData::AccessMapType RequestScheduler::sortAccessBlocks() {
@@ -148,11 +151,11 @@ void RequestScheduler::finalizeRequest(AppRequestIdType id) {
 }
 
 void RequestScheduler::registerDependency(AppRequestIdType u, AppRequestIdType v) {
-    if (u > v) std::swap(u, v);
-    if (!nodeIndex[u]->isAdjacent(v)) {
-        throw BlockError("missing [" + std::to_string(u) + "," + std::to_string(v) + "] edge in the dependency graph");
+    if (!nodeIndex[u]->isAdjacent(v) && !nodeIndex[v]->isAdjacent(u)) {
+        throw BlockError("missing {" + std::to_string(u) + "," + std::to_string(v) +
+                         "} edge in the dependency graph");
     }
-    printf("[%ld->%ld] ", u, v);
+    printf("[%ld--%ld] ", u, v);
 }
 
 heap::Modifier RequestScheduler::getModifierFor(AppRequestIdType requestID) const {

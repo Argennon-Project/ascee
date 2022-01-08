@@ -41,6 +41,14 @@ using AppRequestIdType = int_fast32_t;
 struct AppRequestRawData {
     using AccessMapType = util::FixedOrderedMap<long_id,
             util::FixedOrderedMap<long_id, util::FixedOrderedMap<int32, BlockAccessInfo>>>;
+    /// The unique identifier of a request in a block. It must be a 32 bit integer in the interval [0,n), where n is
+    /// the total number of requests of the block. Obviously any integer in the interval should be assigned to
+    /// exactly one request.
+    ///
+    /// If the proposed execution DAG of the block has k nodes with zero in-degree the first k integers
+    /// (integers in the interval [0,k)) should be assigned to nodes (requests) with a zero in-degree.
+    /// If the request with id == 0 does not have zero in-degree in the proposed execution DAG the block will
+    /// be considered invalid.
     AppRequestIdType id = 0;
     long_id calledAppID = -1;
     std::string httpRequest;
@@ -48,7 +56,7 @@ struct AppRequestRawData {
     std::vector<long_id> appAccessList;
     std::unordered_set<int_fast32_t> stackSizeFailures;
     std::unordered_set<int_fast32_t> cpuTimeFailures;
-    /// It must check that the list is sorted
+    /// The list must be sorted.
     AccessMapType memoryAccessMap;
     /// This list should be checked to make sure no id is out of range.
     std::unordered_set<AppRequestIdType> adjList;
