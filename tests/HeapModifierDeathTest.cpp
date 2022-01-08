@@ -27,6 +27,8 @@ using namespace ascee;
 using namespace runtime;
 using std::vector;
 
+using Access = BlockAccessInfo::Type;
+
 class HeapModifierDeathTest : public ::testing::Test {
 protected:
     heap::Chunk tempChunk1_10{256};
@@ -49,35 +51,36 @@ public:
         // std::vector<T>({obj1, obj2, obj3}) uses copy constructor of T. Therefore we can not use initializer
         // lists for classes without a copy constructor, and we need to use emplace instead.
         vector<heap::Modifier::ChunkInfo> chunksForApp1;
-        chunksForApp1.emplace_back(&tempChunk1_10, 0, false,
-                                   vector<int32>{100, 108, 252},
+        chunksForApp1.emplace_back(&tempChunk1_10, 0, Access::read_only,
+                                   vector<int32>{100, 108, 150, 252},
                                    vector<BlockAccessInfo>{
-                                           {8,  false, 0},
-                                           {16, true,  0},
-                                           {4,  false, 0},
+                                           {8,  Access::read_only,    0},
+                                           {16, Access::writable,     0},
+                                           {4,  Access::int_additive, 0},
+                                           {4,  Access::read_only,    0},
                                    });
-        chunksForApp1.emplace_back(&tempChunk1_11, 0, false,
+        chunksForApp1.emplace_back(&tempChunk1_11, 0, Access::read_only,
                                    vector<int32>{100, 120},
                                    vector<BlockAccessInfo>{
-                                           {8, true, 0},
-                                           {8, true, 0},
+                                           {8, Access::writable, 0},
+                                           {8, Access::writable, 0},
                                    });
-        chunksForApp1.emplace_back(&tempChunk1_100, 0, false,
+        chunksForApp1.emplace_back(&tempChunk1_100, 0, Access::read_only,
                                    vector<int32>{100},
                                    vector<BlockAccessInfo>{
-                                           {8, true, 0},
+                                           {8, Access::writable, 0},
                                    });
 
         vector<heap::Modifier::ChunkInfo> chunksForApp2;
-        chunksForApp2.emplace_back(&tempChunk2_1, 0, false,
+        chunksForApp2.emplace_back(&tempChunk2_1, 0, Access::read_only,
                                    vector<int32>{100},
                                    vector<BlockAccessInfo>{
-                                           {8, true, 0},
+                                           {8, Access::writable, 0},
                                    });
-        chunksForApp2.emplace_back(&tempChunk2_2, 0, false,
+        chunksForApp2.emplace_back(&tempChunk2_2, 0, Access::read_only,
                                    vector<int32>{100},
                                    vector<BlockAccessInfo>{
-                                           {8, true, 0},
+                                           {8, Access::writable, 0},
                                    });
 
         vector<heap::Modifier::ChunkMap64> appMaps;
@@ -104,6 +107,17 @@ TEST_F(HeapModifierDeathTest, SimpleReadWrite) {
 
     auto got2 = modifier->load<StaticArray<int64, 1>>(100);
     EXPECT_EQ(got2.at(0), 0x102020201020202) << "got: 0x" << std::hex << got;
+
+    EXPECT_THROW(modifier->load<int32>(150), std::out_of_range);
+
+    EXPECT_TRUE(modifier->isValid(150, 4));
+
+    modifier->addInt(150, 12);
+    modifier->addInt(150, 22);
+
+    EXPECT_THROW(modifier->addInt(150, int64(3)), std::out_of_range);
+
+    modifier->addInt(150, 10);
 
     modifier->loadChunk(long_id(100));
     modifier->store<int64>(100, 123456789);
@@ -136,6 +150,10 @@ TEST_F(HeapModifierDeathTest, SimpleReadWrite) {
     modifier->loadChunk(long_id(100));
     got = modifier->load<int64>(100);
     EXPECT_EQ(got, 123456789);
+
+    modifier->writeToHeap();
+
+    EXPECT_EQ(*(int64*) tempChunk1_10.getContentPointer(150, 4).get(4), 44);
 }
 
 TEST_F(HeapModifierDeathTest, VersionZero) {

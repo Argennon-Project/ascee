@@ -20,7 +20,6 @@
 
 #include <exception>
 #include <cstring>
-#include <mutex>
 #include <utility>
 #include <vector>
 #include "argc/primitives.h"
@@ -53,6 +52,10 @@ public:
     inline
     void store(int32 offset, T value) { currentChunk->accessTable.at(offset).write<T>(currentVersion, value); }
 
+    template<typename T>
+    inline
+    void addInt(int32 offset, T value) { currentChunk->accessTable.at(offset).addInt<T>(currentVersion, value); }
+
     template<typename T, int h>
     inline
     int storeVarUInt(const IdentifierTrie <T, h>& trie, int32 offset, T value) {
@@ -76,7 +79,7 @@ public:
         // we need to make sure that the access block is defined. Otherwise, scheduler can not guarantee that
         // isValid is properly parallelized with chunk resizing requests.
         if (size > currentChunk->accessTable.at(offset).getSize()) {
-            throw std::out_of_range("isValid size");
+            throw std::out_of_range("isValid: invalid size");
         }
         // we can't use getChunkSize() here
         return offset < currentChunk->size.read<int32>(currentVersion);
@@ -95,10 +98,10 @@ private:
 
         AccessBlock(const AccessBlock&) = delete;
 
-        AccessBlock(const Chunk::Pointer& heapLocation, int32 size, bool writable);
+        AccessBlock(const Chunk::Pointer& heapLocation, int32 size, BlockAccessInfo::Type accessType);
 
         [[nodiscard]] bool isWritable() const {
-            return writable;
+            return !(accessType == BlockAccessInfo::Type::read_only);
         }
 
         [[nodiscard]] inline
@@ -107,22 +110,20 @@ private:
         template<typename T, int h>
         inline
         T readIdentifier(const IdentifierTrie <T, h>& trie, int16_t version, int* n = nullptr) {
-            auto content = syncTo(version);
-            return trie.readIdentifier(content, n, size);
+            return trie.readIdentifier(prepareToRead(version, size), n, size);
         }
 
         template<typename T, int h>
         inline
         T readVarUInt(const IdentifierTrie <T, h>& trie, int16_t version, int* n = nullptr) {
-            auto content = syncTo(version);
-            return trie.decodeVarUInt(content, n, size);
+            return trie.decodeVarUInt(prepareToRead(version, size), n, size);
         }
 
         template<typename T>
         inline
         T read(int16_t version) {
-            if (sizeof(T) > size) throw std::out_of_range("read size");
-            auto content = syncTo(version);
+            auto content = prepareToRead(version, sizeof(T));
+
             T ret{};
             memcpy((byte*) &ret, content, sizeof(T));
             // Here we return the result by value. This is not bad for performance. Compilers usually implement
@@ -135,8 +136,7 @@ private:
         int writeVarUInt(const IdentifierTrie <T, h>& trie, int16_t version, T value) {
             int len;
             auto code = trie.encodeVarUInt(value, &len);
-            prepareToWrite(version, len);
-            trie.writeBigEndian(versionList.back().getContent(), code, len);
+            trie.writeBigEndian(prepareToWrite(version, len), code, len);
             return len;
         }
 
@@ -144,12 +144,25 @@ private:
         template<typename T>
         inline
         void write(int16_t version, T value) {
-            prepareToWrite(version, sizeof(value));
-            memcpy(versionList.back().getContent(), (byte*) &value, sizeof(value));
+            memcpy(prepareToWrite(version, sizeof(value)), (byte*) &value, sizeof(value));
         }
 
-        void wrToHeap(int16_t version, int32 maxWriteSize);
+        template<typename T>
+        inline
+        void addInt(int16_t version, T value) {
+            static_assert(std::is_integral<T>::value);
+            if (sizeof(T) != size) throw std::out_of_range("addInt size");
+            if (accessType != BlockAccessInfo::Type::int_additive) throw std::out_of_range("block is not additive");
+            syncTo(version);
+            T current;
+            if (versionList.empty()) current = 0;
+            else memcpy((byte*) &current, versionList.back().getContent(), sizeof(T));
+            current += value;
+            addVersion(version);
+            memcpy(versionList.back().getContent(), (byte*) &current, sizeof(T));
+        }
 
+        void wrToHeap(Chunk* chunk, int16_t version, int32 maxWriteSize);
 
     private:
         struct Version {
@@ -163,14 +176,16 @@ private:
 
         Chunk::Pointer heapLocation;
         int32 size = 0;
-        bool writable = false;
+        BlockAccessInfo::Type accessType = BlockAccessInfo::Type::read_only;
         std::vector<Version> versionList;
 
-        byte* syncTo(int16_t version);
+        void syncTo(int16_t version);
 
-        byte* add(int16_t version);
+        bool addVersion(int16_t version);
 
-        void prepareToWrite(int16_t version, int writeSize);
+        byte* prepareToRead(int16_t version, int32 readSize);
+
+        byte* prepareToWrite(int16_t version, int32 writeSize);
     };
 
     typedef util::FixedOrderedMap <int32, AccessBlock> AccessTableMap;
@@ -198,7 +213,8 @@ public:
 
     public:
         ChunkInfo(
-                Chunk* chunk, int32 newSize, bool resizable,
+                Chunk* chunk, int32 newSize,
+                BlockAccessInfo::Type accessType,
                 std::vector<int32> sortedAccessedOffsets,
                 const std::vector<BlockAccessInfo>& accessInfoList
         );

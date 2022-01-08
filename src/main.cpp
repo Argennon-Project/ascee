@@ -25,6 +25,11 @@
 using namespace ascee;
 using namespace ascee::runtime;
 
+int a() {
+    return 10;
+}
+
+
 int main(int argc, char const* argv[]) {
     // initialize a pairing:
     char param[1024];
@@ -84,25 +89,28 @@ int main(int argc, char const* argv[]) {
     PageLoader pl;
     heap::PageCache c(pl);
 
+
+    using Access = BlockAccessInfo::Type;
+
     BlockLoader bl;
     heap::PageCache::ChunkIndex ind(c, {7878}, {{full_id(10, 100), true}}, bl.getProposedSizeBounds());
     RequestScheduler rs(3, ind);
     rs.addRequest(0, {.memoryAccessMap = {
             {10},
             {{{100}, {
-                             {{-1, 3}, {{1, false, 0}, {4, true, 0}}},
+                             {{-1, 3}, {{1, Access::read_only, 0}, {4, Access::writable, 0}}},
                      }}}},
             .adjList = {1, 2}});
     rs.addRequest(1, {.memoryAccessMap = {
             {10},
             {{{100}, {
-                             {{-1, 2}, {{1, false, 1}, {4, false, 1}}},
+                             {{-1, 2}, {{1, Access::read_only, 1}, {4, Access::read_only, 1}}},
                      }}}},
             .adjList={2}});
     rs.addRequest(2, {.memoryAccessMap = {
             {10},
             {{{100}, {
-                             {{-1, 2}, {{1, false, 2}, {5, true, 2}}},
+                             {{-1, 2}, {{1, Access::read_only, 2}, {5, Access::writable, 2}}},
                      }}}}});
 
     ;

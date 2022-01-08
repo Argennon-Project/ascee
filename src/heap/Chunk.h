@@ -21,6 +21,7 @@
 #include <argc/types.h>
 #include <memory>
 #include <atomic>
+#include <mutex>
 
 namespace ascee::runtime::heap {
 
@@ -37,11 +38,12 @@ public:
 
         inline bool isNull() { return location == nullptr; }
 
-        inline byte* get(int32 accessSize) {
+        inline byte* get(int32_fast accessSize) {
             return location;
         }
 
     private:
+        // We are going to have a lot of objects of this class in memory, so we try to keep it very lightweight.
         byte* const location = nullptr;
     };
 
@@ -67,6 +69,10 @@ public:
 
     Pointer getContentPointer(int32 offset, int32 size);
 
+    std::mutex& getContentMutex() {
+        return contentMutex;
+    }
+
     /// This is used to indicate that a chunk will not be modified in a block. Knowing that a chunk is not modified
     /// in the block helps in efficient calculation of commitments.
     void setWritable(bool writable);
@@ -80,6 +86,7 @@ private:
     std::atomic<int32> chunkSize = 0;
     int32 capacity = 0;
     bool writable = true;
+    std::mutex contentMutex;
 
     void resize(int32 newCapacity);
 };

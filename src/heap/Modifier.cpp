@@ -63,13 +63,13 @@ void Modifier::writeToHeap() {
         for (auto& chunk: appMap.getValues()) {
             auto chunkSize = chunk.size.read<int32>(currentVersion);
             if (chunk.size.isWritable()) chunk.ptr->setSize(chunkSize);
-            if (chunkSize > 0) {
+            if (chunkSize > 0 && chunk.ptr->isWritable()) {
                 // offset[0] == -1 and we should skip it.
                 for (long i = 1; i < chunk.accessTable.size(); ++i) {
                     auto offset = chunk.accessTable.getKeys()[i];
                     if (offset >= chunkSize) break;     // since offsets are sorted.
                     // We should make sure that we never write outside the chunk.
-                    chunk.accessTable.getValues()[i].wrToHeap(currentVersion, chunkSize - offset);
+                    chunk.accessTable.getValues()[i].wrToHeap(chunk.ptr, currentVersion, chunkSize - offset);
                 }
             }
         }
@@ -94,50 +94,69 @@ int32 Modifier::getChunkSize() {
     return currentChunk->size.read<int32>(currentVersion);
 }
 
-byte* Modifier::AccessBlock::syncTo(int16_t version) {
+void Modifier::AccessBlock::syncTo(int16_t version) {
     while (!versionList.empty() && versionList.back().number > version) {
         versionList.pop_back();
     }
-
-    return versionList.empty() ? heapLocation.get(size) : versionList.back().getContent();
 }
 
-byte* Modifier::AccessBlock::add(int16_t version) {
+bool Modifier::AccessBlock::addVersion(int16_t version) {
     assert(version >= 1);
     // checks are ordered for having the best performance on average
     if (!versionList.empty()) {
         auto latestVersion = versionList.back().number;
         assert(latestVersion <= version);
-        if (latestVersion == version) return nullptr;
+        if (latestVersion == version) return false;
     }
 
-    return versionList.emplace_back(version, size).getContent();
+    versionList.emplace_back(version, size);
+    return true;
 }
 
-void Modifier::AccessBlock::wrToHeap(int16_t version, int32 maxWriteSize) {
+byte* Modifier::AccessBlock::prepareToRead(int16_t version, int32 readSize) {
+    if (readSize > size) throw std::out_of_range("read size");
+    if (accessType < BlockAccessInfo::Type::read_only) throw std::out_of_range("not readable");
     syncTo(version);
-    if (!versionList.empty()) {
-        memcpy(heapLocation.get(size), versionList.back().getContent(), std::min(size, maxWriteSize));
+    return versionList.empty() ? heapLocation.get(readSize) : versionList.back().getContent();
+}
+
+byte* Modifier::AccessBlock::prepareToWrite(int16_t version, int32 writeSize) {
+    if (writeSize > size) throw std::out_of_range("write size");
+    if (accessType != BlockAccessInfo::Type::writable) throw std::out_of_range("block is not writable");
+    syncTo(version);
+    auto oldContent = versionList.empty() ? heapLocation.get(size) : versionList.back().getContent();
+    addVersion(version);
+    if (size != writeSize) {
+        memcpy(versionList.back().getContent() + writeSize, oldContent + writeSize, size - writeSize);
+    }
+
+    return versionList.back().getContent();
+}
+
+void Modifier::AccessBlock::wrToHeap(Chunk* chunk, int16_t version, int32 maxWriteSize) {
+    syncTo(version);
+    if (versionList.empty()) return;
+
+    if (accessType == BlockAccessInfo::Type::int_additive) {
+        int64_fast s = 0, a = 0;
+        auto readSize = std::min(size, int32(sizeof(int_fast64_t)));
+        std::lock_guard<std::mutex> lock(chunk->getContentMutex());
+        memcpy(&s, heapLocation.get(readSize), readSize);
+        memcpy(&a, versionList.back().getContent(), readSize);
+        s += a;
+        auto writeSize = std::min(readSize, maxWriteSize);
+        memcpy(heapLocation.get(writeSize), &s, writeSize);
+    } else {
+        auto writeSize = std::min(size, maxWriteSize);
+        memcpy(heapLocation.get(writeSize), versionList.back().getContent(), writeSize);
     }
 }
 
 Modifier::AccessBlock::AccessBlock(const Chunk::Pointer& heapLocation,
                                    int32 size,
-                                   bool writable) : heapLocation(heapLocation),
-                                                    size(size),
-                                                    writable(writable) {}
-
-void Modifier::AccessBlock::prepareToWrite(int16_t version, int writeSize) {
-    if (writeSize > size) throw std::out_of_range("write size");
-    if (!writable) throw std::out_of_range("block is not writable");
-    auto oldContent = syncTo(version);
-    auto newContent = add(version);
-    if (size != writeSize && newContent != nullptr) {
-        memcpy(newContent + writeSize, oldContent + writeSize, size - writeSize);
-    }
-    // Here we don't return the pointer to `content`. It would be better if the caller always finds the end of the
-    // version list using back().content. That way content of the heap would not be modified accidentally.
-}
+                                   BlockAccessInfo::Type accessType) : heapLocation(heapLocation),
+                                                                       size(size),
+                                                                       accessType(accessType) {}
 
 /// When resizeable is true and newSize > 0 the chunk can only be expanded and the value of
 /// newSize indicates the upper-bound of the settable size. If resizable == true and newSize <= 0 the chunk is
@@ -146,7 +165,8 @@ void Modifier::AccessBlock::prepareToWrite(int16_t version, int writeSize) {
 /// When resizeable is false and newSize != 0 the size of the chunk can only be read but if newSize == 0
 /// the size of the chunk is not accessible. (not readable nor writable)
 Modifier::ChunkInfo::ChunkInfo(
-        Chunk* chunk, int32 newSize, bool resizable,
+        Chunk* chunk, int32 newSize,
+        BlockAccessInfo::Type accessType,
         std::vector<int32> sortedAccessedOffsets,
         const std::vector<BlockAccessInfo>& accessInfoList
 ) :
@@ -154,7 +174,7 @@ Modifier::ChunkInfo::ChunkInfo(
         size(
                 Chunk::Pointer((byte*) (&initialSize), sizeof(initialSize)),
                 sizeof(initialSize),
-                resizable
+                accessType
         ),
         newSize(newSize),
         ptr(chunk),
@@ -170,7 +190,7 @@ vector<Modifier::AccessBlock> Modifier::ChunkInfo::toBlocks(
     vector<AccessBlock> blocks;
     blocks.reserve(offsets.size());
     for (int i = 0; i < offsets.size(); ++i) {
-        if (accessInfoList[i].writable && !chunk->isWritable()) {
+        if (accessInfoList[i].accessType == BlockAccessInfo::Type::read_only && !chunk->isWritable()) {
             throw BlockError("trying to modify a readonly chunk");
         }
 
@@ -180,7 +200,7 @@ vector<Modifier::AccessBlock> Modifier::ChunkInfo::toBlocks(
             blocks.emplace_back(
                     chunk->getContentPointer(offsets[i], accessInfoList[i].size),
                     accessInfoList[i].size,
-                    accessInfoList[i].writable
+                    accessInfoList[i].accessType
             );
         }
     }

@@ -48,9 +48,9 @@ Modifier PageCache::ChunkIndex::buildModifier(const AppRequestRawData::AccessMap
             // When the chunk is not found getChunk throws a BlockError exception.
             auto* chunkPtr = getChunk(full_id(appID, chunkID));
             auto chunkNewSize = chunkMap.getValues()[j].getValues()[0].size;
-            bool resizable = chunkMap.getValues()[j].getValues()[0].writable;
+            auto resizable = chunkMap.getValues()[j].getValues()[0].accessType;
 
-            if (resizable) {
+            if (resizable == BlockAccessInfo::Type::writable) {
                 try {
                     auto& chunkBounds = sizeBoundsInfo.at(full_id(appID, chunkID));
                     if (chunkPtr->getsize() < chunkBounds.sizeLowerBound ||

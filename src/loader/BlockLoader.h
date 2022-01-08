@@ -28,8 +28,11 @@
 namespace ascee::runtime {
 
 struct BlockAccessInfo {
+    enum class Type : byte {
+        int_additive, read_only, writable
+    };
     int32 size;
-    bool writable;
+    Type accessType;
     int_fast32_t requestID;
 };
 

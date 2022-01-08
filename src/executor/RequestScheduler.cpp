@@ -67,7 +67,7 @@ void RequestScheduler::findCollisions(
     int32_fast sizeWritersBegin = 0, sizeWritersEnd = 0;
     int32_fast lowerBound = 0;
     for (int32_fast i = 0; i < accessBlocks.size(); ++i) {
-        auto writable = accessBlocks[i].writable;
+        auto accessType = accessBlocks[i].accessType;
         auto offset = sortedOffsets[i];
 
         // we can skip non-accessible size blocks because based on their offset they will always be at the start
@@ -78,7 +78,8 @@ void RequestScheduler::findCollisions(
         auto end = (offset == -1 || offset == -2) ? 0 : offset + accessBlocks[i].size;
 
         for (int32_fast j = i + 1; j < accessBlocks.size(); ++j) {
-            if (sortedOffsets[j] < end && (writable || accessBlocks[j].writable)) {
+            if (sortedOffsets[j] < end &&
+                (accessType == BlockAccessInfo::Type::writable || accessType != accessBlocks[j].accessType)) {
                 registerDependency(accessBlocks[i].requestID, accessBlocks[j].requestID);
             }
         }
