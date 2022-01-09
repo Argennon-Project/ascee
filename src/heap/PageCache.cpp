@@ -83,13 +83,16 @@ PageCache::ChunkIndex::ChunkIndex(
         PageCache& parent,
         const runtime::BlockHeader& block,
         std::vector<PageAccessInfo>&& requiredPages,
-        util::FixedOrderedMap<full_id, ChunkSizeBounds> chunkBounds
+        util::FixedOrderedMap<full_id, ChunkSizeBounds> chunkBounds,
+        int32_fast numOfChunks
 ) : parent(parent), pageAccessList(std::move(requiredPages)), sizeBoundsInfo(std::move(chunkBounds)) {
-    chunkIndex.reserve(this->pageAccessList.size() * pageAvgLoadFactor / 100);
+    chunkIndex.reserve(numOfChunks);
     parent.loader.setCurrentBlock(block);
     for (const auto& page: this->pageAccessList) {
-        // note that since we've used [] if the page doesn't exist in the cache an empty page will be created.
-        parent.loader.preparePage(page.id, parent.cache[page.id]);
+        parent.loader.preparePage(
+                page.id,
+                parent.cache.try_emplace(page.id, block.blockNumber).first->second
+        );
     }
 
     for (const auto& page: this->pageAccessList) {
@@ -97,7 +100,7 @@ PageCache::ChunkIndex::ChunkIndex(
     }
 
     // after indexing requiredPages all chunks are added to chunkIndex, including accessed non-existent chunks.
-    // getChunk() will throw the right exception when chunk is not found.
+    // getChunk() will throw a BlockError exception correctly when the chunk is not found.
     for (int i = 0; i < sizeBoundsInfo.size(); ++i) {
         getChunk(sizeBoundsInfo.getKeys()[i])->reserveSpace(sizeBoundsInfo.getValues()[i].sizeUpperBound);
     }

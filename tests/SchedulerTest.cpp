@@ -23,7 +23,7 @@ using namespace ascee;
 using namespace runtime;
 
 using Access = BlockAccessInfo::Type;
-
+/*
 TEST(RequestSchedulerTest, SimpleCollisionDetection) {
     PageLoader pl{};
     heap::PageCache pc(pl);
@@ -50,13 +50,16 @@ TEST(RequestSchedulerTest, SimpleCollisionDetection) {
             // [10->13] [11->13] [10->11] [1->4] [1->5] [1->2] [2->5] [3->5] [5->10] [5->11] [2->10] [2->11] [3->6] [3->10] [3->11] [6->10] [6->11] [7->11]
     });
 }
-
+*/
 TEST(RequestSchedulerTest, CollisionsFromRequests) {
     PageLoader pl{};
     heap::PageCache pc(pl);
     auto chunkFullID = full_id(10, 100);
-    heap::PageCache::ChunkIndex index(pc, {10}, {{chunkFullID, true}}, {{chunkFullID},
-                                                                        {{8, 3}}});
+    heap::PageCache::ChunkIndex index(pc, {10},
+                                      {{chunkFullID, true}}, {{chunkFullID},
+                                                              {{8, 3}}}, 0);
+
+    index.getChunk(chunkFullID)->setSize(5);
     RequestScheduler scheduler(14, index);
 
     scheduler.addRequest(12, {.id = 12, .memoryAccessMap = {

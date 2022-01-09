@@ -42,7 +42,8 @@ bool BlockValidator::conditionalValidate(const BlockHeader& current, const Block
                 cache,
                 previous,
                 blockLoader.getPageAccessList(),
-                blockLoader.getProposedSizeBounds()
+                blockLoader.getProposedSizeBounds(),
+                blockLoader.getNumOfChunks()
         );
 
         RequestScheduler scheduler(blockLoader.getNumOfRequests(), index);

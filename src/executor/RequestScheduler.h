@@ -40,7 +40,7 @@ struct AppRequest {
     heap::Modifier modifier;
     std::unordered_map<long_id, dispatcher_ptr> appTable;
     FailureManager failureManager;
-    std::vector<long_id> attachments;
+    std::vector<AppRequestIdType> attachments;
     Digest digest;
 };
 

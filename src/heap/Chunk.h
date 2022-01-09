@@ -75,7 +75,7 @@ public:
 
     /// This is used to indicate that a chunk will not be modified in a block. Knowing that a chunk is not modified
     /// in the block helps in efficient calculation of commitments.
-    void setWritable(bool writable);
+    Chunk* setWritable(bool writable);
 
 private:
     std::unique_ptr<byte[]> content;

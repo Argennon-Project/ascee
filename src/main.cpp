@@ -93,7 +93,9 @@ int main(int argc, char const* argv[]) {
     using Access = BlockAccessInfo::Type;
 
     BlockLoader bl;
-    heap::PageCache::ChunkIndex ind(c, {7878}, {{full_id(10, 100), true}}, bl.getProposedSizeBounds());
+    auto chunkID = full_id(10, 100);
+    heap::PageCache::ChunkIndex ind(c, {7878}, {{chunkID, true}}, {{chunkID},
+                                                                   {{20, 0}}}, 0);
     RequestScheduler rs(3, ind);
     rs.addRequest(0, {.memoryAccessMap = {
             {10},

@@ -37,15 +37,14 @@ namespace ascee::runtime::heap {
 //TODO: Heap must be signal-safe but it does not need to be thread-safe
 class PageCache {
 public:
-    static constexpr int pageAvgLoadFactor = 120;
-
     class ChunkIndex {
     public:
         ChunkIndex(
                 PageCache& parent,
                 const BlockHeader& block,
                 std::vector<PageAccessInfo>&& requiredPages,
-                util::FixedOrderedMap<full_id, ChunkSizeBounds> chunkBounds
+                util::FixedOrderedMap<full_id, ChunkSizeBounds> chunkBounds,
+                int32_fast numOfChunks
         );
 
         /// this function must be thread-safe
@@ -86,11 +85,13 @@ public:
         util::FixedOrderedMap<full_id, ChunkSizeBounds> sizeBoundsInfo;
 
         void indexPage(const PageAccessInfo& accessInfo) {
-            auto& page = parent.cache[accessInfo.id];
+            auto& page = parent.cache.at(accessInfo.id);
             parent.loader.loadPage(accessInfo.id, page);
-            chunkIndex.emplace(accessInfo.id, page.getNative(accessInfo.isWritable));
-            auto chunkList = page.getMigrants(accessInfo.isWritable);
-            chunkIndex.insert(chunkList.begin(), chunkList.end());
+            chunkIndex.emplace(accessInfo.id, page.getNative()->setWritable(accessInfo.isWritable));
+
+            for (auto& migrant: page.getMigrants()) {
+                chunkIndex.emplace(migrant.first, migrant.second->setWritable(accessInfo.isWritable));
+            }
         }
     };
 

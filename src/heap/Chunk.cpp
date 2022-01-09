@@ -42,8 +42,9 @@ Chunk::Pointer Chunk::getContentPointer(int32 offset, int32 size) {
     return {content.get() + offset, size};
 }
 
-void Chunk::setWritable(bool wr) {
+Chunk* Chunk::setWritable(bool wr) {
     writable = wr;
+    return this;
 }
 
 void Chunk::setSize(int32 newSize) {

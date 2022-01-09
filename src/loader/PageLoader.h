@@ -28,8 +28,9 @@ namespace ascee::runtime {
 class PageLoader {
 public:
     void preparePage(full_id pageID, const heap::Page& page) {
-        assert(page.getBlockNumber() < previousBlock.blockNumber);
-        submitGetDeltaRequest(pageID, page.getBlockNumber(), previousBlock.blockNumber);
+        // if page.getBlockNumber() == previousBlock.blockNumber) that means we need to submit a request for getting
+        // the proof of non-existence
+        submitGetPageRequest(pageID, page.getBlockNumber(), previousBlock.blockNumber);
     }
 
     heap::Delta getDelta(full_id pageID, int_fast64_t from, int_fast64_t to, int tries) {
@@ -60,7 +61,7 @@ public:
 private:
     BlockHeader previousBlock;
 
-    void submitGetDeltaRequest(full_id pageID, int_fast64_t from, int_fast64_t to) {
+    void submitGetPageRequest(full_id pageID, int_fast64_t from, int_fast64_t to) {
 
     }
 

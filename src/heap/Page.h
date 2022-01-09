@@ -19,6 +19,7 @@
 #define ASCEE_HEAP_PAGE_H
 
 #include <argc/types.h>
+#include <map>
 #include <vector>
 #include "Chunk.h"
 
@@ -30,34 +31,40 @@ class Delta {
 
 class Page {
 public:
+    explicit Page(int64_fast blockNumber) : version(blockNumber) {
+        native = std::make_unique<Chunk>();
+    }
+
     void addMigrant(long_id appID, long_id chunkID, Chunk* migrant) {};
 
     byte* getDigest() { return nullptr; };
 
-    int_fast64_t getBlockNumber() const {
-        return blockNumber;
+    int64_fast getBlockNumber() const {
+        return version;
     }
 
-    void applyDelta(Delta delta, int_fast64_t blockNumber) {
-
+    void applyDelta(Delta delta, int64_fast blockNumber) {
+        version = blockNumber;
     }
 
     void removeDelta(Delta delta) {
 
     }
 
-    Chunk* getNative(bool writable) {
-        native.setWritable(writable);
-        return &native;
+    [[nodiscard]]
+    Chunk* getNative() {
+        return native.get();
     }
 
-    std::vector<std::pair<full_id, Chunk*>> getMigrants(bool writable) {
-        return std::vector<std::pair<full_id, Chunk*>>();
+    [[nodiscard]]
+    const std::map<full_id, std::unique_ptr<Chunk>>& getMigrants() {
+        return migrants;
     }
 
 private:
-    int_fast64_t blockNumber = 0;
-    Chunk native;
+    int64_fast version = 0;
+    std::unique_ptr<Chunk> native;
+    std::map<full_id, std::unique_ptr<Chunk>> migrants;
 };
 
 } // namespace ascee::runtime::heap
