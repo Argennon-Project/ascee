@@ -101,7 +101,7 @@ public:
     auto& requestAt(AppRequestIdType id);
 
     /// this function is thread-safe as long as all used `id`s are distinct
-    void addRequest(AppRequestIdType id, AppRequestRawData&& data);
+    void addRequest(AppRequestRawData&& data);
 
     /// this function should be called after all requests are added. (using addRequest() or requestAt())
     void finalizeRequest(AppRequestIdType id);

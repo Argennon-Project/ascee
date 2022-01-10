@@ -3,7 +3,7 @@ a size: `chunkSize` and a size upper bound :`sizeUpperBound`. The value
 of `chunkSize` can be determined uniquely at the start of every execution
 session, and it may be updated during the session like a normal memory location.
 On the other hand `sizeUpperBound` is a value that is constant for every block
-of the blockchain and is purposed by the block proposer.
+of the blockchain and is proposed by the block proposer.
 
 The address space of the chunk starts from zero and only offsets lower
 than `sizeUpperBound` (`offset < sizeUpperBound`)

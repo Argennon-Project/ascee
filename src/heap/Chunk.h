@@ -61,7 +61,7 @@ public:
     bool reserveSpace(int32 newCapacity);
 
     /// This function should only be called at the end of block validation.
-    bool shrinkToFit();
+    bool shrinkSpace();
 
     [[nodiscard]] bool isWritable() const {
         return writable;

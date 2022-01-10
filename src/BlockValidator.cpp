@@ -67,7 +67,7 @@ void BlockValidator::loadRequests(RequestScheduler& scheduler) {
     pendingTasks.reserve(numOfRequests);
     for (AppRequestIdType requestID = 0; requestID < numOfRequests; ++requestID) {
         pendingTasks.emplace_back(RUN_TASK([&] {
-            scheduler.addRequest(requestID, blockLoader.loadRequest(requestID));
+            scheduler.addRequest(blockLoader.loadRequest(requestID));
         }));
     }
 
@@ -102,13 +102,6 @@ void BlockValidator::buildDependencyGraph(RequestScheduler& scheduler) {
     waitForAll(pendingTasks);
 }
 
-BlockValidator::BlockValidator(
-        heap::PageCache& cache,
-        BlockLoader& blockLoader,
-        int workersCount) : cache(cache), blockLoader(blockLoader) {
-    this->workersCount = workersCount == -1 ? (int) std::thread::hardware_concurrency() : workersCount;
-}
-
 void BlockValidator::executeRequests(RequestScheduler& scheduler) {
     scheduler.buildExecDag();
 
@@ -124,4 +117,11 @@ void BlockValidator::executeRequests(RequestScheduler& scheduler) {
     for (auto& worker: pool) {
         worker.join();
     }
+}
+
+BlockValidator::BlockValidator(
+        heap::PageCache& cache,
+        BlockLoader& blockLoader,
+        int workersCount) : cache(cache), blockLoader(blockLoader) {
+    this->workersCount = workersCount == -1 ? (int) std::thread::hardware_concurrency() : workersCount;
 }

@@ -190,7 +190,7 @@ vector<Modifier::AccessBlock> Modifier::ChunkInfo::toBlocks(
     vector<AccessBlock> blocks;
     blocks.reserve(offsets.size());
     for (int i = 0; i < offsets.size(); ++i) {
-        if (accessInfoList[i].accessType == BlockAccessInfo::Type::read_only && !chunk->isWritable()) {
+        if (accessInfoList[i].accessType != BlockAccessInfo::Type::read_only && !chunk->isWritable()) {
             throw BlockError("trying to modify a readonly chunk");
         }
 

@@ -65,9 +65,9 @@ public:
         };
 
         void finalize() {
-            for (const auto& page: pageAccessList) {
-                if (page.isWritable) {
-                    parent.loader.updateDigest(page.id, parent.cache.at(page.id).getDigest());
+            for (const auto& pageInfo: pageAccessList) {
+                if (pageInfo.isWritable) {
+                    parent.loader.updateDigest(pageInfo.pageID, parent.cache.at(pageInfo.pageID).getDigest());
                 }
             }
         };
@@ -85,9 +85,9 @@ public:
         util::FixedOrderedMap<full_id, ChunkSizeBounds> sizeBoundsInfo;
 
         void indexPage(const PageAccessInfo& accessInfo) {
-            auto& page = parent.cache.at(accessInfo.id);
-            parent.loader.loadPage(accessInfo.id, page);
-            chunkIndex.emplace(accessInfo.id, page.getNative()->setWritable(accessInfo.isWritable));
+            auto& page = parent.cache.at(accessInfo.pageID);
+            parent.loader.loadPage(accessInfo.pageID, page);
+            chunkIndex.emplace(accessInfo.pageID, page.getNative()->setWritable(accessInfo.isWritable));
 
             for (auto& migrant: page.getMigrants()) {
                 chunkIndex.emplace(migrant.first, migrant.second->setWritable(accessInfo.isWritable));

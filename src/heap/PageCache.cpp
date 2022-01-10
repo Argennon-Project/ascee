@@ -48,9 +48,9 @@ Modifier PageCache::ChunkIndex::buildModifier(const AppRequestRawData::AccessMap
             // When the chunk is not found getChunk throws a BlockError exception.
             auto* chunkPtr = getChunk(full_id(appID, chunkID));
             auto chunkNewSize = chunkMap.getValues()[j].getValues()[0].size;
-            auto resizable = chunkMap.getValues()[j].getValues()[0].accessType;
+            auto sizeAccess = chunkMap.getValues()[j].getValues()[0].accessType;
 
-            if (resizable == BlockAccessInfo::Type::writable) {
+            if (sizeAccess == BlockAccessInfo::Type::writable) {
                 try {
                     auto& chunkBounds = sizeBoundsInfo.at(full_id(appID, chunkID));
                     if (chunkPtr->getsize() < chunkBounds.sizeLowerBound ||
@@ -69,7 +69,7 @@ Modifier PageCache::ChunkIndex::buildModifier(const AppRequestRawData::AccessMap
             chunkInfoList.emplace_back(
                     chunkPtr,
                     chunkNewSize,
-                    resizable,
+                    sizeAccess,
                     chunkMap.getValues()[j].getKeys(),
                     chunkMap.getValues()[j].getValues()
             );
@@ -86,12 +86,12 @@ PageCache::ChunkIndex::ChunkIndex(
         util::FixedOrderedMap<full_id, ChunkSizeBounds> chunkBounds,
         int32_fast numOfChunks
 ) : parent(parent), pageAccessList(std::move(requiredPages)), sizeBoundsInfo(std::move(chunkBounds)) {
-    chunkIndex.reserve(numOfChunks);
     parent.loader.setCurrentBlock(block);
+    chunkIndex.reserve(numOfChunks);
     for (const auto& page: this->pageAccessList) {
         parent.loader.preparePage(
-                page.id,
-                parent.cache.try_emplace(page.id, block.blockNumber).first->second
+                page.pageID,
+                parent.cache.try_emplace(page.pageID, block.blockNumber).first->second
         );
     }
 

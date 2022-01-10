@@ -97,19 +97,19 @@ int main(int argc, char const* argv[]) {
     heap::PageCache::ChunkIndex ind(c, {7878}, {{chunkID, true}}, {{chunkID},
                                                                    {{20, 0}}}, 0);
     RequestScheduler rs(3, ind);
-    rs.addRequest(0, {.memoryAccessMap = {
+    rs.addRequest({.id = 0, .memoryAccessMap = {
             {10},
             {{{100}, {
                              {{-1, 3}, {{1, Access::read_only, 0}, {4, Access::writable, 0}}},
                      }}}},
-            .adjList = {1, 2}});
-    rs.addRequest(1, {.memoryAccessMap = {
+                          .adjList = {1, 2}});
+    rs.addRequest({.id = 1, .memoryAccessMap = {
             {10},
             {{{100}, {
                              {{-1, 2}, {{1, Access::read_only, 1}, {4, Access::read_only, 1}}},
                      }}}},
-            .adjList={2}});
-    rs.addRequest(2, {.memoryAccessMap = {
+                          .adjList={2}});
+    rs.addRequest({.id = 2, .memoryAccessMap = {
             {10},
             {{{100}, {
                              {{-1, 2}, {{1, Access::read_only, 2}, {5, Access::writable, 2}}},

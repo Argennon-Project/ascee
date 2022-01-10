@@ -105,9 +105,9 @@ void RequestScheduler::findCollisions(
     }
 }
 
-void RequestScheduler::addRequest(AppRequestIdType id, AppRequestRawData&& data) {
-    memoryAccessMaps[id] = std::move(data.memoryAccessMap);
-    nodeIndex[id] = std::make_unique<DagNode>(std::move(data), this);
+void RequestScheduler::addRequest(AppRequestRawData&& data) {
+    memoryAccessMaps[data.id] = std::move(data.memoryAccessMap);
+    nodeIndex[data.id] = std::make_unique<DagNode>(std::move(data), this);
 }
 
 auto& RequestScheduler::requestAt(AppRequestIdType id) {

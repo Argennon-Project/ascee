@@ -75,7 +75,7 @@ bool Chunk::reserveSpace(int32 newCapacity) {
     return true;
 }
 
-bool Chunk::shrinkToFit() {
+bool Chunk::shrinkSpace() {
     if (chunkSize == capacity) return false;
     resize(chunkSize);
     return true;

@@ -80,7 +80,7 @@ struct AppRequestRawData {
 };
 
 struct PageAccessInfo {
-    full_id id;
+    full_id pageID;
     bool isWritable;
 };
 
