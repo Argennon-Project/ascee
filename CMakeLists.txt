@@ -38,7 +38,7 @@ add_library(ascee SHARED
         src/util/StringBuffer.cpp
         src/util/VirtualSigManager.cpp
         src/util/BlockingQueue.cpp
-        )
+        src/heap/ChunkIndex.cpp)
 
 add_executable(ascee_run
         src/main.cpp

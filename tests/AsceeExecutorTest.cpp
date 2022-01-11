@@ -38,10 +38,13 @@ public:
     }
 };
 
-char* getDefaultResponse(char buf[], int statusCode) {
-    sprintf(buf, "HTTP/1.1 %d %s", statusCode, "OK");
-    return buf;
-}
+#include <gmock/gmock.h>
+
+class MockModifier {
+public:
+    MOCK_METHOD(void, restoreVersion, (int16_t version));
+    MOCK_METHOD(int16_t, saveVersion, ());
+};
 
 struct AppTestCase {
     Executor* executor;

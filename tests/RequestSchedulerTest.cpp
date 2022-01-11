@@ -29,14 +29,14 @@ class RequestSchedulerTest : public ::testing::Test {
 protected:
     PageLoader pl{};
     heap::PageCache pc;
-    heap::PageCache::ChunkIndex singleChunk;
+    heap::ChunkIndex singleChunk;
 
 public:
     RequestSchedulerTest()
             : pc(pl),
-              singleChunk(pc, {10},
-                          {{{10, 100}, true}}, {{{10, 100}},
-                                                {{8,  3}}}, 0) {
+              singleChunk(pc.prepareBlockPages({10}, {{{10, 100}, true}}, {}),
+                          {{{10, 100}},
+                           {{8,  3}}}, 0) {
         singleChunk.getChunk({10, 100})->setSize(5);
     }
 };
@@ -196,7 +196,7 @@ TEST_F(RequestSchedulerTest, ExecutionDag) {
 
         DagTester(
                 int n,
-                heap::PageCache::ChunkIndex& index,
+                heap::ChunkIndex& index,
                 std::vector<AppRequestRawData> nodeData,
                 std::vector<AppRequestIdType> want,
                 bool wantError = false

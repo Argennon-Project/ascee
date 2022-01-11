@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2022 aybehrouz <behrouz_ayati@yahoo.com>. All rights
+// Copyright (c) 2022 aybehrouz <behrouz_ayati@yahoo.com>. All rights
 // reserved. This file is part of the C++ implementation of the Argennon smart
 // contract Execution Environment (AscEE).
 //
@@ -15,42 +15,42 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef ASCEE_PAGE_CACHE_H
-#define ASCEE_PAGE_CACHE_H
+#ifndef ASCEE_CHUNK_INDEX_H
+#define ASCEE_CHUNK_INDEX_H
 
-
-#include <argc/types.h>
-#include <unordered_map>
 #include <vector>
-#include <util/IdentifierTrie.h>
-#include <mutex>
-#include <cassert>
-#include "Chunk.h"
+#include "argc/primitives.h"
 #include "Page.h"
-#include "loader/PageLoader.h"
+#include "util/FixedOrderedMap.hpp"
 #include "loader/BlockLoader.h"
 #include "Modifier.h"
 
 namespace ascee::runtime::heap {
 
-//TODO: Heap must be signal-safe but it does not need to be thread-safe
-class PageCache {
+class ChunkIndex {
 public:
-    explicit PageCache(PageLoader& loader);
-
-    PageCache(const PageCache&) = delete;
-
-    std::vector<std::pair<full_id, Page*>>
-    prepareBlockPages(
-            const BlockHeader& block,
-            const std::vector<PageAccessInfo>& pageAccessList,
-            const std::vector<MigrationInfo>& chunkMigrations
+    ChunkIndex(
+            std::vector<std::pair<full_id, Page*>>&& requiredPages,
+            util::FixedOrderedMap<full_id, ChunkSizeBounds>&& chunkBounds,
+            int32_fast numOfChunks
     );
 
+    /// this function must be thread-safe
+    Chunk* getChunk(full_id id);;
+
+    int32_fast getSizeLowerBound(full_id chunkID);;
+
+    Modifier buildModifier(const AppRequestRawData::AccessMapType& rawAccessMap);
+
 private:
-    std::unordered_map<int128, Page> cache;
-    PageLoader& loader;
+    std::vector<std::pair<full_id, Page*>> pageList;
+    std::unordered_map<int128, Chunk*> chunkIndex;
+
+    // this map usually is small. That's why we didn't merge it with chunkIndex.
+    util::FixedOrderedMap<full_id, ChunkSizeBounds> sizeBoundsInfo;
+
+    void indexPage(const std::pair<full_id, Page*>& pageInfo);
 };
 
 } // namespace ascee::runtime::heap
-#endif // ASCEE_PAGE_CACHE_H
+#endif // ASCEE_CHUNK_INDEX_H

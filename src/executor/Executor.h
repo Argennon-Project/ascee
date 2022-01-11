@@ -110,7 +110,7 @@ public:
     };
 
     struct SessionInfo {
-        AppRequest* request;
+        AppRequest* request = nullptr;
         bool criticalArea = false;
 
         heap::Modifier& heapModifier = request->modifier;

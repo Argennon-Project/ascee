@@ -19,6 +19,7 @@
 
 using namespace ascee;
 using namespace ascee::runtime::heap;
+using std::vector, std::pair;
 
 static
 bool isLittleEndian() {
@@ -35,73 +36,32 @@ PageCache::PageCache(runtime::PageLoader& loader) : loader(loader) {
     if (!isLittleEndian()) throw std::runtime_error("platform not supported");
 }
 
-Modifier PageCache::ChunkIndex::buildModifier(const AppRequestRawData::AccessMapType& rawAccessMap) {
-    std::vector<heap::Modifier::ChunkMap64> chunkMapList;
-    chunkMapList.reserve(rawAccessMap.size());
-    for (long i = 0; i < rawAccessMap.size(); ++i) {
-        auto appID = rawAccessMap.getKeys()[i];
-        auto& chunkMap = rawAccessMap.getValues()[i];
-        std::vector<heap::Modifier::ChunkInfo> chunkInfoList;
-        chunkInfoList.reserve(chunkMap.size());
-        for (long j = 0; j < chunkMap.size(); ++j) {
-            auto chunkID = chunkMap.getKeys()[j];
-            // When the chunk is not found getChunk throws a BlockError exception.
-            auto* chunkPtr = getChunk(full_id(appID, chunkID));
-            auto chunkNewSize = chunkMap.getValues()[j].getValues()[0].size;
-            auto sizeAccess = chunkMap.getValues()[j].getValues()[0].accessType;
-
-            if (sizeAccess == BlockAccessInfo::Type::writable) {
-                try {
-                    auto& chunkBounds = sizeBoundsInfo.at(full_id(appID, chunkID));
-                    if (chunkPtr->getsize() < chunkBounds.sizeLowerBound ||
-                        chunkPtr->getsize() > chunkBounds.sizeUpperBound ||
-                        chunkNewSize > 0 && chunkNewSize > chunkBounds.sizeUpperBound ||
-                        chunkNewSize <= 0 && -chunkNewSize < chunkBounds.sizeLowerBound) {
-                        throw BlockError("invalid sizeBounds for chunk [" +
-                                         std::to_string(appID) + "::" + std::to_string(chunkID) + "]");
-                    }
-                } catch (const std::out_of_range&) {
-                    throw BlockError("missing sizeBounds for chunk ["
-                                     + std::to_string(appID) + "::" + std::to_string(chunkID) + "]");
-                }
-            }
-
-            chunkInfoList.emplace_back(
-                    chunkPtr,
-                    chunkNewSize,
-                    sizeAccess,
-                    chunkMap.getValues()[j].getKeys(),
-                    chunkMap.getValues()[j].getValues()
-            );
-        }
-        chunkMapList.emplace_back(chunkMap.getKeys(), std::move(chunkInfoList));
+vector<pair<full_id, Page*>>
+PageCache::prepareBlockPages(const BlockHeader& block, const vector<PageAccessInfo>& pageAccessList,
+                             const vector<MigrationInfo>& chunkMigrations) {
+    vector<pair<full_id, Page*>> result;
+    result.reserve(pageAccessList.size());
+    for (const auto& info: pageAccessList) {
+        auto& page = cache.try_emplace(info.pageID, block.blockNumber).first->second;
+        page.setWritableFlag(info.isWritable);
+        result.emplace_back(info.pageID, &page);
     }
-    return {rawAccessMap.getKeys(), std::move(chunkMapList)};
+
+    loader.setCurrentBlock(block);
+    for (const auto& pair: result) {
+        loader.preparePage(pair.first, *pair.second);
+    }
+
+    for (const auto& pair: result) {
+        //todo: this should be done using async
+        loader.loadPage(pair.first, *pair.second);
+    }
+
+    for (const auto& migration: chunkMigrations) {
+        auto* chunk = result.at(migration.fromIndex).second->extractChunk(migration.chunkID);
+        result.at(migration.toIndex).second->addMigrant(migration.chunkID, chunk);
+    }
+
+    return result;
 }
 
-PageCache::ChunkIndex::ChunkIndex(
-        PageCache& parent,
-        const runtime::BlockHeader& block,
-        std::vector<PageAccessInfo>&& requiredPages,
-        util::FixedOrderedMap<full_id, ChunkSizeBounds> chunkBounds,
-        int32_fast numOfChunks
-) : parent(parent), pageAccessList(std::move(requiredPages)), sizeBoundsInfo(std::move(chunkBounds)) {
-    parent.loader.setCurrentBlock(block);
-    chunkIndex.reserve(numOfChunks);
-    for (const auto& page: this->pageAccessList) {
-        parent.loader.preparePage(
-                page.pageID,
-                parent.cache.try_emplace(page.pageID, block.blockNumber).first->second
-        );
-    }
-
-    for (const auto& page: this->pageAccessList) {
-        indexPage(page);
-    }
-
-    // after indexing requiredPages all chunks are added to chunkIndex, including accessed non-existent chunks.
-    // getChunk() will throw a BlockError exception correctly when the chunk is not found.
-    for (int i = 0; i < sizeBoundsInfo.size(); ++i) {
-        getChunk(sizeBoundsInfo.getKeys()[i])->reserveSpace(sizeBoundsInfo.getValues()[i].sizeUpperBound);
-    }
-}

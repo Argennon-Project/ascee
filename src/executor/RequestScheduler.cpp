@@ -116,7 +116,7 @@ auto& RequestScheduler::requestAt(AppRequestIdType id) {
 
 RequestScheduler::RequestScheduler(
         int_fast32_t totalRequestCount,
-        heap::PageCache::ChunkIndex& heapIndex
+        heap::ChunkIndex& heapIndex
 ) :
         heapIndex(heapIndex),
         count(totalRequestCount),

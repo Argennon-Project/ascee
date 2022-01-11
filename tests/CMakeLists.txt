@@ -3,7 +3,7 @@ project(tests)
 
 # 'lib' is the folder with Google Test sources
 add_subdirectory(lib)
-include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
+include_directories(${gtest_SOURCE_DIR}/include ${gmock_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_C_STANDARD 99)

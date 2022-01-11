@@ -27,6 +27,7 @@
 #include "FailureManager.h"
 #include "loader/BlockLoader.h"
 #include "loader/AppLoader.h"
+#include "heap/ChunkIndex.h"
 #include <atomic>
 
 namespace ascee::runtime {
@@ -111,13 +112,13 @@ public:
     [[nodiscard]]
     AppRequestRawData::AccessMapType sortAccessBlocks();
 
-    explicit RequestScheduler(int_fast32_t totalRequestCount, heap::PageCache::ChunkIndex& heapIndex);
+    explicit RequestScheduler(int_fast32_t totalRequestCount, heap::ChunkIndex& heapIndex);
 
     [[nodiscard]]
     heap::Modifier getModifierFor(AppRequestIdType requestID) const;
 
 private:
-    heap::PageCache::ChunkIndex& heapIndex;
+    heap::ChunkIndex& heapIndex;
     std::atomic<int_fast32_t> count;
     BlockingQueue<DagNode*> zeroQueue;
     std::unique_ptr<std::unique_ptr<DagNode>[]> nodeIndex;

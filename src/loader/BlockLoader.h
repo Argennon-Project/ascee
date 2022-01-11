@@ -84,6 +84,14 @@ struct PageAccessInfo {
     bool isWritable;
 };
 
+struct MigrationInfo {
+    full_id chunkID;
+    /// The index of the page that the chunk should be migrated from. Here, index means the sequence number of the
+    /// page in the PageAccessInfo list. The sequence numbers starts from zero.
+    int32_fast fromIndex;
+    int32_fast toIndex;
+};
+
 struct ChunkSizeBounds {
     int32 sizeUpperBound;
     int32 sizeLowerBound;
@@ -115,6 +123,8 @@ public:
     int32_fast getNumOfChunks() {
         return 0;
     }
+
+    std::vector<MigrationInfo> getMigrationList() { return {}; };
 };
 
 } // namespace ascee::runtime

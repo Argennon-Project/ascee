@@ -35,7 +35,7 @@ public:
         native = std::make_unique<Chunk>();
     }
 
-    void addMigrant(long_id appID, long_id chunkID, Chunk* migrant) {};
+    void addMigrant(full_id id, Chunk* migrant) {};
 
     byte* getDigest() { return nullptr; };
 
@@ -45,6 +45,13 @@ public:
 
     void applyDelta(Delta delta, int64_fast blockNumber) {
         version = blockNumber;
+    }
+
+    void setWritableFlag(bool writable) {
+        native->setWritable(writable);
+        for (const auto& pair: migrants) {
+            pair.second->setWritable(writable);
+        }
     }
 
     void removeDelta(Delta delta) {
@@ -61,8 +68,13 @@ public:
         return migrants;
     }
 
+    Chunk* extractChunk(full_id id) {
+        return nullptr;
+    }
+
 private:
     int64_fast version = 0;
+    bool writableFlag = false;
     std::unique_ptr<Chunk> native;
     std::map<full_id, std::unique_ptr<Chunk>> migrants;
 };

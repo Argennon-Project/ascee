@@ -94,8 +94,9 @@ int main(int argc, char const* argv[]) {
 
     BlockLoader bl;
     auto chunkID = full_id(10, 100);
-    heap::PageCache::ChunkIndex ind(c, {7878}, {{chunkID, true}}, {{chunkID},
-                                                                   {{20, 0}}}, 0);
+    heap::ChunkIndex ind(c.prepareBlockPages({7878}, {{chunkID, true}}, {}),
+                         {{chunkID},
+                          {{20, 0}}}, 0);
     RequestScheduler rs(3, ind);
     rs.addRequest({.id = 0, .memoryAccessMap = {
             {10},

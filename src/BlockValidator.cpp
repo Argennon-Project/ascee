@@ -38,10 +38,8 @@ bool BlockValidator::conditionalValidate(const BlockHeader& current, const Block
     try {
         blockLoader.setCurrentBlock(current);
 
-        heap::PageCache::ChunkIndex index(
-                cache,
-                previous,
-                blockLoader.getPageAccessList(),
+        heap::ChunkIndex index(
+                cache.prepareBlockPages(previous, blockLoader.getPageAccessList(), blockLoader.getMigrationList()),
                 blockLoader.getProposedSizeBounds(),
                 blockLoader.getNumOfChunks()
         );
