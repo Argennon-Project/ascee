@@ -53,7 +53,10 @@ public:
 
     Chunk(const Chunk&) = delete;
 
-    [[nodiscard]] int32 getsize() const;
+    explicit operator std::string() const;
+
+    [[nodiscard]]
+    int32 getsize() const;
 
     void setSize(int32 newSize);;
 
@@ -63,15 +66,19 @@ public:
     /// This function should only be called at the end of block validation.
     bool shrinkSpace();
 
-    [[nodiscard]] bool isWritable() const {
-        return writable;
-    };
+    void applyDelta(const Digest& expectedDigest, const byte* delta, int32_fast len);
+
+    void updateDigest();
+
+    [[nodiscard]]
+    const Digest& getDigest() const;
+
+    [[nodiscard]]
+    bool isWritable() const;;
 
     Pointer getContentPointer(int32 offset, int32 size);
 
-    std::mutex& getContentMutex() {
-        return contentMutex;
-    }
+    std::mutex& getContentMutex();
 
     /// This is used to indicate that a chunk will not be modified in a block. Knowing that a chunk is not modified
     /// in the block helps in efficient calculation of commitments.
@@ -87,8 +94,11 @@ private:
     int32 capacity = 0;
     bool writable = true;
     std::mutex contentMutex;
+    Digest digest;
 
     void resize(int32 newCapacity);
+
+    void applyDeltaReversible(const byte* delta, int32_fast len);
 };
 
 } // namespace ascee::runtime::heap

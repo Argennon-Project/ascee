@@ -168,8 +168,13 @@ TEST(AsceeIdentifiersTest, SimpleTrie) {
 
 
 TEST(AsceeIdentifiersTest, VarUIntTest) {
-    IdentifierTrie<uint64_t, 4> tr({0x45684515, 0x2012, 0x220000, 0x31015499});
+    IdentifierTrie<uint32_t, 4> varSize({0xd0, 0xf000, 0xfc0000, 0xffffff00});
 
+    auto x = varSize.encodeVarUInt(8 * 1024);
+    printf("x=%x\n", x);
+
+
+    IdentifierTrie<uint64_t, 4> tr({0x45684515, 0x2012, 0x220000, 0x31015499});
     StaticArray<byte, 16> buf = {};
     byte* ptr = &buf + 8;
 

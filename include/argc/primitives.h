@@ -46,7 +46,16 @@ struct FullID {
     operator __int128_t() const { return id; } // NOLINT(google-explicit-constructor)
 };
 
-class Digest {
+struct Digest {
+    int x = 0;
+public:
+    bool operator==(const Digest& rhs) const {
+        return x == rhs.x;
+    }
+
+    bool operator!=(const Digest& rhs) const {
+        return !(rhs == *this);
+    }
 };
 
 } // namespace ascee
