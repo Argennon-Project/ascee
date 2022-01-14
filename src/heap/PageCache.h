@@ -22,7 +22,7 @@
 #include <argc/types.h>
 #include <unordered_map>
 #include <vector>
-#include <util/IdentifierTrie.h>
+#include <util/PrefixTrie.hpp>
 #include <mutex>
 #include <cassert>
 #include "Chunk.h"

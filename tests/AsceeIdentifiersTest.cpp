@@ -16,7 +16,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include "subtest.h"
-#include <util/IdentifierTrie.h>
+#include <util/PrefixTrie.hpp>
 
 using namespace ascee;
 using namespace runtime;
@@ -28,18 +28,18 @@ TEST(AsceeIdentifiersTest, SimpleTrie) {
         uint64_t wantID = 0;
         int wantLen = 0;
         bool wantOutOfRange = false;
-        IdentifierTrie<uint64_t, 4> t = IdentifierTrie<uint64_t, 4>({0x25, 0x25aa, 0x300000, 0xa1234560});
+        PrefixTrie<uint64_t, 4> t = PrefixTrie<uint64_t, 4>({0x25, 0x25aa, 0x300000, 0xa1234560});
 
         void test() {
             uint64_t gotID;
             int gotLen;
 
             if (wantOutOfRange) {
-                EXPECT_THROW(t.readIdentifier(input, &gotLen, maxLength), std::out_of_range);
+                EXPECT_THROW(t.readPrefixCode(input, &gotLen, maxLength), std::out_of_range);
                 return;
             }
 
-            gotID = t.readIdentifier(input, &gotLen, maxLength);
+            gotID = t.readPrefixCode(input, &gotLen, maxLength);
 
             EXPECT_EQ(gotID, wantID);
             EXPECT_EQ(gotLen, wantLen);
@@ -168,13 +168,13 @@ TEST(AsceeIdentifiersTest, SimpleTrie) {
 
 
 TEST(AsceeIdentifiersTest, VarUIntTest) {
-    IdentifierTrie<uint32_t, 4> varSize({0xd0, 0xf000, 0xfc0000, 0xffffff00});
+    PrefixTrie<uint32_t, 4> varSize({0xd0, 0xf000, 0xfc0000, 0xffffff00});
 
     auto x = varSize.encodeVarUInt(8 * 1024);
     printf("x=%x\n", x);
 
 
-    IdentifierTrie<uint64_t, 4> tr({0x45684515, 0x2012, 0x220000, 0x31015499});
+    PrefixTrie<uint64_t, 4> tr({0x45684515, 0x2012, 0x220000, 0x31015499});
     StaticArray<byte, 16> buf = {};
     byte* ptr = &buf + 8;
 
@@ -232,78 +232,78 @@ TEST(AsceeIdentifiersTest, DifferentTries) {
     uint32_t id;
     int n;
 
-    IdentifierTrie<uint32_t, 4> fixed({0, 0, 0, 0xffffffff});
+    PrefixTrie<uint32_t, 4> fixed({0, 0, 0, 0xffffffff});
 
     byte b2[] = {0x1, 0x2, 0x3, 0x4};
-    id = fixed.readIdentifier(b2, &n);
+    id = fixed.readPrefixCode(b2, &n);
     EXPECT_EQ(id, 0x01020304);
     EXPECT_EQ(n, 4);
 
     byte b3[] = {0xff, 0xff, 0xff, 0xfe};
-    id = fixed.readIdentifier(b3, &n);
+    id = fixed.readPrefixCode(b3, &n);
     EXPECT_EQ(id, 0xfffffffe);
     EXPECT_EQ(n, 4);
 
-    EXPECT_THROW(fixed.readIdentifier(b3, &n, 3), std::out_of_range);
+    EXPECT_THROW(fixed.readPrefixCode(b3, &n, 3), std::out_of_range);
 
     byte b4[] = {0xff, 0xff, 0xff, 0xff};
-    EXPECT_THROW(fixed.readIdentifier(b4, &n), std::out_of_range);
+    EXPECT_THROW(fixed.readPrefixCode(b4, &n), std::out_of_range);
 
-    EXPECT_THROW((IdentifierTrie<uint32_t, 3>({0x8, 0x8, 0xa0000})), std::invalid_argument);
+    EXPECT_THROW((PrefixTrie<uint32_t, 3>({0x8, 0x8, 0xa0000})), std::invalid_argument);
 
-    IdentifierTrie<uint32_t, 3> noLvl({0x8, 0x800, 0xa0000});
+    PrefixTrie<uint32_t, 3> noLvl({0x8, 0x800, 0xa0000});
 
     byte b5[] = {0x8, 0x0, 0x0, 0x0};
-    id = noLvl.readIdentifier(b5, &n);
+    id = noLvl.readPrefixCode(b5, &n);
     EXPECT_EQ(id, 0x08000000);
     EXPECT_EQ(n, 3);
 }
 
 TEST(AsceeIdentifiersTest, ParseSymbolic) {
-    IdentifierTrie<uint8_t, 1> t({0x10});
+    PrefixTrie<uint8_t, 1> t({0x10});
 
     uint8_t id;
 
-    t.parseIdentifier("5", id);
+    t.parsePrefixCode("5", id);
     EXPECT_EQ(id, 5);
 
-    t.parseIdentifier("5.", id);
+    t.parsePrefixCode("5.", id);
     EXPECT_EQ(id, 5);
 
-    t.parseIdentifier(".5", id);
+    t.parsePrefixCode(".5", id);
     EXPECT_EQ(id, 5);
 
-    EXPECT_THROW(t.parseIdentifier("5. ", id), std::invalid_argument);
+    EXPECT_THROW(t.parsePrefixCode("5. ", id), std::invalid_argument);
 
-    EXPECT_THROW(t.parseIdentifier(".", id), std::out_of_range);
+    EXPECT_THROW(t.parsePrefixCode(".", id), std::out_of_range);
 
-    EXPECT_THROW(t.parseIdentifier("", id), std::out_of_range);
+    EXPECT_THROW(t.parsePrefixCode("", id), std::out_of_range);
 
-    EXPECT_THROW(t.parseIdentifier("0x10", id), std::out_of_range);
+    EXPECT_THROW(t.parsePrefixCode("0x10", id), std::out_of_range);
 
     uint32_t id2;
-    IdentifierTrie<uint32_t, 3> t2({0x10, 0x1111, 0x119900});
+    PrefixTrie<uint32_t, 3> t2({0x10, 0x1111, 0x119900});
 
-    t2.parseIdentifier("0x0f", id2);
+    t2.parsePrefixCode("0x0f", id2);
     EXPECT_EQ(id2, 0x0f000000);
 
-    EXPECT_THROW(t2.parseIdentifier("0x0f.0x0", id2), std::invalid_argument);
+    EXPECT_THROW(t2.parsePrefixCode("0x0f.0x0", id2), std::invalid_argument);
 
-    EXPECT_THROW(t2.parseIdentifier("16.0.0  ", id2), std::invalid_argument);
+    EXPECT_THROW(t2.parsePrefixCode("16.0.0  ", id2), std::invalid_argument);
 
-    t2.parseIdentifier("16.0", id2);
+    t2.parsePrefixCode("16.0", id2);
     EXPECT_EQ(id2, 0x10000000);
 
-    t2.parseIdentifier("16  .   17", id2);
+    t2.parsePrefixCode("16  .   17", id2);
     EXPECT_EQ(id2, 0x10110000);
 
-    t2.parseIdentifier("0x11...0x2", id2);
+    t2.parsePrefixCode("0x11...0x2", id2);
     EXPECT_EQ(id2, 0x11020000);
 
-    EXPECT_THROW(t2.parseIdentifier("420", id2), std::overflow_error);
+    EXPECT_THROW(t2.parsePrefixCode("420", id2), std::overflow_error);
 
-    t2.parseIdentifier("0x11.0x11.0xaa", id2);
+    t2.parsePrefixCode("0x11.0x11.0xaa", id2);
     EXPECT_EQ(id2, 0x1111aa00);
 
-    EXPECT_THROW(t2.parseIdentifier("g2", id2), std::invalid_argument);
+    EXPECT_THROW(t2.parsePrefixCode("g2", id2), std::invalid_argument);
 }

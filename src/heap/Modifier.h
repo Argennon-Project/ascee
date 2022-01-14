@@ -24,7 +24,7 @@
 #include <vector>
 #include "argc/primitives.h"
 #include "Chunk.h"
-#include "util/IdentifierTrie.h"
+#include "util/PrefixTrie.hpp"
 #include "util/FixedOrderedMap.hpp"
 #include "loader/BlockLoader.h"
 
@@ -38,13 +38,13 @@ public:
 
     template<typename T, int h>
     inline
-    T loadVarUInt(const IdentifierTrie <T, h>& trie, int32 offset, int* n = nullptr) {
+    T loadVarUInt(const PrefixTrie <T, h>& trie, int32 offset, int* n = nullptr) {
         return currentChunk->accessTable.at(offset).readVarUInt(trie, currentVersion, n);
     }
 
     template<typename T, int h>
     inline
-    T loadIdentifier(const IdentifierTrie <T, h>& trie, int32 offset, int* n = nullptr) {
+    T loadIdentifier(const PrefixTrie <T, h>& trie, int32 offset, int* n = nullptr) {
         return currentChunk->accessTable.at(offset).readIdentifier(trie, currentVersion, n);
     }
 
@@ -58,7 +58,7 @@ public:
 
     template<typename T, int h>
     inline
-    int storeVarUInt(const IdentifierTrie <T, h>& trie, int32 offset, T value) {
+    int storeVarUInt(const PrefixTrie <T, h>& trie, int32 offset, T value) {
         return currentChunk->accessTable.at(offset).writeVarUInt(trie, currentVersion, value);
     }
 
@@ -109,13 +109,13 @@ private:
 
         template<typename T, int h>
         inline
-        T readIdentifier(const IdentifierTrie <T, h>& trie, int16_t version, int* n = nullptr) {
-            return trie.readIdentifier(prepareToRead(version, size), n, size);
+        T readIdentifier(const PrefixTrie <T, h>& trie, int16_t version, int* n = nullptr) {
+            return trie.readPrefixCode(prepareToRead(version, size), n, size);
         }
 
         template<typename T, int h>
         inline
-        T readVarUInt(const IdentifierTrie <T, h>& trie, int16_t version, int* n = nullptr) {
+        T readVarUInt(const PrefixTrie <T, h>& trie, int16_t version, int* n = nullptr) {
             return trie.decodeVarUInt(prepareToRead(version, size), n, size);
         }
 
@@ -133,7 +133,7 @@ private:
 
         template<typename T, int h>
         inline
-        int writeVarUInt(const IdentifierTrie <T, h>& trie, int16_t version, T value) {
+        int writeVarUInt(const PrefixTrie <T, h>& trie, int16_t version, T value) {
             int len;
             auto code = trie.encodeVarUInt(value, &len);
             trie.writeBigEndian(prepareToWrite(version, len), code, len);

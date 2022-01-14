@@ -18,7 +18,7 @@
 #include <cstring>
 #include <cassert>
 #include "Chunk.h"
-#include "util/IdentifierTrie.h"
+#include "util/PrefixTrie.hpp"
 
 using namespace ascee;
 using namespace ascee::runtime::heap;
@@ -82,7 +82,7 @@ bool Chunk::shrinkSpace() {
     return true;
 }
 
-ascee::runtime::IdentifierTrie<uint32_t, 4> gVarSizeTrie({0xd0, 0xf000, 0xfc0000, 0xffffff00});
+ascee::runtime::PrefixTrie<uint32_t, 4> gVarSizeTrie({0xd0, 0xf000, 0xfc0000, 0xffffff00});
 
 static
 int32_fast readVarSize(const byte*& readPtr, const byte* boundary) {

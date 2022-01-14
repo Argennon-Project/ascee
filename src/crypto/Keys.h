@@ -19,7 +19,7 @@
 #ifndef ASCEE_CRYPTO_KEYS_H
 #define ASCEE_CRYPTO_KEYS_H
 
-#include <util/StaticArray.h>
+#include <util/StaticArray.hpp>
 #include <argc/primitives.h>
 
 

@@ -19,7 +19,7 @@
 #define ASCEE_EXEC_SCHEDULER_H
 
 #include <argc/types.h>
-#include <util/BlockingQueue.h>
+#include <util/BlockingQueue.hpp>
 #include <unordered_set>
 #include <cassert>
 #include "heap/PageCache.h"

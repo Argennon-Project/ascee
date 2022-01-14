@@ -26,11 +26,11 @@
 namespace ascee::runtime {
 
 template<typename T, int height = sizeof(T)>
-class IdentifierTrie {
+class PrefixTrie {
     static_assert(height <= sizeof(T) && height > 0);
     static_assert(std::is_unsigned<T>::value);
 public:
-    explicit IdentifierTrie(const std::array<T, height>& trie) {
+    explicit PrefixTrie(const std::array<T, height>& trie) {
         for (int i = 0; i < height; ++i) {
             auto shift = (sizeof(T) - i - 1) << 3;
             this->trie[i] = trie[i] & (~T(0) >> shift);
@@ -45,7 +45,7 @@ public:
         }
     }
 
-    T readIdentifier(const byte* binary, int* len = nullptr, int maxLength = height) const {
+    T readPrefixCode(const byte* binary, int* len = nullptr, int maxLength = height) const {
         T id = 0;
         if (maxLength > height) maxLength = height;
         for (int i = 0; i < maxLength; ++i) {
@@ -56,10 +56,10 @@ public:
             }
         }
         if (len != nullptr) *len = 0;
-        throw std::out_of_range("readIdentifier: invalid identifier");
+        throw std::out_of_range("readPrefixCode: invalid identifier");
     }
 
-    T readIdentifier(T binary, int* len = nullptr, int maxLength = height) const {
+    T readPrefixCode(T binary, int* len = nullptr, int maxLength = height) const {
         if (maxLength > height) maxLength = height;
         for (int i = 0; i < maxLength; ++i) {
             if (binary < boundary[i]) {
@@ -68,16 +68,16 @@ public:
             }
         }
         if (len != nullptr) *len = 0;
-        throw std::out_of_range("readIdentifier: invalid identifier");
+        throw std::out_of_range("readPrefixCode: invalid identifier");
     }
 
-    void parseIdentifier(std::string symbolicRep, T& id) const {
+    void parsePrefixCode(std::string symbolicRep, T& id) const {
         byte buffer[height];
         // returned array by data() is null-terminated after C++11
         char* token = strtok(symbolicRep.data(), ".");
         int i = 0;
         while (token != nullptr) {
-            if (i == height) throw std::invalid_argument("parseIdentifier: input too long");
+            if (i == height) throw std::invalid_argument("parsePrefixCode: input too long");
 
             auto component = std::stoul(token, nullptr, 0);
             if (component > 255) throw std::overflow_error("identifier component is larger than 255");
@@ -86,8 +86,8 @@ public:
             token = strtok(nullptr, ".");
         }
         int n;
-        id = readIdentifier(buffer, &n, i);
-        if (n != i) throw std::invalid_argument("parseIdentifier: input too long");
+        id = readPrefixCode(buffer, &n, i);
+        if (n != i) throw std::invalid_argument("parsePrefixCode: input too long");
     }
 
     T encodeVarUInt(T value, int* len = nullptr) const {
@@ -105,7 +105,7 @@ public:
     template<typename U>
     T decodeVarUInt(U binary, int* len = nullptr, int maxLength = height) const {
         int n;
-        T code = readIdentifier(binary, &n, maxLength);
+        T code = readPrefixCode(binary, &n, maxLength);
         code >>= (sizeof(T) - n) << 3;
 
         auto bound = trie[n - 1];
@@ -125,9 +125,9 @@ private:
     T trie[height] = {};
 };
 
-inline const IdentifierTrie<uint16_t, 2> gNonceTrie({0xe0, 0xff00});
+inline const PrefixTrie<uint16_t, 2> gNonceTrie({0xe0, 0xff00});
 
-inline const IdentifierTrie<uint64_t, 6> gAppTrie({});
+inline const PrefixTrie<uint64_t, 6> gAppTrie({});
 
 } // namespace ascee::runtime
 #endif // ASCEE_IDENTIFIER_TRIE_H

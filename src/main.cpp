@@ -19,7 +19,7 @@
 #include <executor/Executor.h>
 #include <iostream>
 #include <loader/AppLoader.h>
-#include <util/StaticArray.h>
+#include <util/StaticArray.hpp>
 #include "util/FixedOrderedMap.hpp"
 
 using namespace ascee;

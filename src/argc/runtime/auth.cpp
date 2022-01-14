@@ -19,7 +19,7 @@
 #include <argc/functions.h>
 #include <executor/Executor.h>
 #include <crypto/CryptoSystem.h>
-#include <util/IdentifierTrie.h>
+#include <util/PrefixTrie.hpp>
 
 #define LAST_RESERVED_NONCE 7
 #define ARG_APP_ID 0x0100000000000000
