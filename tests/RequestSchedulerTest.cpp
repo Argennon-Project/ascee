@@ -200,7 +200,7 @@ TEST_F(RequestSchedulerTest, ExecutionDag) {
         DagTester(
                 int n,
                 ChunkIndex& index,
-                std::vector<AppRequestRawData> nodeData,
+                std::vector<AppRequestInfo> nodeData,
                 std::vector<AppRequestIdType> want,
                 bool wantError = false
         ) : scheduler(n, index), want(std::move(want)), n(n), wantError(wantError) {

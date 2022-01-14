@@ -54,12 +54,12 @@ public:
     }
 
     //todo: make sure this is efficient
-    void setCurrentBlock(const BlockHeader& block) {
+    void setCurrentBlock(const BlockInfo& block) {
         previousBlock = block;
     };
 
 private:
-    BlockHeader previousBlock;
+    BlockInfo previousBlock;
 
     void submitGetPageRequest(full_id pageID, int_fast64_t from, int_fast64_t to) {
 

@@ -24,7 +24,7 @@ using std::vector, std::pair;
 
 ChunkIndex::ChunkIndex(
         vector<pair<full_id, Page*>>&& requiredPages,
-        util::FixedOrderedMap<full_id, ChunkSizeBounds>&& chunkBounds,
+        util::FixedOrderedMap<full_id, ChunkBoundsInfo>&& chunkBounds,
         int32_fast numOfChunks
 ) : pageList(std::move(requiredPages)), sizeBoundsInfo(std::move(chunkBounds)) {
 
@@ -40,7 +40,7 @@ ChunkIndex::ChunkIndex(
     }
 }
 
-HeapModifier ChunkIndex::buildModifier(const AppRequestRawData::AccessMapType& rawAccessMap) {
+HeapModifier ChunkIndex::buildModifier(const AppRequestInfo::AccessMapType& rawAccessMap) {
     vector<HeapModifier::ChunkMap64> chunkMapList;
     chunkMapList.reserve(rawAccessMap.size());
     for (long i = 0; i < rawAccessMap.size(); ++i) {

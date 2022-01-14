@@ -32,7 +32,7 @@ public:
             int workersCount = -1
     );
 
-    bool conditionalValidate(const BlockHeader& current, const BlockHeader& previous);
+    bool conditionalValidate(const BlockInfo& current, const BlockInfo& previous);
 
 private:
     ascee::runtime::Executor executor;

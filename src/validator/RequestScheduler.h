@@ -60,7 +60,7 @@ public:
         return adjList.contains(other);
     }
 
-    explicit DagNode(AppRequestRawData&& data, const RequestScheduler* scheduler);
+    explicit DagNode(AppRequestInfo&& data, const RequestScheduler* scheduler);
 
 private:
     ascee::runtime::AppRequest request;
@@ -84,7 +84,7 @@ public:
     auto& requestAt(AppRequestIdType id);
 
     /// this function is thread-safe as long as all used `id`s are distinct
-    void addRequest(AppRequestRawData&& data);
+    void addRequest(AppRequestInfo&& data);
 
     /// this function should be called after all requests are added. (using addRequest() or requestAt())
     void finalizeRequest(AppRequestIdType id);
@@ -92,7 +92,7 @@ public:
     void buildExecDag();
 
     [[nodiscard]]
-    AppRequestRawData::AccessMapType sortAccessBlocks();
+    AppRequestInfo::AccessMapType sortAccessBlocks();
 
     explicit RequestScheduler(int_fast32_t totalRequestCount, asa::ChunkIndex& heapIndex);
 
@@ -104,7 +104,7 @@ private:
     std::atomic<int_fast32_t> count;
     util::BlockingQueue<DagNode*> zeroQueue;
     std::unique_ptr<std::unique_ptr<DagNode>[]> nodeIndex;
-    std::vector<AppRequestRawData::AccessMapType> memoryAccessMaps;
+    std::vector<AppRequestInfo::AccessMapType> memoryAccessMaps;
 
 
     void registerDependency(AppRequestIdType u, AppRequestIdType v);

@@ -37,7 +37,7 @@ PageCache::PageCache(PageLoader& loader) : loader(loader) {
 }
 
 vector<pair<full_id, Page*>>
-PageCache::prepareBlockPages(const BlockHeader& block, const vector<PageAccessInfo>& pageAccessList,
+PageCache::prepareBlockPages(const BlockInfo& block, const vector<PageAccessInfo>& pageAccessList,
                              const vector<MigrationInfo>& chunkMigrations) {
     vector<pair<full_id, Page*>> result;
     result.reserve(pageAccessList.size());

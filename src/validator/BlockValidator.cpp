@@ -35,7 +35,7 @@ void waitForAll(const vector<future<void>>& pendingTasks) {
 /// Conditionally validates a block: valid(current | previous). Returns true when the block is valid and false
 /// if the block is not valid.
 /// Throwing an exception indicates that due to an internal error checking the validity of the block was not possible.
-bool BlockValidator::conditionalValidate(const BlockHeader& current, const BlockHeader& previous) {
+bool BlockValidator::conditionalValidate(const BlockInfo& current, const BlockInfo& previous) {
     try {
         blockLoader.setCurrentBlock(current);
 

@@ -30,9 +30,9 @@ namespace argennon::ave {
 
 class BlockLoader {
 public:
-    void setCurrentBlock(const BlockHeader& b) {};
+    void setCurrentBlock(const BlockInfo& b) {};
 
-    AppRequestRawData loadRequest(AppRequestIdType id) { return {}; };
+    AppRequestInfo loadRequest(AppRequestIdType id) { return {}; };
 
     // BlockLoader must verify this value.
     int32_fast getNumOfRequests() { return 0; };
@@ -44,7 +44,7 @@ public:
 
     /// This list will not include all chunks. Only expandable chunks and accessed non-existent chunks should be
     /// included.
-    util::FixedOrderedMap <full_id, ChunkSizeBounds> getProposedSizeBounds() { return {}; };
+    util::FixedOrderedMap <full_id, ChunkBoundsInfo> getProposedSizeBounds() { return {}; };
 
     // BlockLoader does NOT need to verify this value. (only affects performance)
     int32_fast getNumOfChunks() {

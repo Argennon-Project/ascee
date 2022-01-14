@@ -37,7 +37,7 @@ public:
 
     std::vector<std::pair<full_id, Page*>>
     prepareBlockPages(
-            const BlockHeader& block,
+            const BlockInfo& block,
             const std::vector<PageAccessInfo>& pageAccessList,
             const std::vector<MigrationInfo>& chunkMigrations
     );

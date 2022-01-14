@@ -106,7 +106,7 @@ void RequestScheduler::findCollisions(
     }
 }
 
-void RequestScheduler::addRequest(AppRequestRawData&& data) {
+void RequestScheduler::addRequest(AppRequestInfo&& data) {
     auto id = data.id;
     memoryAccessMaps[id] = std::move(data.memoryAccessMap);
     nodeIndex[id] = std::make_unique<DagNode>(std::move(data), this);
@@ -136,7 +136,7 @@ void RequestScheduler::buildExecDag() {
     if (zeroQueue.isEmpty()) throw BlockError("source node of the execution DAG is missing");
 }
 
-AppRequestRawData::AccessMapType RequestScheduler::sortAccessBlocks() {
+AppRequestInfo::AccessMapType RequestScheduler::sortAccessBlocks() {
     return util::mergeAllParallel(std::move(memoryAccessMaps));
 }
 
@@ -164,7 +164,7 @@ HeapModifier RequestScheduler::getModifierFor(AppRequestIdType requestID) const 
     return heapIndex.buildModifier(memoryAccessMaps[requestID]);
 }
 
-DagNode::DagNode(AppRequestRawData&& data,
+DagNode::DagNode(AppRequestInfo&& data,
                  const RequestScheduler* scheduler) :
         adjList(std::move(data.adjList)),
         request{

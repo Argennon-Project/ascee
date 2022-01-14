@@ -34,7 +34,7 @@ class ChunkIndex {
 public:
     ChunkIndex(
             std::vector<std::pair<full_id, Page*>>&& requiredPages,
-            util::FixedOrderedMap<full_id, ChunkSizeBounds>&& chunkBounds,
+            util::FixedOrderedMap<full_id, ChunkBoundsInfo>&& chunkBounds,
             int32_fast numOfChunks
     );
 
@@ -43,14 +43,14 @@ public:
 
     int32_fast getSizeLowerBound(full_id chunkID);;
 
-    ascee::runtime::HeapModifier buildModifier(const AppRequestRawData::AccessMapType& rawAccessMap);
+    ascee::runtime::HeapModifier buildModifier(const AppRequestInfo::AccessMapType& rawAccessMap);
 
 private:
     std::vector<std::pair<full_id, Page*>> pageList;
     std::unordered_map<int128, Chunk*> chunkIndex;
 
     // this map usually is small. That's why we didn't merge it with chunkIndex.
-    util::FixedOrderedMap<full_id, ChunkSizeBounds> sizeBoundsInfo;
+    util::FixedOrderedMap<full_id, ChunkBoundsInfo> sizeBoundsInfo;
 
     void indexPage(const std::pair<full_id, Page*>& pageInfo);
 };

@@ -38,7 +38,6 @@ public:
     }
 };
 
-
 using AppRequestIdType = int32_fast;
 
 struct BlockAccessInfo {
@@ -50,7 +49,7 @@ struct BlockAccessInfo {
     AppRequestIdType requestID;
 };
 
-struct AppRequestRawData {
+struct AppRequestInfo {
     using AccessMapType = util::FixedOrderedMap<long_id,
             util::FixedOrderedMap<long_id, util::FixedOrderedMap<int32, BlockAccessInfo>>>;
     /**
@@ -104,12 +103,12 @@ struct MigrationInfo {
     int32_fast toIndex;
 };
 
-struct ChunkSizeBounds {
+struct ChunkBoundsInfo {
     int32 sizeUpperBound;
     int32 sizeLowerBound;
 };
 
-struct BlockHeader {
+struct BlockInfo {
     int_fast64_t blockNumber;
 };
 
