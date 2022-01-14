@@ -1,8 +1,9 @@
 #include "argc/types.h"
 #include "argc/functions.h"
 
+using namespace argennon;
 using namespace ascee;
-using namespace ascee::argc;
+using namespace argc;
 
 extern "C"
 int dispatcher(string_c request) {

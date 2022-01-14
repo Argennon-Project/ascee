@@ -20,8 +20,8 @@
 #include "argc/functions.h"
 #include "subtest.h"
 
-using namespace ascee;
-using namespace argc;
+using namespace argennon;
+using namespace ascee::argc;
 
 
 TEST(ArgcFloatDeathTest, Truncate) {

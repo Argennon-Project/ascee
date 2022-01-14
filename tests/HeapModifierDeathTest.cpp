@@ -21,8 +21,9 @@
 #include <memory>
 
 #include "heap/Chunk.h"
-#include "heap/Modifier.h"
+#include "heap/HeapModifier.h"
 
+using namespace argennon;
 using namespace ascee;
 using namespace runtime;
 using std::vector;
@@ -31,14 +32,14 @@ using Access = BlockAccessInfo::Type;
 
 class HeapModifierDeathTest : public ::testing::Test {
 protected:
-    heap::Chunk tempChunk1_10{256};
-    heap::Chunk tempChunk1_11{256};
-    heap::Chunk tempChunk1_100{256};
-    heap::Chunk tempChunk2_1{256};
-    heap::Chunk tempChunk2_2{256};
+    Chunk tempChunk1_10{256};
+    Chunk tempChunk1_11{256};
+    Chunk tempChunk1_100{256};
+    Chunk tempChunk2_1{256};
+    Chunk tempChunk2_2{256};
 
 
-    std::unique_ptr<heap::Modifier> modifier;
+    std::unique_ptr<HeapModifier> modifier;
 
 public:
     HeapModifierDeathTest() {
@@ -50,7 +51,7 @@ public:
 
         // std::vector<T>({obj1, obj2, obj3}) uses copy constructor of T. Therefore we can not use initializer
         // lists for classes without a copy constructor, and we need to use emplace instead.
-        vector<heap::Modifier::ChunkInfo> chunksForApp1;
+        vector<HeapModifier::ChunkInfo> chunksForApp1;
         chunksForApp1.emplace_back(&tempChunk1_10, 0, Access::read_only,
                                    vector<int32>{100, 108, 150, 252},
                                    vector<BlockAccessInfo>{
@@ -71,7 +72,7 @@ public:
                                            {8, Access::writable, 0},
                                    });
 
-        vector<heap::Modifier::ChunkInfo> chunksForApp2;
+        vector<HeapModifier::ChunkInfo> chunksForApp2;
         chunksForApp2.emplace_back(&tempChunk2_1, 0, Access::read_only,
                                    vector<int32>{100},
                                    vector<BlockAccessInfo>{
@@ -83,11 +84,11 @@ public:
                                            {8, Access::writable, 0},
                                    });
 
-        vector<heap::Modifier::ChunkMap64> appMaps;
+        vector<HeapModifier::ChunkMap64> appMaps;
         appMaps.emplace_back(vector<long_id>{10, 11, 100}, std::move(chunksForApp1));
         appMaps.emplace_back(vector<long_id>{10, 11}, std::move(chunksForApp2));
 
-        modifier = std::make_unique<heap::Modifier>(vector<long_id>{1, 2}, std::move(appMaps));
+        modifier = std::make_unique<HeapModifier>(vector<long_id>{1, 2}, std::move(appMaps));
 
         *(int64*) tempChunk1_10.getContentPointer(100, 8).get(8) = 0x102020201020202;
 
@@ -105,7 +106,7 @@ TEST_F(HeapModifierDeathTest, SimpleReadWrite) {
 
     EXPECT_EQ(got, 0x102020201020202) << "got: 0x" << std::hex << got;
 
-    auto got2 = modifier->load<StaticArray<int64, 1>>(100);
+    auto got2 = modifier->load<util::StaticArray<int64, 1>>(100);
     EXPECT_EQ(got2.at(0), 0x102020201020202) << "got: 0x" << std::hex << got;
 
     EXPECT_THROW(modifier->load<int32>(150), std::out_of_range);

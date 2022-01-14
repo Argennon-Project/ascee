@@ -21,9 +21,16 @@
 #include <loader/AppLoader.h>
 #include <util/StaticArray.hpp>
 #include "util/FixedOrderedMap.hpp"
+#include "validator/RequestScheduler.h"
+#include "validator/BlockLoader.h"
+#include "storage/ChunkIndex.h"
+#include "storage/PageCache.h"
 
-using namespace ascee;
+using namespace argennon;
+using namespace ave;
+using namespace asa;
 using namespace ascee::runtime;
+
 
 int a() {
     return 10;
@@ -87,16 +94,16 @@ int main(int argc, char const* argv[]) {
 
 
     PageLoader pl;
-    heap::PageCache c(pl);
+    PageCache c(pl);
 
 
     using Access = BlockAccessInfo::Type;
 
     BlockLoader bl;
     auto chunkID = full_id(10, 100);
-    heap::ChunkIndex ind(c.prepareBlockPages({7878}, {{chunkID, true}}, {}),
-                         {{chunkID},
-                          {{20, 0}}}, 0);
+    ChunkIndex ind(c.prepareBlockPages({7878}, {{chunkID, true}}, {}),
+                   {{chunkID},
+                    {{20, 0}}}, 0);
     RequestScheduler rs(3, ind);
     rs.addRequest({.id = 0, .memoryAccessMap = {
             {10},

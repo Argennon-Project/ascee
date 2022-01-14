@@ -16,11 +16,10 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#include <util/VirtualSigManager.h>
 #include "gtest/gtest.h"
+#include "executor/VirtualSigManager.h"
 
-using namespace ascee;
-using namespace runtime;
+using namespace argennon::ascee::runtime;
 
 
 TEST(AsceeVSigManagerTest, Simple) {

@@ -18,8 +18,8 @@
 #include "subtest.h"
 #include <util/PrefixTrie.hpp>
 
-using namespace ascee;
-using namespace runtime;
+using namespace argennon;
+using namespace util;
 
 TEST(AsceeIdentifiersTest, SimpleTrie) {
     struct {

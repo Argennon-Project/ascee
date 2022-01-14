@@ -25,13 +25,14 @@
 #define NORMAL_GAS 1500
 #define LOW_GAS 100
 
+using namespace argennon;
 using namespace ascee;
 using namespace runtime;
 using std::string, std::vector, std::to_string;
 
 class AsceeExecutorTest : public ::testing::Test {
 protected:
-    ascee::runtime::Executor executor;
+    Executor executor;
 public:
     AsceeExecutorTest() {
         AppLoader::global = std::make_unique<AppLoader>("appFiles/compiled");

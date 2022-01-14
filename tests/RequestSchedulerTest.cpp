@@ -17,10 +17,13 @@
 
 
 #include "subtest.h"
-#include "executor/RequestScheduler.h"
+#include "storage/PageLoader.h"
+#include "validator/RequestScheduler.h"
+#include "storage/PageCache.h"
 
-using namespace ascee;
-using namespace runtime;
+using namespace argennon;
+using namespace ave;
+using namespace asa;
 
 
 using Access = BlockAccessInfo::Type;
@@ -28,8 +31,8 @@ using Access = BlockAccessInfo::Type;
 class RequestSchedulerTest : public ::testing::Test {
 protected:
     PageLoader pl{};
-    heap::PageCache pc;
-    heap::ChunkIndex singleChunk;
+    PageCache pc;
+    ChunkIndex singleChunk;
 
 public:
     RequestSchedulerTest()
@@ -196,7 +199,7 @@ TEST_F(RequestSchedulerTest, ExecutionDag) {
 
         DagTester(
                 int n,
-                heap::ChunkIndex& index,
+                ChunkIndex& index,
                 std::vector<AppRequestRawData> nodeData,
                 std::vector<AppRequestIdType> want,
                 bool wantError = false

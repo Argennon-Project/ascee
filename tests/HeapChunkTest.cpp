@@ -18,12 +18,12 @@
 #include "subtest.h"
 #include <heap/Chunk.h>
 
-using namespace ascee;
-using namespace runtime;
+using namespace argennon;
+using namespace ascee::runtime;
 
 TEST(HeapChunkTest, ApplyDelta) {
     Digest good{}, bad{1};
-    heap::Chunk c;
+    Chunk c;
     using std::string;
 
 

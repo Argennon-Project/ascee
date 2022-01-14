@@ -15,14 +15,14 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef ASCEE_UTIL_BLOCKING_QUEUE_H
-#define ASCEE_UTIL_BLOCKING_QUEUE_H
+#ifndef ARGENNON_UTIL_BLOCKING_QUEUE_H
+#define ARGENNON_UTIL_BLOCKING_QUEUE_H
 
 #include <mutex>
 #include <condition_variable>
 #include <queue>
 
-namespace ascee::runtime {
+namespace argennon::util {
 
 template<typename T>
 class BlockingQueue {
@@ -78,5 +78,5 @@ private:
     int producerCount = 0;
 };
 
-} // namespace ascee::runtime
-#endif // ASCEE_UTIL_BLOCKING_QUEUE_H
+} // namespace argennon::util
+#endif // ARGENNON_UTIL_BLOCKING_QUEUE_H

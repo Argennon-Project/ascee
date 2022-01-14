@@ -15,13 +15,13 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef ASCEE_STATIC_ARRAY_H
-#define ASCEE_STATIC_ARRAY_H
+#ifndef ARGENNON_STATIC_ARRAY_H
+#define ARGENNON_STATIC_ARRAY_H
 
 #include <string>
 #include <array>
 
-namespace ascee::runtime {
+namespace argennon::util {
 
 template<typename T, std::size_t size>
 class StaticArray : public std::array<T, size> {
@@ -47,5 +47,5 @@ public:
     }
 };
 
-} // namespace ascee::runtime
-#endif // ASCEE_STATIC_ARRAY_H
+} // namespace argennon::util
+#endif // ARGENNON_STATIC_ARRAY_H

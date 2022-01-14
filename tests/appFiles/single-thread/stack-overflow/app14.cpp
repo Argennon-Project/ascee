@@ -2,8 +2,9 @@
 #include "argc/types.h"
 #include "argc/functions.h"
 
+using namespace argennon;
 using namespace ascee;
-using namespace ascee::argc;
+using namespace argc;
 
 int64 fib(int64 n) {
     if (n <= 1) return n;

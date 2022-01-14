@@ -15,8 +15,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef ASCEE_UTIL_FIXED_ORDERED_MAP_H
-#define ASCEE_UTIL_FIXED_ORDERED_MAP_H
+#ifndef ARGENNON_UTIL_FIXED_ORDERED_MAP_H
+#define ARGENNON_UTIL_FIXED_ORDERED_MAP_H
 
 #include <utility>
 #include <vector>
@@ -24,7 +24,7 @@
 #include <functional>
 #include <future>
 
-namespace ascee::util {
+namespace argennon::util {
 
 template<typename K, typename V>
 class FixedOrderedMap {
@@ -154,5 +154,5 @@ FixedOrderedMap<K, V> mergeAllParallel(std::vector<FixedOrderedMap<K, V>>&& maps
     return mergeAllParallel(std::move(maps), 0, maps.size());
 }
 
-} // namespace ascee::util
-#endif // ASCEE_UTIL_FIXED_ORDERED_MAP_H
+} // namespace argennon::util
+#endif // ARGENNON_UTIL_FIXED_ORDERED_MAP_H

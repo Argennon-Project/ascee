@@ -47,5 +47,5 @@ add_executable(Google_Tests_run
 
 # linking Google_Tests_run with libraries
 
-target_link_libraries(Google_Tests_run gtest gtest_main m dl ascee)
+target_link_libraries(Google_Tests_run gtest gtest_main m ascee asa ave argutil stdc++ pthread rt pbc gmp crypto dl)
 

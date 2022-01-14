@@ -16,10 +16,9 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include <gtest/gtest.h>
-#include <crypto/CryptoSystem.h>
+#include <util/crypto/CryptoSystem.h>
 
-using namespace ascee;
-using namespace runtime;
+using namespace argennon::util;
 
 TEST(AsceeCryptoTest, Simple) {
     CryptoSystem signer;

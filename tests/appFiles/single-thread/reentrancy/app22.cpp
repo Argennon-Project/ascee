@@ -3,8 +3,9 @@
 #include "argc/types.h"
 #include "argc/functions.h"
 
+using namespace argennon;
 using namespace ascee;
-using namespace ascee::argc;
+using namespace argc;
 
 void f(int deferred_call) {
     enter_area();

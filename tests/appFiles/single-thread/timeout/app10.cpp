@@ -1,6 +1,7 @@
 
 #include "argc/types.h"
 
+using namespace argennon;
 using namespace ascee;
 
 extern "C"

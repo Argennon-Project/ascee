@@ -4,8 +4,10 @@
 
 #include "stdio.h"
 
+using namespace argennon;
 using namespace ascee;
 using namespace argc;
+
 
 void foo() {
     foo();

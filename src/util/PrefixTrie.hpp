@@ -15,15 +15,15 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef ASCEE_IDENTIFIER_TRIE_H
-#define ASCEE_IDENTIFIER_TRIE_H
+#ifndef ARGENNON_IDENTIFIER_TRIE_H
+#define ARGENNON_IDENTIFIER_TRIE_H
 
 #include <argc/types.h>
 #include <string>
 #include <stdexcept>
 #include <array>
 
-namespace ascee::runtime {
+namespace argennon::util {
 
 template<typename T, int height = sizeof(T)>
 class PrefixTrie {
@@ -129,5 +129,5 @@ inline const PrefixTrie<uint16_t, 2> gNonceTrie({0xe0, 0xff00});
 
 inline const PrefixTrie<uint64_t, 6> gAppTrie({});
 
-} // namespace ascee::runtime
-#endif // ASCEE_IDENTIFIER_TRIE_H
+} // namespace argennon::util
+#endif // ARGENNON_IDENTIFIER_TRIE_H
