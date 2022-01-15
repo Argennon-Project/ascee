@@ -137,8 +137,6 @@ public:
         std::unordered_map<long_id, bool> isLocked;
         VirtualSigManager virtualSigner;
 
-        string_buffer_c<RESPONSE_MAX_SIZE> httpResponse;
-
         CallInfoContext* currentCall = nullptr;
         CallResourceContext* currentResources = nullptr;
 
@@ -156,7 +154,9 @@ public:
     AppResponse executeOne(AppRequest* req);
 
     static
-    int controlledExec(int (* invoker)(long_id, string_c), long_id app_id, string_c request,
+    int controlledExec(const std::function<int(long_id, response_buffer_c&, string_view_c)>& invoker,
+                       long_id app_id,
+                       response_buffer_c& response, string_view_c request,
                        int_fast64_t execTime, size_t stackSize);
 
 private:

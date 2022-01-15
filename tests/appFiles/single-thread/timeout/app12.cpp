@@ -6,11 +6,9 @@ using namespace argennon;
 using namespace ascee;
 using namespace argc;
 
-extern "C"
-int dispatcher(string_c request) {
-    append_str(response_buffer(), request);
-    invoke_dispatcher(85, 10, request);
-    string_c response = STRING(" TOO LONG...");
-    append_str(response_buffer(), response);
+DEF_ARGC_DISPATCHER {
+    append_str(response, request);
+    invoke_dispatcher(85, 10, response, request);
+    append_str(response, " TOO LONG...");
     return HTTP_OK;
 }

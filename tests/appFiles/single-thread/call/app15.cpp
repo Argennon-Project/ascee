@@ -6,13 +6,12 @@ using namespace argennon;
 using namespace ascee;
 using namespace argc;
 
-extern "C"
-int dispatcher(string_c request) {
-    append_str(response_buffer(), request);
-    string_c req = STRING("request from 15");
-    invoke_dispatcher(85, 11, req);
-    string_c response = STRING(" got in 15");
-    append_str(response_buffer(), response);
+DEF_ARGC_DISPATCHER {
+    append_str(response, request);
+    STRING(req, "request from 15");
+    invoke_dispatcher(85, 11, response, req);
+    STRING(temp, " got in 15");
+    append_str(response, temp);
     return HTTP_OK;
 }
 

@@ -28,18 +28,6 @@ using namespace runtime;
 
 using std::unique_ptr, std::vector, std::unordered_map, std::string, std::string_view;
 
-string_buffer_c<RESPONSE_MAX_SIZE>& argc::response_buffer() {
-    return Executor::getSession()->httpResponse;
-}
-
-static inline
-void addDefaultResponse(int statusCode) {
-    char response[256];
-    int n = sprintf(response, "HTTP/1.1 %d %s", statusCode, "OK");
-    Executor::getSession()->httpResponse.clear();
-    Executor::getSession()->httpResponse.append(string_c(response, n));
-}
-
 void argc::enter_area() {
     if (Executor::getSession()->currentCall->hasLock) return;
 
@@ -63,7 +51,7 @@ void argc::exit_area() {
     Executor::unBlockSignals();
 }
 
-void argc::invoke_deferred(long_id app_id, string_c request) {
+void argc::invoke_deferred(long_id app_id, response_buffer_c& response, string_view_c request) {
     Executor::getSession()->currentCall->deferredCalls.emplace_back(DeferredArgs{
             .appID = app_id,
             // string constructor makes a copy of its input, so we should be safe here.
@@ -71,23 +59,22 @@ void argc::invoke_deferred(long_id app_id, string_c request) {
     });
 }
 
-void argc::revert(string_c msg) {
+void argc::revert(string_view_c msg) {
     Executor::blockSignals();
     throw Executor::GenericError(std::string(msg));
 }
 
-int argc::dependant_call(long_id app_id, string_c request) {
+int argc::dependant_call(long_id app_id, response_buffer_c& response, string_view_c request) {
     try {
         Executor::getSession()->appTable.checkApp(app_id);
     } catch (const ApplicationError& err) {
         throw Executor::GenericError(err);
     }
 
-    Executor::getSession()->httpResponse.clear();
     Executor::CallInfoContext callContext(app_id);
 
     Executor::unBlockSignals();
-    int ret = Executor::getSession()->appTable.callApp(app_id, request);
+    int ret = Executor::getSession()->appTable.callApp(app_id, response, request);
     if (ret >= 400) {
         throw Executor::GenericError("returning an error code normally", StatusCode::invalid_operation);
     }
@@ -97,49 +84,45 @@ int argc::dependant_call(long_id app_id, string_c request) {
     argc::exit_area();
 
     if (!callContext.deferredCalls.empty()) {
-        // Here we use heap memory for keeping a copy of the main response.
-        string mainResponse(string_c(Executor::getSession()->httpResponse));
         for (const auto& dCall: callContext.deferredCalls) {
-            int temp = argc::dependant_call(dCall.appID, StringView(dCall.request));
-            printf("** deferred call returns: %d\n", temp);
+            // Discarding the responses of deferred calls
+            response_buffer_c tempBuffer;
+            int temp = argc::dependant_call(dCall.appID, tempBuffer, StringView(dCall.request));
+            printf("** deferred call returns: %d %s\n", temp, StringView(tempBuffer).data());
         }
-
-        // Discarding the responses of deferred calls and restoring the original response
-        Executor::getSession()->httpResponse.clear();
-        Executor::getSession()->httpResponse.append(StringView(mainResponse));
     }
     return ret;
 }
 
 static
-int invoke_noexcept(long_id app_id, string_c request) {
+int invoke_noexcept(long_id app_id, response_buffer_c& response, string_view_c request) {
     int ret;
     try {
         try {
-            ret = argc::dependant_call(app_id, request);
+            ret = argc::dependant_call(app_id, response, request);
         } catch (const std::out_of_range& out) {
             throw Executor::GenericError(out.what());
         }
     } catch (const Executor::GenericError& ee) {
         Executor::blockSignals();
         ret = ee.errorCode();
-        ee.toHttpResponse(Executor::getSession()->httpResponse.clear());
+        ee.toHttpResponse(response.clear());
     }
     return ret;
 }
 
-int argc::invoke_dispatcher(byte forwarded_gas, long_id app_id, string_c request) {
+int argc::invoke_dispatcher(byte forwarded_gas, long_id app_id, response_buffer_c& response, string_view_c request) {
     Executor::blockSignals();
 
     int ret;
     try {
         Executor::CallResourceContext resourceContext(forwarded_gas);
-        ret = Executor::controlledExec(invoke_noexcept, app_id, request,
+        ret = Executor::controlledExec(invoke_noexcept, app_id, response, request,
                                        resourceContext.getExecTime(), resourceContext.getStackSize());
         if (ret < 400) resourceContext.complete();
     } catch (const ApplicationError& ae) {
         ret = ae.errorCode();
-        Executor::GenericError(ae).toHttpResponse(Executor::getSession()->httpResponse.clear());
+        Executor::GenericError(ae).toHttpResponse(response.clear());
     }
 
     // unBlockSignals() should be called here, in case resourceContext's constructor throws an exception.

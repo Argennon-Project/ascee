@@ -6,42 +6,37 @@ using namespace argennon;
 using namespace ascee;
 using namespace argc;
 
-extern "C"
-int dispatcher(string_c request) {
-    string_c dummy = STRING("dummy");
-    STRING_BUFFER(response, 1024);
+DEF_ARGC_DISPATCHER {
+    STRING(dummy, "dummy");
+    STRING_BUFFER(all, 2048);
 
     // time out
-    append_str(response_buffer(), dummy);
-    invoke_dispatcher(40, 10, request);
-    append_str(response, buf_to_string(response_buffer()));
+    append_str(response, dummy);
+    invoke_dispatcher(40, 10, response, request);
+    append_str(all, response);
 
     // division zero
-    append_str(response_buffer(), dummy);
-    invoke_dispatcher(40, 20, request);
-    append_str(response, buf_to_string(response_buffer()));
+    append_str(response, dummy);
+    invoke_dispatcher(40, 20, response, request);
+    append_str(all, response);
 
     // self call: App not found
-    append_str(response_buffer(), dummy);
-    invoke_dispatcher(40, 19, request);
-    append_str(response, buf_to_string(response_buffer()));
+    append_str(response, dummy);
+    invoke_dispatcher(40, 19, response, request);
+    append_str(all, response);
 
     // App not declared
-    append_str(response_buffer(), dummy);
-    invoke_dispatcher(40, 11, request);
-    append_str(response, buf_to_string(response_buffer()));
+    append_str(response, dummy);
+    invoke_dispatcher(40, 11, response, request);
+    append_str(all, response);
 
     // segmentation fault
-    append_str(response_buffer(), dummy);
-    invoke_dispatcher(40, 21, request);
-    printf("teeSSSSTTTT->%s", string_c(response_buffer()).data());
-    append_str(response, buf_to_string(response_buffer()));
+    invoke_dispatcher(40, 21, response, request);
+    append_str(all, response);
 
-
-    clear_buffer(response_buffer());
-    append_str(response_buffer(), buf_to_string(response));
-
-    string_c end = STRING(" all called...");
-    append_str(response_buffer(), end);
+    clear_buffer(response);
+    append_str(response, all);
+    STRING(end, " all called...");
+    append_str(response, end);
     return HTTP_OK;
 }

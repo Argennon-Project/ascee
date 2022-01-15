@@ -5,10 +5,8 @@ using namespace argennon;
 using namespace ascee;
 using namespace argc;
 
-extern "C"
-int dispatcher(string_c request) {
-    string_c dummy = STRING("dummy");
-    append_str(response_buffer(), dummy);
+DEF_ARGC_DISPATCHER {
+    append_str(response, "dummy");
     int x = 10 / 0;
     return HTTP_OK;
 }

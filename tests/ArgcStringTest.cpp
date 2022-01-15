@@ -41,7 +41,7 @@ struct AppendTestCase {
         if (wantError) {
             if (appendType == STR)
                 EXPECT_THROW(
-                        argc::append_str(buf, string_c(strToAppend)),
+                        argc::append_str(buf, string_view_c(strToAppend)),
                         std::out_of_range
                 );
             else if (appendType == INT64)
@@ -51,9 +51,9 @@ struct AppendTestCase {
                 );
             return;
         }
-        if (appendType == STR) argc::append_str(buf, string_c(strToAppend));
+        if (appendType == STR) argc::append_str(buf, string_view_c(strToAppend));
         else if (appendType == INT64) argc::append_int64(buf, int64ToAppend);
-        EXPECT_EQ(string_c(buf), wantResult);
+        EXPECT_EQ(string_view_c(buf), wantResult);
     }
 };
 
@@ -159,8 +159,8 @@ TEST(ArgcStringTest, ScanInt) {
         int64 wantInt = 0;
 
         void test() const {
-            string_c gotRest;
-            int64 gotInt = scan_int64(string_c(input), string_c(pattern), gotRest);
+            string_view_c gotRest;
+            int64 gotInt = scan_int64(string_view_c(input), string_view_c(pattern), gotRest);
             EXPECT_EQ(gotInt, wantInt);
             EXPECT_EQ(gotRest, wantRest);
         }
@@ -326,8 +326,8 @@ TEST(ArgcStringTest, ScanFloat) {
         float64 wantFloat = 0;
 
         void test() const {
-            string_c gotRest;
-            float64 gotFloat = scan_float64(string_c(input), string_c(pattern), gotRest);
+            string_view_c gotRest;
+            float64 gotFloat = scan_float64(string_view_c(input), string_view_c(pattern), gotRest);
             EXPECT_EQ(gotFloat, wantFloat);
             EXPECT_EQ(gotRest, wantRest);
         }

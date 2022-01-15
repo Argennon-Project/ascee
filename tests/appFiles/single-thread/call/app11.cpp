@@ -6,11 +6,10 @@ using namespace argennon;
 using namespace ascee;
 using namespace argc;
 
-extern "C"
-int dispatcher(string_c request) {
-    string_c response = STRING(" is DONE!");
-    append_str(response_buffer(), request);
-    append_str(response_buffer(), response);
+DEF_ARGC_DISPATCHER {
+    clear_buffer(response);
+    append_str(response, request);
+    append_str(response, " is DONE!");
     return HTTP_OK;
 }
 

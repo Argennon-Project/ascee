@@ -20,8 +20,8 @@
 using namespace argennon;
 using namespace ascee::runtime;
 
-int AppTable::callApp(long_id appID, string_c request) const {
-    return callTable.at(appID)(request);
+int AppTable::callApp(long_id appID, response_buffer_c& response, string_view_c request) const {
+    return callTable.at(appID)(response, request);
 }
 
 void AppTable::checkApp(long_id appID) const {

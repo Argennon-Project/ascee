@@ -11,14 +11,13 @@ int64 fib(int64 n) {
     return fib(n - 1) + fib(n - 2);
 }
 
-extern "C"
-int dispatcher(string_c request) {
-    append_str(response_buffer(), request);
-    invoke_dispatcher(85, 13, request);
-    string_c response = STRING(" OVER FLOW... fib: ");
+DEF_ARGC_DISPATCHER {
+    append_str(response, request);
+    invoke_dispatcher(85, 13, response, request);
+    STRING(temp, " OVER FLOW... fib: ");
     STRING_BUFFER(dummy, 2000 * 1024);
-    append_str(response_buffer(), response);
-    append_int64(response_buffer(), fib(30));
+    append_str(response, temp);
+    append_int64(response, fib(30));
     return HTTP_OK;
 }
 

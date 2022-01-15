@@ -24,7 +24,7 @@
 
 using namespace argennon;
 using namespace ascee::runtime;
-using std::unique_ptr, std::string, std::to_string;
+using std::unique_ptr, std::string, std::to_string, std::function;
 
 thread_local Executor::SessionInfo* Executor::session = nullptr;
 
@@ -100,7 +100,8 @@ void* Executor::registerRecoveryStack() {
 }
 
 AppResponse Executor::executeOne(AppRequest* req) {
-    AppResponse result{.reqID = req->id};
+    response_buffer_c response;
+    int statusCode;
     session = nullptr;
     try {
         SessionInfo threadSession{
@@ -110,17 +111,16 @@ AppResponse Executor::executeOne(AppRequest* req) {
 
         CallResourceContext rootResourceCtx(req->gas);
         CallInfoContext rootInfoCtx;
-        result.statusCode = argc::invoke_dispatcher(255, req->calledAppID, string_c(req->httpRequest));
-        // here, string's assignment operator makes a copy of the buffer.
-        result.response = StringView(session->httpResponse);
+        statusCode = argc::invoke_dispatcher(255, req->calledAppID, response, string_view_c(req->httpRequest));
         rootResourceCtx.complete();
         session->heapModifier.writeToHeap();
     } catch (const std::out_of_range& err) {
-
+        //todo: fix this
+        throw std::runtime_error("why???");
     }
     session = nullptr;
 
-    return result;
+    return {req->id, statusCode, string(response)};
 }
 
 Executor::Executor() {
@@ -128,10 +128,11 @@ Executor::Executor() {
 }
 
 struct InvocationArgs {
-    int (* invoker)(long_id, ascee::string_c);
+    const function<int(long_id, ascee::response_buffer_c&, ascee::string_view_c)>& invoker;
 
     long_id app_id;
-    ascee::string_c request;
+    ascee::string_view_c request;
+    ascee::response_buffer_c& response;
     int_fast64_t execTime;
     Executor::SessionInfo* session;
 };
@@ -148,14 +149,15 @@ void* Executor::threadStart(void* voidArgs) {
     ThreadCpuTimer cpuTimer;
     cpuTimer.setAlarm(args->execTime);
 
-    *ret = args->invoker(args->app_id, args->request);
+    *ret = args->invoker(args->app_id, args->response, args->request);
 
     free(recoveryStack);
     return ret;
 }
 
-int Executor::controlledExec(int (* invoker)(long_id, string_c),
-                             long_id app_id, string_c request,
+int Executor::controlledExec(const function<int(long_id, response_buffer_c&, string_view_c)>& invoker,
+                             long_id app_id,
+                             response_buffer_c& response, string_view_c request,
                              int_fast64_t execTime, size_t stackSize) {
     pthread_t threadID;
     pthread_attr_t threadAttr;
@@ -170,6 +172,7 @@ int Executor::controlledExec(int (* invoker)(long_id, string_c),
             .invoker = invoker,
             .app_id = app_id,
             .request = request,
+            .response = response,
             .execTime = execTime,
             .session = Executor::getSession()
     };

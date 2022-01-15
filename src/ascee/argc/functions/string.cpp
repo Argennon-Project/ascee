@@ -50,13 +50,13 @@ void buf_to_string(const string_buffer& buf, string_t &str) {
 }
 */
 
-int64 argc::scan_int64(const string_c& input, const string_c& pattern, string_c& rest) {
+int64 argc::scan_int64(string_view_c input, string_view_c pattern, string_view_c& rest) {
     int64 ret;
     rest = input.scan(pattern, ret);
     return ret;
 }
 
-float64 argc::scan_float64(const string_c& input, const string_c& pattern, string_c& rest) {
+float64 argc::scan_float64(string_view_c input, string_view_c pattern, string_view_c& rest) {
     float64 ret;
     rest = input.scan(pattern, ret);
     return ret;

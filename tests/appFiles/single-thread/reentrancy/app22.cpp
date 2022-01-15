@@ -7,34 +7,35 @@ using namespace argennon;
 using namespace ascee;
 using namespace argc;
 
-void f(int deferred_call) {
+void f(response_buffer_c& response, int deferred_call) {
     enter_area();
 
-    string_c req1 = STRING("choice: 1");
-    string_c req2 = STRING("choice: 2");
-    string_c req3 = STRING("choice: 3");
+    STRING(req1, "choice: 1");
+    STRING(req2, "choice: 2");
+    STRING(req3, "choice: 3");
 
     if (deferred_call) {
-        invoke_deferred(23, req3);
+        invoke_deferred(23, response, req3);
         // forgetting to call exit_area()...
         return;
     }
 
-    STRING_BUFFER(temp, 1024);
-    invoke_dispatcher(50, 23, req1);
-    append_str(temp, response_buffer());
+    STRING_BUFFER(all, 1024);
 
-    invoke_dispatcher(50, 23, req2);
-    append_str(temp, response_buffer());
+    invoke_dispatcher(50, 23, response, req1);
+    append_str(all, response);
 
-    invoke_dispatcher(50, 23, req1);
-    append_str(temp, response_buffer());
+    invoke_dispatcher(50, 23, response, req2);
+    append_str(all, response);
 
-    invoke_dispatcher(50, 23, req3);
-    append_str(temp, response_buffer());
+    invoke_dispatcher(50, 23, response, req1);
+    append_str(all, response);
 
-    clear_buffer(response_buffer());
-    append_str(response_buffer(), temp);
+    invoke_dispatcher(50, 23, response, req3);
+    append_str(all, response);
+
+    clear_buffer(response);
+    append_str(response, all);
 
     exit_area();
 }
@@ -52,19 +53,18 @@ int h() {
 }
 
 
-extern "C"
-int dispatcher(string_c request) {
-    string_c pattern = STRING("choice: ");
-    string_c rest;
+DEF_ARGC_DISPATCHER {
+    STRING(pattern, "choice: ");
+    string_view_c rest;
     int64 choice = scan_int64(request, pattern, rest);
 
-    if (choice == 1) f(0);
+    if (choice == 1) f(response, 0);
     else if (choice == 2) g();
     else if (choice == 3) return h();
-    else if (choice == 4) f(1); // deferred call
+    else if (choice == 4) f(response, 1); // deferred call
 
-    string_c done = STRING(" Done: ");
-    append_str(response_buffer(), done);
-    append_int64(response_buffer(), choice);
+    STRING(done, " Done: ");
+    append_str(response, done);
+    append_int64(response, choice);
     return HTTP_OK;
 }

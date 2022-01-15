@@ -13,9 +13,8 @@ void foo() {
     foo();
 }
 
-
-int dispatcher(string_c request) {
-    int ret = invoke_dispatcher(255, 1, request);
+DEF_ARGC_DISPATCHER {
+    int ret = invoke_dispatcher(255, 1, response, request);
     /*  string_t req = STRING("Hi!");
       foo();
       return 0;*/

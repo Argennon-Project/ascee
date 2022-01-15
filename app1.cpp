@@ -11,11 +11,9 @@ int fib(int n) {
     return fib(n - 1) + fib(n - 2);
 }
 
-extern "C"
-int dispatcher(string_c request) {
+DEF_ARGC_DISPATCHER {
     printf("ssss%d\n", fib(20));
-    string_c response = STRING(" is DONE!");
-    append_str(response_buffer(), request);
-    append_str(response_buffer(), response);
+    append_str(response, request);
+    append_str(response, " is DONE!");
     return HTTP_OK;
 }

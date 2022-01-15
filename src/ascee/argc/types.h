@@ -15,8 +15,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef ARGENNON_TYPES_INC
-#define ARGENNON_TYPES_INC
+#ifndef ARGENNON_ARGC_TYPES_H
+#define ARGENNON_ARGC_TYPES_H
 
 #include <unordered_map>
 #include <arg/primitives.h>
@@ -27,15 +27,17 @@ namespace argennon::ascee {
 
 /// argc strings are not null-terminated. However, usually there is a null at the end. `length` is the number of
 /// bytes without considering any null bytes at the end.
-using string_c = runtime::StringView;
+using string_view_c = runtime::StringView;
 template<int max_size>
 using string_buffer_c = runtime::StringBuffer<max_size>;
+using response_buffer_c = runtime::StringBuffer<8 * 1024>;
+
 using signature_c = util::Signature;
 using publickey_c = util::PublicKey;
 
 /// We use a fixed size buffer for messages, instead of allowing smart contracts to choose the buffer size.
 /// I believe letting smart contracts choose this size can introduce undesirable coupling of smart contracts
-/// to the suffix size of the messages, which is appended by the signature verification functions.
+/// to the suffix size of messages, which is appended by the signature verification functions.
 using message_c = runtime::StringBuffer<2 * 1024>;
 
 /// HTTP response status codes
@@ -101,12 +103,12 @@ public:
     const StatusCode code;
 };
 
-typedef int (* dispatcher_ptr)(string_c request);
+typedef int (* dispatcher_ptr)(response_buffer_c& response, string_view_c request);
 
-#define STRING(str) string_c(str)
+#define STRING(name, str) char __##name##_buf__[] = str; string_view_c name(__##name##_buf__)
 #define STRING_BUFFER(name, size) string_buffer_c<size> name
+#define DEF_ARGC_DISPATCHER extern "C" int dispatcher(response_buffer_c& response, string_view_c request)
 
-#define RESPONSE_MAX_SIZE (2*1024)
 
 /// HTTP status codes. new costume coded could be defined.
 #define HTTP_OK 200
@@ -128,5 +130,4 @@ typedef int (* dispatcher_ptr)(string_c request);
 #define MAX_CALL_DEPTH_REACHED 514
 
 } // namespace ascee
-
-#endif // ARGENNON_TYPES_INC
+#endif // ARGENNON_ARGC_TYPES_H

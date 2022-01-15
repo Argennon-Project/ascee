@@ -6,10 +6,9 @@ using namespace argennon;
 using namespace ascee;
 using namespace argc;
 
-extern "C"
-int dispatcher(string_c request) {
+DEF_ARGC_DISPATCHER {
     int dummy[128 * 1024];
-    invoke_dispatcher(250, 17, request);
+    invoke_dispatcher(250, 17, response, request);
     return HTTP_OK;
 }
 

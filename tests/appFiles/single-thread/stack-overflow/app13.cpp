@@ -10,11 +10,9 @@ using namespace argennon;
 using namespace ascee;
 using namespace argc;
 
-extern "C"
-int dispatcher(string_c request) {
-    string_c response = STRING(" OVER FLOW!");
-    append_str(response_buffer(), request);
-    append_str(response_buffer(), response);
+DEF_ARGC_DISPATCHER {
+    append_str(response, request);
+    append_str(response, " OVER FLOW!");
     foo();
     return HTTP_OK;
 }

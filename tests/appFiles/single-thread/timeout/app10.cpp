@@ -4,7 +4,6 @@
 using namespace argennon;
 using namespace ascee;
 
-extern "C"
-int dispatcher(string_c request) {
+DEF_ARGC_DISPATCHER {
     while (1);
 }

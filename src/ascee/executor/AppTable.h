@@ -30,7 +30,7 @@ class AppTable {
 public:
     explicit AppTable(const std::vector<long_id>& appList) : callTable(AppLoader::global->createAppTable(appList)) {}
 
-    int callApp(long_id appID, string_c request) const;
+    int callApp(long_id appID, response_buffer_c& response, string_view_c request) const;
 
     void checkApp(long_id appID) const;
 
