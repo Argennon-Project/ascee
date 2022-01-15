@@ -81,6 +81,26 @@ inline const char* gReasonByStatusCode(StatusCode code) {
     return "Unknown Reason";
 }
 
+class ApplicationError : public std::exception {
+public:
+    explicit ApplicationError(
+            std::string msg,
+            StatusCode code = StatusCode::internal_error,
+            std::string thrower = ""
+    ) noexcept: msg(std::move(msg)),
+                code(code), thrower(std::move(thrower)),
+                message(this->thrower.empty() ? this->msg : "[" + this->thrower + "]-> " + this->msg) {}
+
+    [[nodiscard]] int errorCode() const { return (int) code; }
+
+    [[nodiscard]] const char* what() const noexcept override { return message.c_str(); }
+
+    const std::string thrower;
+    const std::string msg;
+    const std::string message;
+    const StatusCode code;
+};
+
 typedef int (* dispatcher_ptr)(string_c request);
 
 #define STRING(str) string_c(str)

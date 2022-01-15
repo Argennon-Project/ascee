@@ -86,7 +86,7 @@ int main(int argc, char const* argv[]) {
             .calledAppID = 1,
             .httpRequest = "test request",
             .gas = 1000,
-            .appTable = AppLoader::global->createAppTable({1})
+            .appTable = AppTable({1})
     };
     auto response = executor.executeOne(&request);
 

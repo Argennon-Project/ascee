@@ -16,6 +16,8 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include "RequestScheduler.h"
+#include "ascee/heap/HeapModifier.h"
+
 
 using namespace argennon;
 using namespace ave;
@@ -173,7 +175,7 @@ DagNode::DagNode(AppRequestInfo&& data,
                 .httpRequest = std::move(data.httpRequest),
                 .gas = data.gas,
                 .modifier = scheduler->getModifierFor(data.id),
-                .appTable = AppLoader::global->createAppTable(data.appAccessList),
+                .appTable = AppTable(data.appAccessList),
                 .failureManager = FailureManager(
                         std::move(data.stackSizeFailures),
                         std::move(data.cpuTimeFailures)

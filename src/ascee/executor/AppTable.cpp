@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2022 aybehrouz <behrouz_ayati@yahoo.com>. All rights
+// Copyright (c) 2022 aybehrouz <behrouz_ayati@yahoo.com>. All rights
 // reserved. This file is part of the C++ implementation of the Argennon smart
 // contract Execution Environment (AscEE).
 //
@@ -15,17 +15,22 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#include <executor/Executor.h>
-#include <argc/types.h>
+#include "AppTable.h"
 
 using namespace argennon;
-using namespace argennon::ascee::runtime;
+using namespace ascee::runtime;
 
-int64 loadInt64(int32 offset) {
-    try {
-        return Executor::getSession()->heapModifier.load<int64>(offset);
-    } catch (const std::out_of_range& err) {
-        throw ascee::ApplicationError(err.what());
-    }
+int AppTable::callApp(long_id appID, string_c request) const {
+    return callTable.at(appID)(request);
 }
 
+void AppTable::checkApp(long_id appID) const {
+    try {
+        if (callTable.at(appID) == nullptr) {
+            throw ApplicationError("app does not exist", StatusCode::not_found);
+        }
+    } catch (const std::out_of_range&) {
+        throw ApplicationError("app/" + std::to_string(appID) + " was not declared in the call list",
+                               StatusCode::limit_violated);
+    }
+}

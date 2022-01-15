@@ -1,4 +1,4 @@
-// Copyright (c) 2021-2022 aybehrouz <behrouz_ayati@yahoo.com>. All rights
+// Copyright (c) 2022 aybehrouz <behrouz_ayati@yahoo.com>. All rights
 // reserved. This file is part of the C++ implementation of the Argennon smart
 // contract Execution Environment (AscEE).
 //
@@ -15,17 +15,28 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#include <executor/Executor.h>
-#include <argc/types.h>
+#ifndef ARGENNON_CORE_APP_TABLE_H
+#define ARGENNON_CORE_APP_TABLE_H
 
-using namespace argennon;
-using namespace argennon::ascee::runtime;
+#include <unordered_map>
+#include "arg/primitives.h"
+#include "argc/types.h"
+#include "loader/AppLoader.h"
 
-int64 loadInt64(int32 offset) {
-    try {
-        return Executor::getSession()->heapModifier.load<int64>(offset);
-    } catch (const std::out_of_range& err) {
-        throw ascee::ApplicationError(err.what());
-    }
-}
+namespace argennon::ascee::runtime {
 
+
+class AppTable {
+public:
+    explicit AppTable(const std::vector<long_id>& appList) : callTable(AppLoader::global->createAppTable(appList)) {}
+
+    int callApp(long_id appID, string_c request) const;
+
+    void checkApp(long_id appID) const;
+
+private:
+    std::unordered_map<long_id, dispatcher_ptr> callTable;
+};
+
+} // namespace argennon::ascee::runtime
+#endif // ARGENNON_CORE_APP_TABLE_H

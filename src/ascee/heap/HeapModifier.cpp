@@ -17,7 +17,6 @@
 
 #include "HeapModifier.h"
 #include "argc/types.h"
-#include "executor/FailureManager.h"
 // #define NDEBUG
 #include <cassert>
 #include <utility>

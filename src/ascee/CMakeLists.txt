@@ -19,4 +19,4 @@ add_library(ascee SHARED
         argc/StringBuffer.cpp
         heap/Chunk.cpp
         heap/HeapModifier.cpp
-        )
+        executor/AppTable.cpp executor/AppTable.h)

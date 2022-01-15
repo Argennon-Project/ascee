@@ -26,8 +26,6 @@
 #include "arg/info.h"
 #include "util/BlockingQueue.hpp"
 #include "storage/ChunkIndex.h"
-#include "ascee/loader/AppLoader.h"
-#include "ascee/heap/HeapModifier.h"
 #include "ascee/executor/Executor.h"
 
 namespace argennon::ave {

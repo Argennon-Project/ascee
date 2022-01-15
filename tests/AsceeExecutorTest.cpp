@@ -62,7 +62,7 @@ struct AppTestCase {
                 .calledAppID = calledApp,
                 .httpRequest = request,
                 .gas = gas,
-                .appTable = AppLoader::global->createAppTable(appAccessList)
+                .appTable = AppTable(appAccessList)
         };
         auto result = executor->executeOne(&req);
 

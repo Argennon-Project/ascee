@@ -84,8 +84,8 @@ struct AppRequestInfo {
      *  for which it wants to pay fees for. By injecting digest of those request by validators that signature can
      *  be validated correctly by the ARG application.
      */
-    // BlockLoader needs to verify that all integers in the list are in [0, numOfRequests)
     std::vector<AppRequestIdType> attachments;
+    // BlockLoader needs to verify that all integers in the list are in [0, numOfRequests)
 
     Digest digest;
 };

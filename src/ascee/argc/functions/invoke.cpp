@@ -77,22 +77,17 @@ void argc::revert(string_c msg) {
 }
 
 int argc::dependant_call(long_id app_id, string_c request) {
-    dispatcher_ptr dispatcher;
     try {
-        dispatcher = Executor::getSession()->appTable.at(app_id);
-    } catch (const std::out_of_range&) {
-        throw Executor::GenericError("app/" + std::to_string(app_id) + " was not declared in the call list",
-                                     StatusCode::limit_violated);
-    }
-    if (dispatcher == nullptr) {
-        throw Executor::GenericError("app does not exist", StatusCode::not_found);
+        Executor::getSession()->appTable.checkApp(app_id);
+    } catch (const ApplicationError& err) {
+        throw Executor::GenericError(err);
     }
 
     Executor::getSession()->httpResponse.clear();
     Executor::CallInfoContext callContext(app_id);
 
     Executor::unBlockSignals();
-    int ret = dispatcher(request);
+    int ret = Executor::getSession()->appTable.callApp(app_id, request);
     if (ret >= 400) {
         throw Executor::GenericError("returning an error code normally", StatusCode::invalid_operation);
     }

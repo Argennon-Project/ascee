@@ -30,6 +30,7 @@
 #include "ThreadCpuTimer.h"
 #include "heap/HeapModifier.h"
 #include "VirtualSigManager.h"
+#include "AppTable.h"
 
 namespace argennon::ascee::runtime {
 
@@ -37,10 +38,10 @@ struct AppRequest {
     AppRequestIdType id;
     long_id calledAppID;
     std::string httpRequest;
-    int_fast32_t gas;
-    ascee::runtime::HeapModifier modifier;
-    std::unordered_map<long_id, dispatcher_ptr> appTable;
-    ascee::runtime::FailureManager failureManager;
+    int32_fast gas;
+    HeapModifier modifier;
+    AppTable appTable;
+    FailureManager failureManager;
     std::vector<AppRequestIdType> attachments;
     Digest digest;
 };
@@ -131,7 +132,7 @@ public:
         bool criticalArea = false;
 
         HeapModifier& heapModifier = request->modifier;
-        std::unordered_map<long_id, dispatcher_ptr>& appTable = request->appTable;
+        const AppTable& appTable = request->appTable;
         FailureManager& failureManager = request->failureManager;
         std::unordered_map<long_id, bool> isLocked;
         VirtualSigManager virtualSigner;
