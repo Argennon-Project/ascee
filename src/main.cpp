@@ -90,7 +90,7 @@ int main(int argc, char const* argv[]) {
     };
     auto response = executor.executeOne(&request);
 
-    printf("hereeeee@@ \n%s\n", response.response.c_str());
+    printf("hereeeee@@ \n%s\n", response.httpResponse.c_str());
 
 
     PageLoader pl;

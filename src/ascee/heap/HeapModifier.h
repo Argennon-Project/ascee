@@ -77,7 +77,8 @@ public:
 
     bool isValid(int32 offset, int32 size) {
         // we need to make sure that the access block is defined. Otherwise, scheduler can not guarantee that
-        // isValid is properly parallelized with chunk resizing requests.
+        // isValid is properly parallelized with chunk resizing requests. Also, we need to make sure that an access
+        // block with the proper size is defined at the offset.
         if (size > currentChunk->accessTable.at(offset).getSize()) {
             throw std::out_of_range("isValid: invalid size");
         }

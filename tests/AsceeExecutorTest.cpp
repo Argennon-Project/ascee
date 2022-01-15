@@ -66,7 +66,7 @@ struct AppTestCase {
         };
         auto result = executor->executeOne(&req);
 
-        EXPECT_EQ(result.response, wantResponse);
+        EXPECT_EQ(result.httpResponse, wantResponse);
 
         EXPECT_EQ(result.statusCode, wantCode);
     }

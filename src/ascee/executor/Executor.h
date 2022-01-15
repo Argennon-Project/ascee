@@ -49,7 +49,7 @@ struct AppRequest {
 struct AppResponse {
     AppRequestIdType reqID;
     int statusCode;
-    std::string response;
+    std::string httpResponse;
 };
 
 struct DeferredArgs {

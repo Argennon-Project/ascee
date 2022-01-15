@@ -67,10 +67,20 @@ struct AppRequestInfo {
     long_id calledAppID = -1;
     std::string httpRequest;
     int_fast32_t gas = 0;
+
     std::vector<long_id> appAccessList;
     std::unordered_set<int_fast32_t> stackSizeFailures;
     std::unordered_set<int_fast32_t> cpuTimeFailures;
-    /// The list must be sorted.
+    /**
+     * memoryAccessMap is the sorted list of memory location that the request will access. The list must be sorted based
+     * on appIDs, chunkIDs and offsets. The first defined access block for every chunk MUST be one of the following
+     * access blocks:
+     * {offset = -3, size = 0, access = read_only} which means the request does not access the size of the chunk
+     * {offset = -2, size != 0, access = read_only} which means the request reads the chunkSize but will not modify it
+     * {offset = -1, access = writable}, which means the request wants to resize the chunk. If size > 0 the request
+     * expands the chunk and maxSize = size. If size <= 0 the request can shrink the chunk and minSize = -size.
+     * Note that: newSize <= maxSize when expanding the chunk and newSize >= minSize when shrinking the chunk.
+    */
     AccessMapType memoryAccessMap;
     /// This list should be checked to make sure no id is out of range.
     std::unordered_set<AppRequestIdType> adjList;

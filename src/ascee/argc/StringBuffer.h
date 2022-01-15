@@ -79,7 +79,7 @@ public:
 
 private:
     int end = 0;
-    // we allocate one extra byte, so always there will be a null at the end of buffer.
+    // we allocate one extra byte, so always there will be a null at the end of the buffer.
     char buffer[maxSize + 1] = {};
 };
 

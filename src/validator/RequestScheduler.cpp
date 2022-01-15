@@ -97,7 +97,7 @@ void RequestScheduler::findCollisions(
             lowerBound = heapIndex.getSizeLowerBound(chunkID);
         }
 
-        // end > upperBound will never occur, since those transactions must not be included in a block.
+        // offset > upperBound will never occur, since those transactions must not be included in a block.
         if (sizeWritersEnd != 0 && end > lowerBound) {
             for (int32_fast j = sizeWritersBegin; j < sizeWritersEnd; ++j) {
                 auto newSize = accessBlocks[j].size;
