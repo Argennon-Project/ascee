@@ -25,7 +25,13 @@
 #include "heap/Chunk.h"
 
 namespace argennon::asa {
-
+/**
+ * When a page contains migrants, its native chunk can not be migrated. We need to check that in this class.
+ *
+ * If the page does not have any migrants, its
+ * native can be migrated and the page will be converted into a special <<moved>> page in the merkle tree. However,
+ * we don't need to implement that here.
+ */
 class Page {
     using Chunk = ascee::runtime::Chunk;
 public:
