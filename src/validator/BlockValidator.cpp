@@ -26,10 +26,16 @@ using namespace asa;
 using namespace ascee::runtime;
 using std::vector, std::future;
 
+static
 void waitForAll(const vector<future<void>>& pendingTasks) {
     for (const auto& task: pendingTasks) {
         task.wait();
     }
+}
+
+static
+Digest calculateDigest(vector<AppResponse> responses) {
+    return {};
 }
 
 /// Conditionally validates a block: valid(current | previous). Returns true when the block is valid and false
@@ -51,12 +57,11 @@ bool BlockValidator::conditionalValidate(const BlockInfo& current, const BlockIn
 
         buildDependencyGraph(scheduler);
 
-        executeRequests(scheduler);
+        return calculateDigest(executeRequests(scheduler)) == blockLoader.getResponseListDigest();
     } catch (const BlockError& err) {
         std::cout << err.message << std::endl;
         return false;
     }
-    return true;
 }
 
 void BlockValidator::loadRequests(RequestScheduler& scheduler) {
@@ -101,14 +106,17 @@ void BlockValidator::buildDependencyGraph(RequestScheduler& scheduler) {
     waitForAll(pendingTasks);
 }
 
-void BlockValidator::executeRequests(RequestScheduler& scheduler) {
+vector<AppResponse> BlockValidator::executeRequests(RequestScheduler& scheduler) {
     scheduler.buildExecDag();
+
+    vector<AppResponse> responseList(blockLoader.getNumOfRequests());
 
     std::thread pool[workersCount];
     for (auto& worker: pool) {
         worker = std::thread([&] {
             while (auto* request = scheduler.nextRequest()) {
-                scheduler.submitResult(executor.executeOne(request));
+                responseList[request->id] = executor.executeOne(request);
+                scheduler.submitResult(request->id, responseList[request->id].statusCode);
             }
         });
     }
@@ -116,6 +124,8 @@ void BlockValidator::executeRequests(RequestScheduler& scheduler) {
     for (auto& worker: pool) {
         worker.join();
     }
+
+    return responseList;
 }
 
 BlockValidator::BlockValidator(

@@ -52,6 +52,10 @@ public:
     }
 
     std::vector<MigrationInfo> getMigrationList() { return {}; };
+
+    Digest getResponseListDigest() {
+        return {};
+    }
 };
 
 } // namespace argennon::ave

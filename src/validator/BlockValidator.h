@@ -44,7 +44,7 @@ private:
 
     void buildDependencyGraph(RequestScheduler& scheduler);
 
-    void executeRequests(RequestScheduler& scheduler);
+    std::vector<ascee::runtime::AppResponse> executeRequests(RequestScheduler& scheduler);
 };
 
 } // namespace argennon::ave

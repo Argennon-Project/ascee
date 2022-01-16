@@ -25,7 +25,7 @@ namespace argennon::ascee::runtime {
 
 class FailureManager {
 public:
-    typedef int_fast32_t InvocationID;
+    typedef int32_fast InvocationID;
 
     FailureManager() = default;
 
@@ -36,7 +36,7 @@ public:
 
     void completeInvocation();
 
-    int_fast64_t getExecTime(InvocationID id, int_fast32_t gas);
+    int64_fast getExecTime(InvocationID id, int32_fast gas);
 
     size_t getStackSize(InvocationID id);
 

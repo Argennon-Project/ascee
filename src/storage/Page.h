@@ -76,8 +76,19 @@ public:
         return migrants;
     }
 
-    Chunk* extractChunk(full_id id) {
-        return nullptr;
+    Chunk* extractMigrant(full_id id) {
+        try {
+            auto ret = migrants.at(id).release();
+            migrants.erase(id);
+            return ret;
+        } catch (const std::out_of_range&) {
+            throw BlockError("is not a migrant");
+        }
+    }
+
+    Chunk* extractNative() {
+        if (!migrants.empty()) throw BlockError("migrating native chunk of a page containing migrants");
+        return native.release();
     }
 
 private:

@@ -24,10 +24,11 @@
 #define DEFAULT_GAS_COEFFICIENT 300000
 #define FAIL_CHECK_GAS_COEFFICIENT 150000
 
-using namespace argennon::ascee;
+using namespace argennon;
+using namespace ascee;
 using namespace argennon::ascee::runtime;
 
-int_fast32_t FailureManager::nextInvocation() {
+int32_fast FailureManager::nextInvocation() {
     lastGeneratedID++;
     callDepth++;
     return lastGeneratedID;
@@ -37,7 +38,7 @@ void FailureManager::completeInvocation() {
     callDepth--;
 }
 
-int_fast64_t FailureManager::getExecTime(InvocationID id, int_fast32_t gas) {
+int64_fast FailureManager::getExecTime(InvocationID id, int32_fast gas) {
     if (cpuTimeFailures.contains(id)) return FAIL_CHECK_GAS_COEFFICIENT * gas;
     return DEFAULT_GAS_COEFFICIENT * gas;
 }

@@ -47,7 +47,6 @@ struct AppRequest {
 };
 
 struct AppResponse {
-    AppRequestIdType reqID;
     int statusCode;
     std::string httpResponse;
 };

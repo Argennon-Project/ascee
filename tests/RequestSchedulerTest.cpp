@@ -184,7 +184,7 @@ TEST_F(RequestSchedulerTest, SimpleDagFull) {
     while (auto* next = scheduler.nextRequest()) {
         result.emplace_back(next->id);
         std::cout << next->id << std::endl;
-        scheduler.submitResult({next->id, 200, ""});
+        scheduler.submitResult(next->id, 200);
     }
 
     EXPECT_EQ(result, std::vector<AppRequestIdType>({0, 2, 1}));
@@ -217,14 +217,14 @@ TEST_F(RequestSchedulerTest, ExecutionDag) {
             scheduler.buildExecDag();
 
             if (wantError) {
-                EXPECT_THROW(while (auto* next = scheduler.nextRequest()) scheduler.submitResult({next->id, 200, ""}),
+                EXPECT_THROW(while (auto* next = scheduler.nextRequest()) scheduler.submitResult(next->id, 200),
                              BlockError);
             } else {
                 std::vector<AppRequestIdType> got;
                 while (auto* next = scheduler.nextRequest()) {
                     got.emplace_back(next->id);
                     std::cout << next->id << std::endl;
-                    scheduler.submitResult({next->id, 200, ""});
+                    scheduler.submitResult(next->id, 200);
                 }
                 EXPECT_EQ(got, want);
             }

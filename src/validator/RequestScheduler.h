@@ -72,7 +72,7 @@ class RequestScheduler {
 public:
     ascee::runtime::AppRequest* nextRequest();
 
-    void submitResult(const ascee::runtime::AppResponse& result);
+    void submitResult(AppRequestIdType reqID, int statusCode);
 
     void findCollisions(full_id chunkID,
                         const std::vector<int32>& sortedOffsets,

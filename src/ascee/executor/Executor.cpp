@@ -120,7 +120,7 @@ AppResponse Executor::executeOne(AppRequest* req) {
     }
     session = nullptr;
 
-    return {req->id, statusCode, string(response)};
+    return {statusCode, string(response)};
 }
 
 Executor::Executor() {

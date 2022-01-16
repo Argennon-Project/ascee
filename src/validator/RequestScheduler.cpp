@@ -35,11 +35,11 @@ AppRequest* RequestScheduler::nextRequest() {
     }
 }
 
-void RequestScheduler::submitResult(const AppResponse& result) {
+void RequestScheduler::submitResult(AppRequestIdType reqID, int statusCode) {
     // This function is thread-safe
-    auto& reqNode = nodeIndex[result.reqID];
+    auto& reqNode = nodeIndex[reqID];
 
-    if (result.statusCode > 400 && !reqNode->getAppRequest().attachments.empty()) {
+    if (statusCode > 400 && !reqNode->getAppRequest().attachments.empty()) {
         throw BlockError("block contains a failed fee payment");
     }
 

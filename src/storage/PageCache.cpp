@@ -58,7 +58,9 @@ PageCache::prepareBlockPages(const BlockInfo& block, const vector<PageAccessInfo
     }
 
     for (const auto& migration: chunkMigrations) {
-        auto* chunk = result.at(migration.fromIndex).second->extractChunk(migration.chunkID);
+        auto from = result.at(migration.fromIndex);
+        auto* chunk = from.first == migration.chunkID ?
+                      from.second->extractNative() : from.second->extractMigrant(migration.chunkID);
         result.at(migration.toIndex).second->addMigrant(migration.chunkID, chunk);
     }
 
