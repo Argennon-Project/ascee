@@ -64,46 +64,47 @@ bool BlockValidator::conditionalValidate(const BlockInfo& current, const BlockIn
     }
 }
 
+void runAll(const std::function<void(int64_fast)>& task, int64_fast n, int workersCount) {
+    auto step = std::max<int64_fast>(n / workersCount, 1);
+
+    vector<future<void>> pendingTasks;
+    pendingTasks.reserve(workersCount);
+    for (int i = 0; i < workersCount; ++i) {
+        pendingTasks.emplace_back(std::async([&, i] {
+            for (int64_fast taskID = i * step; taskID < (i + 1) * step && taskID < n; ++taskID) {
+                task(taskID);
+            }
+        }));
+    }
+
+    for (const auto& pending: pendingTasks) {
+        pending.wait();
+    }
+}
+
 void BlockValidator::loadRequests(RequestScheduler& scheduler) {
     auto numOfRequests = blockLoader.getNumOfRequests();
 
-    vector<future<void>> pendingTasks;
-    pendingTasks.reserve(numOfRequests);
-    for (AppRequestIdType requestID = 0; requestID < numOfRequests; ++requestID) {
-        pendingTasks.emplace_back(RUN_TASK([&] {
-            scheduler.addRequest(blockLoader.loadRequest(requestID));
-        }));
-    }
+    runAll([&](AppRequestIdType requestID) {
+        scheduler.addRequest(blockLoader.loadRequest(requestID));
+    }, numOfRequests, workersCount);
 
-    waitForAll(pendingTasks);
-
-    pendingTasks.clear();
-    for (AppRequestIdType requestID = 0; requestID < numOfRequests; ++requestID) {
-        pendingTasks.emplace_back(RUN_TASK([&] {
-            scheduler.finalizeRequest(requestID);
-        }));
-    }
-
-    waitForAll(pendingTasks);
+    runAll([&](AppRequestIdType requestID) {
+        scheduler.finalizeRequest(requestID);
+    }, numOfRequests, workersCount);
 }
 
 void BlockValidator::buildDependencyGraph(RequestScheduler& scheduler) {
-    auto sortedMap = scheduler.sortAccessBlocks();
+    auto sortedMap = scheduler.sortAccessBlocks(workersCount);
 
-    vector<future<void>> pendingTasks;
     for (long i = 0; i < sortedMap.size(); ++i) {
-        auto appID = sortedMap.getKeys()[i];
-        const auto& chunkList = sortedMap.getValues()[i];
-        for (long j = 0; j < chunkList.size(); ++j) {
+        runAll([&, i](long j) {
+            const auto& chunkList = sortedMap.getValues()[i];
             auto chunkID = chunkList.getKeys()[j];
             const auto& blocks = chunkList.getValues()[j];
-            pendingTasks.emplace_back(RUN_TASK([&] {
-                scheduler.findCollisions(full_id(appID, chunkID), blocks.getKeys(), blocks.getValues());
-            }));
-        }
+            scheduler.findCollisions(full_id(sortedMap.getKeys()[i], chunkID), blocks.getKeys(), blocks.getValues());
+        }, sortedMap.getValues()[i].size(), workersCount);
     }
-
-    waitForAll(pendingTasks);
 }
 
 vector<AppResponse> BlockValidator::executeRequests(RequestScheduler& scheduler) {
@@ -132,5 +133,5 @@ BlockValidator::BlockValidator(
         PageCache& cache,
         BlockLoader& blockLoader,
         int workersCount) : cache(cache), blockLoader(blockLoader) {
-    this->workersCount = workersCount == -1 ? (int) std::thread::hardware_concurrency() : workersCount;
+    this->workersCount = workersCount == -1 ? (int) std::thread::hardware_concurrency() * 2 : workersCount;
 }

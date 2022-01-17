@@ -15,10 +15,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#include <memory>
-#include <unordered_map>
-#include <vector>
-
 #include <executor/Executor.h>
 #include <argc/functions.h>
 
@@ -26,7 +22,6 @@ using namespace argennon;
 using namespace ascee;
 using namespace runtime;
 
-using std::unique_ptr, std::vector, std::unordered_map, std::string, std::string_view;
 
 void argc::enter_area() {
     if (Executor::getSession()->currentCall->hasLock) return;

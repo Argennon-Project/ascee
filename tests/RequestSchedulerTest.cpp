@@ -121,7 +121,7 @@ TEST_F(RequestSchedulerTest, CollisionsFromRequests) {
                                  .adjList = {11}});
 
 
-    auto sortedMap = scheduler.sortAccessBlocks();
+    auto sortedMap = scheduler.sortAccessBlocks(8);
 
     scheduler.findCollisions({10, 100}, sortedMap.at(10).at(100).getKeys(), sortedMap.at(10).at(100).getValues());
 }
@@ -170,7 +170,7 @@ TEST_F(RequestSchedulerTest, SimpleDagFull) {
                     .adjList = {1}
             });
 
-    auto sortedMap = scheduler.sortAccessBlocks();
+    auto sortedMap = scheduler.sortAccessBlocks(8);
 
     scheduler.findCollisions({10, 100}, sortedMap.at(10).at(100).getKeys(), sortedMap.at(10).at(100).getValues());
 

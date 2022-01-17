@@ -90,7 +90,7 @@ public:
     void buildExecDag();
 
     [[nodiscard]]
-    AppRequestInfo::AccessMapType sortAccessBlocks();
+    AppRequestInfo::AccessMapType sortAccessBlocks(int workersCount);
 
     explicit RequestScheduler(int_fast32_t totalRequestCount, asa::ChunkIndex& heapIndex);
 

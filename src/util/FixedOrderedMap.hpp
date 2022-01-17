@@ -139,19 +139,27 @@ private:
 
 template<class K, class V>
 static FixedOrderedMap<K, V>
-mergeAllParallel(std::vector<FixedOrderedMap<K, V>>&& maps, std::size_t begin, std::size_t end) {
+mergeAllParallel(std::vector<FixedOrderedMap<K, V>>&& maps, std::size_t begin, std::size_t end, std::size_t k) {
+    using std::move;
     if (end == 1 + begin) return std::move(maps[begin]);
     if (end == 2 + begin) {
         return std::move(maps[begin]) | std::move(maps[begin + 1]);
     }
-    auto secondHalf = std::async([&]() { return mergeAllParallel(std::move(maps), (begin + end) / 2, end); });
-    return mergeAllParallel(std::move(maps), begin, (begin + end) / 2) | secondHalf.get();
+
+    if (end < begin + k) {
+        return mergeAllParallel(move(maps), begin, (begin + end) / 2, k) |
+               mergeAllParallel(move(maps), (begin + end) / 2, end, k);
+    }
+
+    auto secondHalf = std::async([&]() { return mergeAllParallel(move(maps), (begin + end) / 2, end, k); });
+    auto&& firstHalf = mergeAllParallel(move(maps), begin, (begin + end) / 2, k);
+    return move(firstHalf) | secondHalf.get();
 }
 
 template<class K, class V>
 inline
-FixedOrderedMap<K, V> mergeAllParallel(std::vector<FixedOrderedMap<K, V>>&& maps) {
-    return mergeAllParallel(std::move(maps), 0, maps.size());
+FixedOrderedMap<K, V> mergeAllParallel(std::vector<FixedOrderedMap<K, V>>&& maps, int workersCount) {
+    return mergeAllParallel(std::move(maps), 0, maps.size(), maps.size() / workersCount);
 }
 
 } // namespace argennon::util

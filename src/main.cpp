@@ -125,7 +125,7 @@ int main(int argc, char const* argv[]) {
 
     ;
 
-    auto temp = rs.sortAccessBlocks().at(10).at(100);
+    auto temp = rs.sortAccessBlocks(8).at(10).at(100);
     rs.findCollisions(full_id(10, 100), temp.getKeys(), temp.getValues());
 
     util::FixedOrderedMap<int, std::string> m1({10, 15, 24}, {"Hi", "Yo", "Bye"});
@@ -142,7 +142,7 @@ int main(int argc, char const* argv[]) {
                     {{4, 5, 9},      {"4", "5", "9"}},
                     {{8},            {"8"}},
                     {{2, 7, 11, 12}, {"2", "5", "11", "12"}}
-            });
+            }, 8);
 
     for (const auto& item: m.getKeys()) {
         std::cout << item << ",";

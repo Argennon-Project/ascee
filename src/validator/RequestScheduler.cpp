@@ -138,8 +138,8 @@ void RequestScheduler::buildExecDag() {
     if (zeroQueue.isEmpty()) throw BlockError("source node of the execution DAG is missing");
 }
 
-AppRequestInfo::AccessMapType RequestScheduler::sortAccessBlocks() {
-    return util::mergeAllParallel(std::move(memoryAccessMaps));
+AppRequestInfo::AccessMapType RequestScheduler::sortAccessBlocks(int workersCount) {
+    return util::mergeAllParallel(std::move(memoryAccessMaps), workersCount);
 }
 
 void RequestScheduler::finalizeRequest(AppRequestIdType id) {
