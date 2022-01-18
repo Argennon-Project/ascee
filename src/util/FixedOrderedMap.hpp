@@ -137,18 +137,21 @@ private:
     }
 };
 
+/// Calculates: maps[begin] | maps[begin + 1] | maps[begin + 2] | ... | map[end - 1], where | operator merges two maps.
 template<class K, class V>
-static FixedOrderedMap<K, V>
-mergeAllParallel(std::vector<FixedOrderedMap<K, V>>&& maps, std::size_t begin, std::size_t end, std::size_t k) {
+static
+FixedOrderedMap<K, V> mergeAllParallel(std::vector<FixedOrderedMap<K, V>>&& maps,
+                                       std::size_t begin, std::size_t end, std::size_t k) {
     using std::move;
-    if (end == 1 + begin) return std::move(maps[begin]);
-    if (end == 2 + begin) {
-        return std::move(maps[begin]) | std::move(maps[begin + 1]);
-    }
 
-    if (end < begin + k) {
-        return mergeAllParallel(move(maps), begin, (begin + end) / 2, k) |
-               mergeAllParallel(move(maps), (begin + end) / 2, end, k);
+    if (begin >= end) return {};
+
+    if (end < begin + k || end < begin + 3) {
+        auto&& result = std::move(maps[begin]);
+        for (std::size_t i = begin + 1; i < end; ++i) {
+            result = move(result) | move(maps[i]);
+        }
+        return result;
     }
 
     auto secondHalf = std::async([&]() { return mergeAllParallel(move(maps), (begin + end) / 2, end, k); });
