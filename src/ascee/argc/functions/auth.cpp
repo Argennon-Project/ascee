@@ -18,130 +18,126 @@
 #include <argc/types.h>
 #include <argc/functions.h>
 #include <executor/Executor.h>
-#include <util/PrefixTrie.hpp>
 #include "util/crypto/CryptoSystem.h"
 
-#define LAST_RESERVED_NONCE 7
-#define ARG_APP_ID 0x0100000000000000
-#define MASK 0xffffffffffff0000
-#define NONCE16_MAX INT16_MAX
-#define ARG_BALANCE_BYTES 8
 
 using namespace argennon;
 using namespace ascee;
 using namespace runtime;
 using namespace util;
 
+constexpr uint16 last_reserved_nonce = 7;
+constexpr long_id arg_app_id = 0x0100000000000000;
+constexpr long_id nonce_chunk_mask = 0xffffffffffff0000;
+constexpr uint16 nonce16_max = UINT16_MAX;
+
 static util::CryptoSystem cryptoSigner;
 
 static
-byte loadNonceChunk(long_id accountID, int32& size) {
+uint16 loadPkChunk(long_id accountID) {
     auto& heap = Executor::getSession()->heapModifier;
-    heap.loadChunk(accountID & MASK);
-    size = heap.getChunkSize();
-    return heap.load<byte>(size - 1);
+    heap.loadChunk(accountID & nonce_chunk_mask);
+    return heap.load<uint16>(0);
 }
 
 static
-bool verifyWithNonce(long_id spender, uint32_t nonce, message_c& msg, signature_c& sig, PublicKey& pk) {
-    msg.append(",\"spender\":").append(StringView(std::to_string(spender)));
-    msg.append(",\"nonce\":").append(StringView(std::to_string(nonce))).append("}");
-    return cryptoSigner.verify(StringView(msg), sig, pk);
+void appendNonce(message_c& msg, long_id spender, uint32_t nonce) {
+    msg << ",\"spender\":" << std::to_string(spender);
+    msg << ",\"nonce\":" << std::to_string(nonce) << "}";
 }
 
 static
-bool verifyWithMultiwayNonce(int nonceCount, int32 chunkSize,
-                             long_id spender, message_c& msg, signature_c& sig, PublicKey& pk) {
-    int32 nonceIndex = chunkSize - 2 * nonceCount + int32(spender % nonceCount) * 2;
-    auto nonce = Executor::getSession()->heapModifier.load<uint16_t>(nonceIndex);
-    if (nonce >= NONCE16_MAX) return false;
-
-    bool valid = verifyWithNonce(spender, nonce, msg, sig, pk);
-    if (valid) Executor::getSession()->heapModifier.store(nonceIndex, nonce + 1);
-    return valid;
-}
-
-static
-bool verifyByAcc(long_id spender, long_id accountID, message_c& msg, signature_c& sig, bool invalidate_msg = true) {
+bool verifyWithMultiwayNonce(int nonceCount, int32 nonceIndex,
+                             long_id spender, message_c& msg, signature_c& sig, bool invalidate) {
     auto& heap = Executor::getSession()->heapModifier;
+    auto pk = heap.load<PublicKey>(nonceIndex + nonceCount * 2);
 
-    int32 chunkSize;
-    byte decisionByte = loadNonceChunk(accountID, chunkSize);
-
-    if (decisionByte > 1 && decisionByte <= LAST_RESERVED_NONCE) {
-        return false;
-    }
-
-    // decisionByte == 0 means that the owner of the account is an app
-    if (decisionByte == 0) {
-        auto app = heap.loadIdentifier(gAppTrie, 0);
-        return argc::verify_by_app(app, msg, invalidate_msg);
-    }
-
-    auto pk = heap.load<PublicKey>(0);
-
-    if (!invalidate_msg) {
+    if (!invalidate) {
         return cryptoSigner.verify(StringView(msg), sig, pk);
     }
 
-    // decisionByte == 1 means that the owner account has 5 nonce values. This improves parallelization for
-    // that account. The nonce will be selected based on the id of the spender.
-    if (decisionByte == 1) {
-        return verifyWithMultiwayNonce(5, chunkSize, spender, msg, sig, pk);
-    }
+    if (nonceCount > 1) nonceIndex += int32(spender % nonceCount) * 2;
+    auto nonce = heap.load<uint16>(nonceIndex);
+    if (nonce >= nonce16_max) return false;
 
-    // decisionByte == 2 means that the owner account has an 11 way nonce value.
-    if (decisionByte == 2) {
-        return verifyWithMultiwayNonce(11, chunkSize, spender, msg, sig, pk);
-    }
+    appendNonce(msg, spender, nonce);
+    bool valid = cryptoSigner.verify(StringView(msg), sig, pk);
+    if (valid) heap.store(nonceIndex, nonce + 1);
 
-    // if decisionByte > LAST_RESERVED_NONCE this account is a normal account which uses a var length nonce.
-    if (decisionByte > LAST_RESERVED_NONCE) {
-        int32 nonceOffset = pk.size() + ARG_BALANCE_BYTES;
-        auto nonce = heap.loadVarUInt(gNonceTrie, nonceOffset);
-        bool valid = verifyWithNonce(spender, nonce, msg, sig, pk);
-        if (valid) {
-            try {
-                // If nonce is too big storeVarUInt will throw an exception. Nonce should be much smaller than
-                // UINT16_MAX and the cast is safe.
-                int len = heap.storeVarUInt(gNonceTrie, nonceOffset, uint16_t(nonce + 1));
-                heap.updateChunkSize(nonceOffset + len);
-            } catch (const std::overflow_error&) {
-                return false;
-            }
+    return valid;
+}
+
+class Context {
+public:
+    class SignalBlocker {
+    public:
+        SignalBlocker() {
+            printf("-->>>>signal\n");
+            Executor::blockSignals();
         }
-        return valid;
+
+        ~SignalBlocker() {
+            Executor::unBlockSignals();
+        }
+    };
+
+    Context() : caller(Executor::getSession()->currentCall->appID) {
+        Executor::getSession()->heapModifier.loadContext(arg_app_id);
     }
-    // we should not get here.
+
+    ~Context() {
+        Executor::getSession()->heapModifier.loadContext(caller);
+    }
+
+    SignalBlocker sig;
+    const long_id caller;
+};
+
+static
+bool verifyByApp(long_id appID, message_c& msg, bool invalidate_msg = true) {
+    if (!invalidate_msg) {
+        return Executor::getSession()->virtualSigner.verify(appID, StringView(msg));
+    }
+    auto caller = Executor::getSession()->currentCall->appID;
+    msg << ",\"spender\":" << std::to_string(caller) << "}";
+    return Executor::getSession()->virtualSigner.verifyAndInvalidate(appID, StringView(msg));
+}
+
+bool argc::verify_by_account(long_id accountID, message_c& msg, signature_c& sig, bool invalidate_msg = true) {
+    Context context;
+    auto spender = context.caller;
+    auto& heap = Executor::getSession()->heapModifier;
+
+    auto decisionNonce = loadPkChunk(accountID);
+
+    // decisionNonce == 0 means that the owner of the account is an app
+    if (decisionNonce == 0) {
+        auto app = heap.loadIdentifier(gAppTrie, 2);
+        return verifyByApp(app, msg, invalidate_msg);
+    }
+
+    // decisionNonce == 1 means that the owner account has 5 nonce values. This improves parallelization for
+    // that account. The nonce will be selected based on the id of the spender.
+    if (decisionNonce == 1) {
+        return verifyWithMultiwayNonce(5, 2, spender, msg, sig, invalidate_msg);
+    }
+
+    // decisionNonce == 2 means that the owner account has an 11 way nonce value.
+    if (decisionNonce == 2) {
+        return verifyWithMultiwayNonce(11, 2, spender, msg, sig, invalidate_msg);
+    }
+
+    // if decisionNonce > LAST_RESERVED_NONCE this account is a normal account which uses a 2 bytes nonce.
+    if (decisionNonce > last_reserved_nonce) {
+        return verifyWithMultiwayNonce(1, 0, spender, msg, sig, invalidate_msg);
+    }
+
+    // decisionNonce > 2 && decisionNonce <= LAST_RESERVED_NONCE: non-used decision values. These
+    // are reserved for later use.
     return false;
 }
 
 bool argc::verify_by_app(long_id appID, message_c& msg, bool invalidate_msg = true) {
-    Executor::blockSignals();
-    bool result;
-    if (invalidate_msg) {
-        auto caller = Executor::getSession()->currentCall->appID;
-        msg.append(",\"spender\":").append(StringView(std::to_string(caller))).append("}");
-        result = Executor::getSession()->virtualSigner.verifyAndInvalidate(appID, StringView(msg));
-    } else {
-        result = Executor::getSession()->virtualSigner.verify(appID, StringView(msg));
-    }
-    Executor::unBlockSignals();
-    return result;
+    Context::SignalBlocker blocker;
+    return verifyByApp(appID, msg, invalidate_msg);
 }
-
-bool argc::verify_by_account(long_id accountID, message_c& msg, signature_c& sig, bool invalidate_msg = true) {
-    Executor::blockSignals();
-    Executor::getSession()->heapModifier.loadContext(ARG_APP_ID);
-    auto caller = Executor::getSession()->currentCall->appID;
-    bool result = verifyByAcc(caller, accountID, msg, sig, invalidate_msg);
-    Executor::getSession()->heapModifier.loadContext(caller);
-    Executor::unBlockSignals();
-    return result;
-}
-
-bool argc::verify_by_account(long_id accountID, message_c& msg, bool invalidate_msg = true) {
-    signature_c dummy;
-    return verify_by_account(accountID, msg, dummy, invalidate_msg);
-}
-

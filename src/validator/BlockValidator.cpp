@@ -133,5 +133,5 @@ BlockValidator::BlockValidator(
         PageCache& cache,
         BlockLoader& blockLoader,
         int workersCount) : cache(cache), blockLoader(blockLoader) {
-    this->workersCount = workersCount == -1 ? (int) std::thread::hardware_concurrency() * 2 : workersCount;
+    this->workersCount = workersCount < 1 ? (int) std::thread::hardware_concurrency() * 2 : workersCount;
 }

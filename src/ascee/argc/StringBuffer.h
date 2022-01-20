@@ -51,19 +51,19 @@ template<int maxSize>
 class StringBuffer {
     static_assert(maxSize < MAX_BUFFER_SIZE && maxSize >= 0);
 public:
-    StringBuffer& append(const StringView& str) {
+    StringBuffer& append(const std::string_view& str) {
         if (maxSize < end + str.size()) throw std::out_of_range("append: str is too long");
         std::memcpy(buffer + end, str.data(), str.size());
         end += str.size();
         return *this;
     }
 
-    StringBuffer& operator<<(const StringView& str) {
+    StringBuffer& operator<<(const std::string_view& str) {
         return append(str);
     }
 
     StringBuffer& operator<<(int64_t v) {
-        return append(StringView(std::to_string(v)));
+        return append(std::to_string(v));
     }
 
     [[nodiscard]] int size() const { return end; }

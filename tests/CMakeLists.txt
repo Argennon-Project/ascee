@@ -43,7 +43,8 @@ add_executable(Google_Tests_run
         AsceeCryptoTest.cpp
         AsceeVSigManagerTest.cpp
         RequestSchedulerTest.cpp
-        HeapChunkTest.cpp)
+        HeapChunkTest.cpp
+        UtilBase64urlTest.cpp)
 
 # linking Google_Tests_run with libraries
 

@@ -45,6 +45,14 @@ public:
         }
     }
 
+    /**
+     * reads a prefix code from a byte array, assuming the code is big-endian. That means the root of the tree is
+     * written at address 0.
+     * @param binary
+     * @param len
+     * @param maxLength
+     * @return
+     */
     T readPrefixCode(const byte* binary, int* len = nullptr, int maxLength = height) const {
         T id = 0;
         if (maxLength > height) maxLength = height;
@@ -59,6 +67,15 @@ public:
         throw std::out_of_range("readPrefixCode: invalid identifier");
     }
 
+    /**
+     * reads a prefix code from a data type which is not a byte*, assuming the data type contains a fixed-length
+     * representation of the prefix code. That means the root of the tree is written in the highest order byte
+     * of the data type.
+     * @param binary
+     * @param len
+     * @param maxLength
+     * @return
+     */
     T readPrefixCode(T binary, int* len = nullptr, int maxLength = height) const {
         if (maxLength > height) maxLength = height;
         for (int i = 0; i < maxLength; ++i) {
@@ -102,6 +119,15 @@ public:
         throw std::overflow_error("encodeVarUInt: value too large");
     }
 
+    /**
+     *
+     * @tparam U can be a byte* containing a big-endian representation of the prefix-code or a data type containing
+     * a fixed length representation of the code.
+     * @param binary
+     * @param len
+     * @param maxLength
+     * @return
+     */
     template<typename U>
     T decodeVarUInt(U binary, int* len = nullptr, int maxLength = height) const {
         int n;
@@ -124,10 +150,6 @@ private:
     T sum[height] = {};
     T trie[height] = {};
 };
-
-inline const PrefixTrie<uint16_t, 2> gNonceTrie({0xe0, 0xff00});
-
-inline const PrefixTrie<uint64_t, 6> gAppTrie({});
 
 } // namespace argennon::util
 #endif // ARGENNON_IDENTIFIER_TRIE_H

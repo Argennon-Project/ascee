@@ -23,6 +23,7 @@
 #include <unordered_set>
 #include "primitives.h"
 #include "util/FixedOrderedMap.hpp"
+#include "util/PrefixTrie.hpp"
 
 namespace argennon {
 
@@ -130,6 +131,11 @@ public:
 
     [[nodiscard]] const char* what() const noexcept override { return message.c_str(); }
 };
+
+inline const util::PrefixTrie<uint16_t, 2> gNonceTrie({0xe0, 0xff00});
+inline const util::PrefixTrie<uint64_t, 6> gAppTrie({});
+inline const util::PrefixTrie<uint32_t, 4> gVarSizeTrie({0xd0, 0xf000, 0xfc0000, 0xffffff00});
+
 
 } // namespace argennon
 #endif // ARGENNON_INFO_H

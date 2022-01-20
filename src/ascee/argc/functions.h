@@ -67,8 +67,6 @@ bool verify_by_app(long_id appID, message_c& msg, bool invalidate_msg);
 
 bool verify_by_account(long_id accountID, message_c& msg, signature_c& sig, bool invalidate_msg);
 
-bool verify_by_account(long_id accountID, message_c& msg, bool invalidate_msg);
-
 float64 exact_addf64(float64 a, float64 b);
 
 int dependant_call(long_id app_id, response_buffer_c& response, string_view_c request);

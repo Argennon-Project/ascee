@@ -28,7 +28,7 @@ inline static
 std::size_t parse(string_view str, int64_t& ret) {
     std::size_t pos;
     // string constructor copies its input, therefore we truncate the input str to make the copy less costly.
-    ret = std::stoll(string(str.substr(0, MAX_NUM64_LENGTH)), &pos);
+    ret = std::stoll(string(str.substr(0, MAX_NUM64_LENGTH)), &pos, 0);
     return pos;
 }
 
