@@ -18,10 +18,10 @@
 #ifndef ARGENNON_IDENTIFIER_TRIE_H
 #define ARGENNON_IDENTIFIER_TRIE_H
 
-#include <argc/types.h>
 #include <string>
 #include <stdexcept>
 #include <array>
+#include <cstring>
 
 namespace argennon::util {
 
@@ -29,10 +29,12 @@ template<typename T, int height = sizeof(T)>
 class PrefixTrie {
     static_assert(height <= sizeof(T) && height > 0);
     static_assert(std::is_unsigned<T>::value);
+
+    using byte = uint8_t;
 public:
     explicit PrefixTrie(const std::array<T, height>& trie) {
         for (int i = 0; i < height; ++i) {
-            auto shift = (sizeof(T) - i - 1) << 3;
+            auto shift = (sizeof(T) - i - 1) * 8;
             this->trie[i] = trie[i] & (~T(0) >> shift);
             boundary[i] = trie[i] << shift;
             if (i > 0 && boundary[i - 1] > boundary[i]) throw std::invalid_argument("malformed trie");
@@ -57,7 +59,7 @@ public:
         T id = 0;
         if (maxLength > height) maxLength = height;
         for (int i = 0; i < maxLength; ++i) {
-            id |= T(binary[i]) << ((sizeof(T) - i - 1) << 3);
+            id |= T(binary[i]) << ((sizeof(T) - i - 1) * 8);
             if (id < boundary[i]) {
                 if (len != nullptr) *len = i + 1;
                 return id;
@@ -81,11 +83,20 @@ public:
         for (int i = 0; i < maxLength; ++i) {
             if (binary < boundary[i]) {
                 if (len != nullptr) *len = i + 1;
-                return binary & (~T(0) << ((sizeof(T) - i - 1) << 3));
+                return binary & (~T(0) << ((sizeof(T) - i - 1) * 8));
             }
         }
         if (len != nullptr) *len = 0;
         throw std::out_of_range("readPrefixCode: invalid identifier");
+    }
+
+    static T uncheckedParse(const std::string& str) {
+        auto start = str.find("0x") + 2;
+        if (start == std::string::npos) throw std::runtime_error("not implemented");
+        std::size_t end;
+        auto num = std::stoull(str, &end, 0);
+        auto len = end - start;
+        return num << ((sizeof(T) - len / 2 - len % 2) * 8);
     }
 
     void parsePrefixCode(std::string symbolicRep, T& id) const {
@@ -112,7 +123,7 @@ public:
             if (value < sum[i]) {
                 auto bound = trie[i];
                 if (len != nullptr) *len = i + 1;
-                return (bound - (sum[i] - value)) << ((sizeof(T) - i - 1) << 3);
+                return (bound - (sum[i] - value)) << ((sizeof(T) - i - 1) * 8);
             }
         }
         if (len != nullptr) *len = 0;
@@ -132,7 +143,7 @@ public:
     T decodeVarUInt(U binary, int* len = nullptr, int maxLength = height) const {
         int n;
         T code = readPrefixCode(binary, &n, maxLength);
-        code >>= (sizeof(T) - n) << 3;
+        code >>= (sizeof(T) - n) * 8;
 
         auto bound = trie[n - 1];
         if (len != nullptr) *len = n;
@@ -141,7 +152,7 @@ public:
 
     void writeBigEndian(byte* dest, T value, int n) const {
         for (int i = 0; i < n; ++i) {
-            dest[i] = byte(value >> ((sizeof(T) - i - 1) << 3));
+            dest[i] = byte(value >> ((sizeof(T) - i - 1) * 8));
         }
     }
 

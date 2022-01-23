@@ -133,7 +133,7 @@ public:
         HeapModifier& heapModifier = request->modifier;
         const AppTable& appTable = request->appTable;
         FailureManager& failureManager = request->failureManager;
-        std::unordered_map<long_id, bool> isLocked;
+        std::unordered_map<uint64_t, bool> isLocked;
         VirtualSigManager virtualSigner;
 
         CallInfoContext* currentCall = nullptr;

@@ -17,12 +17,13 @@
 
 #include "subtest.h"
 #include <util/encoding.h>
+#include "argc/StringBuffer.h"
 
 using namespace argennon;
 using namespace util;
 
 TEST(UtilBase64utilTest, SimpleTest) {
-    unsigned char binary[] = {0x11, 0x0, 0x4a, 0xff, 0x01};
+    uint8_t binary[] = {0x11, 0x0, 0x4a, 0xff, 0x01};
 
     char buf[10];
     size_t len;
@@ -51,4 +52,15 @@ TEST(UtilBase64utilTest, SimpleTest) {
     EXPECT_EQ(base64DecodeLen(18), 13);
     EXPECT_EQ(base64DecodeLen(19), 14);
     EXPECT_EQ(base64DecodeLen(20), 15);
+
+    uint8_t bin[] = {0x0, 0x1, 0x2, 0x3};
+    std::cout << base64urlEncode(bin, 4) << std::endl;
+    argennon::ascee::runtime::StringView str("find:AAECAw,");
+
+
+    int32 x = 2;
+    //auto ar = str.matchPattern<StaticArray<uint8_t,20>>("find:", ",", x);
+
+    std::cout << str.matchPattern<std::string_view>("", "", x) << std::endl;
+
 }

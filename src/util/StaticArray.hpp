@@ -20,6 +20,7 @@
 
 #include <string>
 #include <array>
+#include <cassert>
 #include "encoding.h"
 
 namespace argennon::util {
@@ -29,10 +30,12 @@ class StaticArray : public std::array<T, size> {
 public:
     StaticArray() = default;
 
-    explicit StaticArray(std::string_view base64) {
-        if (base64DecodeLen(base64.length()) != size) throw std::out_of_range("array is too small");
-        auto actualSize = base64urlDecode(base64.data(), base64.length(), this->data());
-        assert(actualSize == size);
+    explicit StaticArray(std::string_view base64) : std::array<T, size>() {
+        auto sizeInBytes = size * sizeof(T);
+        if (base64DecodeLen(base64.length()) > sizeInBytes) throw std::out_of_range("array is too small");
+        auto modified = base64urlDecode(base64.data(), base64.length(), this->data());
+        assert(modified <= sizeInBytes);
+        memset(this->data() + modified, 0, sizeInBytes - modified);
     }
 
     std::string toBase64() {

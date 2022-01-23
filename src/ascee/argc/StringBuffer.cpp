@@ -25,7 +25,7 @@ using std::string_view, std::string;
 
 
 inline static
-std::size_t parse(string_view str, int64_t& ret) {
+std::size_t parse_scan(string_view str, int64_t& ret) {
     std::size_t pos;
     // string constructor copies its input, therefore we truncate the input str to make the copy less costly.
     ret = std::stoll(string(str.substr(0, MAX_NUM64_LENGTH)), &pos, 0);
@@ -33,12 +33,19 @@ std::size_t parse(string_view str, int64_t& ret) {
 }
 
 inline static
-std::size_t parse(string_view str, double& ret) {
+std::size_t parse_scan(string_view str, double& ret) {
     std::size_t pos;
     ret = std::stod(string(str.substr(0, MAX_NUM64_LENGTH)), &pos);
     return pos;
 }
 
+/**
+ *
+ * @tparam T
+ * @param pattern
+ * @param output
+ * @return
+ */
 template<typename T>
 StringView StringView::scan(const StringView& pattern, T& output) const {
     string_view content = *this;
@@ -58,7 +65,7 @@ StringView StringView::scan(const StringView& pattern, T& output) const {
     try {
         if (i == length() || j < pattern.length()) throw std::invalid_argument("pattern not found");
 
-        auto pos = parse(content.substr(i), output);
+        auto pos = parse_scan(content.substr(i), output);
         return StringView(content.substr(i + pos));
     } catch (const std::invalid_argument&) {
         output = 0;

@@ -28,7 +28,8 @@ using namespace ascee;
 using namespace runtime;
 using std::vector;
 
-using Access = BlockAccessInfo::Type;
+using Access = BlockAccessInfo::Access::Type;
+using SizeType = HeapModifier::ChunkInfo::ResizingType;
 
 class HeapModifierDeathTest : public ::testing::Test {
 protected:
@@ -52,7 +53,7 @@ public:
         // std::vector<T>({obj1, obj2, obj3}) uses copy constructor of T. Therefore we can not use initializer
         // lists for classes without a copy constructor, and we need to use emplace instead.
         vector<HeapModifier::ChunkInfo> chunksForApp1;
-        chunksForApp1.emplace_back(&tempChunk1_10, 0, Access::read_only,
+        chunksForApp1.emplace_back(&tempChunk1_10, 0, SizeType::read_only,
                                    vector<int32>{100, 108, 150, 252},
                                    vector<BlockAccessInfo>{
                                            {8,  Access::read_only,    0},
@@ -60,25 +61,25 @@ public:
                                            {4,  Access::int_additive, 0},
                                            {4,  Access::read_only,    0},
                                    });
-        chunksForApp1.emplace_back(&tempChunk1_11, 0, Access::read_only,
+        chunksForApp1.emplace_back(&tempChunk1_11, 0, SizeType::read_only,
                                    vector<int32>{100, 120},
                                    vector<BlockAccessInfo>{
                                            {8, Access::writable, 0},
                                            {8, Access::writable, 0},
                                    });
-        chunksForApp1.emplace_back(&tempChunk1_100, 0, Access::read_only,
+        chunksForApp1.emplace_back(&tempChunk1_100, 0, SizeType::read_only,
                                    vector<int32>{100},
                                    vector<BlockAccessInfo>{
                                            {8, Access::writable, 0},
                                    });
 
         vector<HeapModifier::ChunkInfo> chunksForApp2;
-        chunksForApp2.emplace_back(&tempChunk2_1, 0, Access::read_only,
+        chunksForApp2.emplace_back(&tempChunk2_1, 0, SizeType::read_only,
                                    vector<int32>{100},
                                    vector<BlockAccessInfo>{
                                            {8, Access::writable, 0},
                                    });
-        chunksForApp2.emplace_back(&tempChunk2_2, 0, Access::read_only,
+        chunksForApp2.emplace_back(&tempChunk2_2, 0, SizeType::read_only,
                                    vector<int32>{100},
                                    vector<BlockAccessInfo>{
                                            {8, Access::writable, 0},

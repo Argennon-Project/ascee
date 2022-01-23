@@ -42,12 +42,66 @@ public:
 using AppRequestIdType = int32_fast;
 
 struct BlockAccessInfo {
-    enum class Type : byte {
-        int_additive, read_only, writable
+    class Access {
+    public:
+        enum class Type : byte {
+            check_only, int_additive, read_only, writable
+        };
+
+        enum class Operation : byte {
+            check, int_add, read, write
+        };
+
+        Access(Type type) : type(type) {} // NOLINT(google-explicit-constructor)
+
+        bool isAdditive() {
+            return type == Type::int_additive;
+        }
+
+        [[nodiscard]]
+        bool mayWrite() const {
+            return type != Type::read_only && type != Type::check_only;
+        }
+
+        [[nodiscard]]
+        bool denies(Operation op) const {
+            switch (type) {
+                case Type::check_only:
+                    return op != Operation::check;
+                case Type::int_additive:
+                    return !(op == Operation::check || op == Operation::int_add);
+                case Type::read_only:
+                    return !(op == Operation::check || op == Operation::read);
+                case Type::writable:
+                    return false;
+            }
+            return true;
+        }
+
+        [[nodiscard]]
+        bool collides(Access other) const {
+            switch (type) {
+                case Type::check_only:
+                    return false;
+                case Type::int_additive:
+                    return !(other.type == Type::check_only || other.type == Type::int_additive);
+                case Type::read_only:
+                    return !(other.type == Type::check_only || other.type == Type::read_only);
+                case Type::writable:
+                    return true;
+            }
+            return true;
+        }
+
+    private:
+        const Type type;
     };
+
     int32 size;
-    Type accessType;
+    Access accessType;
     AppRequestIdType requestID;
+
+
 };
 
 struct AppRequestInfo {
@@ -73,14 +127,18 @@ struct AppRequestInfo {
     std::unordered_set<int_fast32_t> stackSizeFailures;
     std::unordered_set<int_fast32_t> cpuTimeFailures;
     /**
-     * memoryAccessMap is the sorted list of memory location that the request will access. The list must be sorted based
+     * memoryAccessMap is the sorted list of memory locations that the request will access. The list must be sorted based
      * on appIDs, chunkIDs and offsets. The first defined access block for every chunk MUST be one of the following
      * access blocks:
-     * {offset = -3, size = 0, access = read_only} which means the request does not access the size of the chunk
-     * {offset = -2, size != 0, access = read_only} which means the request reads the chunkSize but will not modify it
-     * {offset = -1, access = writable}, which means the request wants to resize the chunk. If size > 0 the request
+     *
+     * {offset = -3, size = 0, access = read_only} which means the request does not access the size of the chunk.
+     *
+     * {offset = -2, size != 0, access = read_only} which means the request reads the chunkSize but will not modify it.
+     *
+     * {offset = -1, access = writable}, which means the request may resize the chunk. If size > 0 the request wants to
      * expands the chunk and maxSize = size. If size <= 0 the request can shrink the chunk and minSize = -size.
-     * Note that: newSize <= maxSize when expanding the chunk and newSize >= minSize when shrinking the chunk.
+     *
+     * @note newSize <= maxSize when expanding the chunk and newSize >= minSize when shrinking the chunk.
     */
     AccessMapType memoryAccessMap;
     /// This list should be checked to make sure no id is out of range.

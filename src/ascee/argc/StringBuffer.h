@@ -20,15 +20,37 @@
 
 #define MAX_BUFFER_SIZE (2*1024*1024)
 
+#include "arg/primitives.h"
 #include <string>
 #include <cstring>
 #include <stdexcept>
 #include <array>
+#include "util/StaticArray.hpp"
 
 namespace argennon::ascee::runtime {
+//constexpr int len = 10;
+/*
+template<size_t len>
+class String {
+public:
+    String(std::array<char,len> str3) : str{str3} {
+        memcpy(str, str3, len);
+    }
+private:
 
+    char str[len];
+};
+
+void f() {
+    char str[10] = "dsfs";
+    std::array<char,5> a;
+    String<10> s({"dfdf"});
+}
+*/
 class StringView : public std::string_view {
 public:
+    static constexpr int max_num64_length = 32;
+
     StringView() = default;
 
     StringView(const char* cStr, size_type len);
@@ -42,7 +64,43 @@ public:
     template<typename T>
     StringView scan(const StringView& pattern, T& output) const;
 
-    //operator std::string_view() const;
+    /**
+     *
+     * @tparam T
+     * @param start
+     * @param end
+     * @param[in,out] pos
+     * @return
+     */
+    template<typename T>
+    T matchPattern(StringView start, StringView end, int32& pos) {
+        auto foundPos = find(start, pos);
+        if (foundPos == npos) throw std::invalid_argument("start pattern not found");
+
+        auto startPos = foundPos + start.size();
+
+        foundPos = find(end, startPos);
+        if (foundPos == npos) throw std::invalid_argument("end pattern not found");
+
+        auto len = foundPos - startPos;
+        pos = int32(foundPos + end.size());
+        return parse(substr(startPos, len), T{});
+    }
+
+private:
+    static int64_t parse(std::string_view str, const int64_t&) {
+        // string constructor copies its input, therefore we truncate the input str to make the copy less costly.
+        return std::stoll(std::string(str.substr(0, max_num64_length)), nullptr, 0);
+    }
+
+    static double parse(std::string_view str, const double&) {
+        return std::stod(std::string(str.substr(0, max_num64_length)), nullptr);
+    }
+
+    template<typename T>
+    static T parse(std::string_view str, const T&) {
+        return T(str);
+    }
 };
 
 /// This class dose not allocate any memory on heap and only uses stack. This is important for smart contract execution

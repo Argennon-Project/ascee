@@ -34,7 +34,7 @@ private:
         dispatcher_ptr dispatcher;
     };
     const std::filesystem::path libraryPath;
-    std::unordered_map<long_id, AppHandle> dispatchersMap;
+    std::unordered_map<uint64_t, AppHandle> dispatchersMap;
     std::mutex mapMutex;
 
 public:
@@ -50,7 +50,7 @@ public:
 
     dispatcher_ptr getDispatcher(long_id appID);
 
-    std::unordered_map<long_id, dispatcher_ptr>
+    std::unordered_map<uint64_t, dispatcher_ptr>
     createAppTable(const std::vector<long_id>& appList);
 
     static std::unique_ptr<AppLoader> global;

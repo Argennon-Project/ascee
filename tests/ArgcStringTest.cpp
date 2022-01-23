@@ -59,7 +59,6 @@ struct AppendTestCase {
 
 
 TEST(ArgcStringTest, Append) {
-
     AppendTestCase<10> testCase;
 
     testCase.strToAppend = {"str1"};

@@ -52,10 +52,21 @@ HeapModifier ChunkIndex::buildModifier(const AppRequestInfo::AccessMapType& rawA
             auto chunkID = chunkMap.getKeys()[j];
             // When the chunk is not found getChunk throws a BlockError exception.
             auto* chunkPtr = getChunk(full_id(appID, chunkID));
-            auto chunkNewSize = chunkMap.getValues()[j].getValues()[0].size;
-            auto sizeAccess = chunkMap.getValues()[j].getValues()[0].accessType;
 
-            if (sizeAccess == BlockAccessInfo::Type::writable) {
+            auto offset = chunkMap.getValues()[j].getKeys()[0];
+            using Resizing = HeapModifier::ChunkInfo::ResizingType;
+            auto chunkNewSize = chunkMap.getValues()[j].getValues()[0].size;
+
+            Resizing resizingType = Resizing::non_accessible;
+            if (offset == -2) resizingType = Resizing::read_only;
+            else if (offset == -1 && chunkNewSize > 0) resizingType = Resizing::expandable;
+            else if (offset == -1 && chunkNewSize <= 0) {
+                resizingType = Resizing::shrinkable;
+                chunkNewSize = -chunkNewSize;
+            }
+
+            // if chunk is resizable
+            if (offset == -1) {
                 try {
                     auto& chunkBounds = sizeBoundsInfo.at(full_id(appID, chunkID));
                     if (chunkPtr->getsize() < chunkBounds.sizeLowerBound ||
@@ -74,7 +85,7 @@ HeapModifier ChunkIndex::buildModifier(const AppRequestInfo::AccessMapType& rawA
             chunkInfoList.emplace_back(
                     chunkPtr,
                     chunkNewSize,
-                    sizeAccess,
+                    resizingType,
                     chunkMap.getValues()[j].getKeys(),
                     chunkMap.getValues()[j].getValues()
             );

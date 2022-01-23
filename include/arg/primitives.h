@@ -19,6 +19,8 @@
 #define ASCEE_PRIMITIVES_H
 
 #include <cstdint>
+#include <string>
+#include "util/PrefixTrie.hpp"
 
 namespace argennon {
 
@@ -33,17 +35,32 @@ typedef __int128_t int128;
 typedef double float64;
 typedef __float128 float128;
 typedef uint32_t short_id;
-typedef uint64_t long_id;
+typedef struct LongID long_id;
 typedef struct FullID full_id;
 
-struct FullID {
-    __int128_t id;
+class LongID {
+public:
+    LongID() = default;
 
-    FullID(__int128_t id) : id(id) {} // NOLINT(google-explicit-constructor)
+    explicit LongID(std::string_view str) : id(util::PrefixTrie<uint64_t>::uncheckedParse(std::string(str))) {}
+
+    constexpr LongID(uint64_t id) noexcept: id(id) {} // NOLINT(google-explicit-constructor)
+
+    operator uint64_t() const { return id; } // NOLINT(google-explicit-constructor)
+
+private:
+    uint64_t id = 0;
+};
+
+class FullID {
+public:
+    constexpr FullID(__int128_t id) : id(id) {} // NOLINT(google-explicit-constructor)
 
     FullID(long_id up, long_id down) { id = __int128_t(up) << 64 | down; }
 
     operator __int128_t() const { return id; } // NOLINT(google-explicit-constructor)
+private:
+    __int128_t id = 0;
 };
 
 

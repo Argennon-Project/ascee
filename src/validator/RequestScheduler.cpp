@@ -55,9 +55,11 @@ void RequestScheduler::submitResult(AppRequestIdType reqID, int statusCode) {
     zeroQueue.removeProducer();
 }
 
-/// sortedOffsets needs to be sorted, and AccessBlocks are corresponding BlockAccessInfos with those offsets.
-/// we must have offset == -3 for blocks(!writable && size == 0) and offset == -2 for blocks(!writable && size != 0)
-/// and offset == -1 for blocks(writable)
+/// sortedOffsets needs to be a sorted list of offsets, and AccessBlocks are corresponding BlockAccessInfos with
+/// those offsets. Access blocks must be non-overlapping.
+///
+/// we must have offset == -3 for blocks(!writable && size == 0) and offset == -2 for
+/// blocks(!writable && size != 0) and offset == -1 for blocks(writable)
 ///
 /// sizeLowerBound is the minimum allowed size of the chunk and it is
 /// inclusive. (i.e. it is the mathematical lower bound of chunkSize and we require chunkSize >= sizeLowerBound)
@@ -81,13 +83,13 @@ void RequestScheduler::findCollisions(
         auto end = (offset == -1 || offset == -2) ? 0 : offset + accessBlocks[i].size;
 
         for (int32_fast j = i + 1; j < accessBlocks.size(); ++j) {
-            if (sortedOffsets[j] < end &&
-                (accessType == BlockAccessInfo::Type::writable || accessType != accessBlocks[j].accessType)) {
+            if (sortedOffsets[j] < end && accessType.collides(accessBlocks[j].accessType)) {
                 registerDependency(accessBlocks[i].requestID, accessBlocks[j].requestID);
             }
         }
 
-        // finding the index interval of chunk resizing info blocks: for all of them we have offset == -1
+        // finding the index interval of chunk resizing info blocks in the input vector: for all of them we
+        // have offset == -1
         if (!inSizeWriterList && offset == -1) {
             inSizeWriterList = true;
             sizeWritersBegin = i;
@@ -98,7 +100,7 @@ void RequestScheduler::findCollisions(
         }
 
         // offset > upperBound will never occur, since those transactions must not be included in a block.
-        if (sizeWritersEnd != 0 && end > lowerBound) {
+        if (end > lowerBound) {
             for (int32_fast j = sizeWritersBegin; j < sizeWritersEnd; ++j) {
                 auto newSize = accessBlocks[j].size;
                 bool collision = newSize > 0 ? offset < newSize : end > -newSize;

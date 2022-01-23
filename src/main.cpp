@@ -84,7 +84,11 @@ int main(int argc, char const* argv[]) {
     Executor executor;
     AppRequest request{
             .calledAppID = 1,
-            .httpRequest = "test request",
+            .httpRequest = "PATCH /balances/0x14ab HTTP/1.1\r\n"
+                           "Content-Type: application/json; charset=utf-8\r\n"
+                           "Content-Length: 57\r\n"
+                           "\r\n"
+                           "{\"to\":0xabc,\"amount\":123456,\"sig\":\"AAECAw\",\"Price\":1.99}",
             .gas = 1000,
             .appTable = AppTable({1})
     };
@@ -97,7 +101,7 @@ int main(int argc, char const* argv[]) {
     PageCache c(pl);
 
 
-    using Access = BlockAccessInfo::Type;
+    using Access = BlockAccessInfo::Access::Type;
 
     BlockLoader bl;
     auto chunkID = full_id(10, 100);

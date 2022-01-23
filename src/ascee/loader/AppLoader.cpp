@@ -77,8 +77,8 @@ dispatcher_ptr AppLoader::getDispatcher(long_id appID) {
     }
 }
 
-unordered_map<long_id, dispatcher_ptr> AppLoader::createAppTable(const vector<long_id>& appList) {
-    unordered_map<long_id, dispatcher_ptr> table(appList.size());
+unordered_map<uint64_t, dispatcher_ptr> AppLoader::createAppTable(const vector<long_id>& appList) {
+    unordered_map<uint64_t, dispatcher_ptr> table(appList.size());
     for (const auto& appID: appList) {
         table[appID] = getDispatcher(appID);
     }

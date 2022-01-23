@@ -13,12 +13,15 @@ are valid. Trying to access any offset higher
 than `sizeUpperBound` (`offset >= sizeUpperBound)` will always result in a
 revert.
 
-The value of `chunkSize` at the **end** of the execution session will determine
-if the location at an offset is persistent or not. Offsets lower than this
-value (`offset < chunkSize`) are persistent, and offsets higher
-than `chunkSize` (`offset >= chunkSize`) are not persistent. Non-persistent
-locations will be re-initialized with zero, **at the start of every execution
-session**.
+The value of `chunkSize`  will determine if the location at an offset is
+persistent or not. Offsets lower than this value (`offset < chunkSize`) are
+persistent, and offsets higher than `chunkSize` (`offset >= chunkSize`) are not
+persistent. Non-persistent locations will be re-initialized with zero, **at the
+start of every block validation** or when they are changed to persistent
+locations. (this happens when the chunk is expanded.)
+It is important to remember that the value of a non-persistent location is
+persistent during a single block as long as it stays outside a chunk and will be
+re-initialized only after the validation of the next block starts.
 
 There is no way for an application to query the chunk capacity. As a result in
 the view of an application, accessing offsets higher than `chunkSize` results in
@@ -49,7 +52,7 @@ As a result, as long as modifying the chunk size does not change the result of
 this check `Scheduler` can parallelize requests using `is_valid` with requests
 that modify the chunk size.*
 
-#### Chunk Resizing
+#### Chunk SizeType
 
 The value of `chunkSize` can be modified during an execution session. However,
 it can only be increased or decreased. More precisely, if a request has declared

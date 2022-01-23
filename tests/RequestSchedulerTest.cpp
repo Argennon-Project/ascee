@@ -26,7 +26,7 @@ using namespace ave;
 using namespace asa;
 
 
-using Access = BlockAccessInfo::Type;
+using Access = BlockAccessInfo::Access::Type;
 
 class RequestSchedulerTest : public ::testing::Test {
 protected:

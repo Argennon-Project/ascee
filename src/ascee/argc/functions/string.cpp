@@ -20,7 +20,7 @@
 #include <argc/types.h>
 #include <argc/functions.h>
 
-using std::string, std::string_view;
+using std::string;
 using namespace argennon;
 using namespace ascee;
 
@@ -49,6 +49,22 @@ void buf_to_string(const string_buffer& buf, string_t &str) {
     str = string_t(buf);
 }
 */
+
+signature_c argc::sig_match_pattern(string_view_c str, string_view_c start, string_view_c end, int32& pos) {
+    return str.matchPattern<signature_c>(start, end, pos);
+}
+
+int64 argc::int64_match_pattern(string_view_c str, string_view_c start, string_view_c end, int32& pos) {
+    return str.matchPattern<int64>(start, end, pos);
+}
+
+long_id argc::long_id_match(string_view_c str, string_view_c start, string_view_c end, int32& pos) {
+    return str.matchPattern<long_id>(start, end, pos);
+}
+
+string_view_c argc::str_match(string_view_c str, string_view_c start, string_view_c end, int32& pos) {
+    return str.matchPattern<string_view_c>(start, end, pos);
+}
 
 int64 argc::scan_int64(string_view_c input, string_view_c pattern, string_view_c& rest) {
     int64 ret;

@@ -50,6 +50,7 @@
 
 #include <cstdint>
 #include <stdexcept>
+#include <cassert>
 #include "encoding.h"
 
 typedef int error_t;
@@ -95,7 +96,7 @@ std::string util::base64urlEncode(const void* input, size_t inputLen) {
     char buf[4 * (inputLen / 3) + 4];
     size_t len;
     base64urlEncode(input, inputLen, buf, &len);
-    printf("%s\n", buf);
+    assert(sizeof(buf) > len);
     return {buf, len};
 }
 

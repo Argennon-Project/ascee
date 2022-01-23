@@ -74,6 +74,14 @@ int dependant_call(long_id app_id, response_buffer_c& response, string_view_c re
 void invoke_deferred(long_id app_id, response_buffer_c& response, string_view_c request);
 
 void revert(string_view_c msg);
+
+signature_c sig_match_pattern(string_view_c str, string_view_c start, string_view_c end, int32& pos);
+
+int64 int64_match_pattern(string_view_c str, string_view_c start, string_view_c end, int32& pos);
+
+long_id long_id_match(string_view_c str, string_view_c start, string_view_c end, int32& pos);
+
+string_view_c str_match(string_view_c str, string_view_c start, string_view_c end, int32& pos);
 } // namespace argc
 
 #endif // ARGENNON_ARGC_FUNCTIONS_H

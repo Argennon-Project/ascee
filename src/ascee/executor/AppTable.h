@@ -35,7 +35,7 @@ public:
     void checkApp(long_id appID) const;
 
 private:
-    std::unordered_map<long_id, dispatcher_ptr> callTable;
+    std::unordered_map<uint64_t, dispatcher_ptr> callTable;
 };
 
 } // namespace argennon::ascee::runtime

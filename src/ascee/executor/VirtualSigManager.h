@@ -39,7 +39,7 @@ public:
 
 private:
     std::size_t cost = 0;
-    std::unordered_map<long_id, std::unordered_set<std::string>> messages;
+    std::unordered_map<uint64_t, std::unordered_set<std::string>> messages;
 };
 
 } // namespace argennon::ascee::runtime

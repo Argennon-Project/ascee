@@ -78,9 +78,10 @@ public:
     bool isValid(int32 offset, int32 size) {
         // we need to make sure that the access block is defined. Otherwise, scheduler can not guarantee that
         // isValid is properly parallelized with chunk resizing requests. Also, we need to make sure that an access
-        // block with the proper size is defined at the offset.
-        if (size > currentChunk->accessTable.at(offset).getSize()) {
-            throw std::out_of_range("isValid: invalid size");
+        // block with the proper size is defined at the offset. We should throw an exception if the block is not
+        // defined because that's a violation of proper resource declaration.
+        if (!currentChunk->accessTable.at(offset).defined(size)) {
+            throw std::out_of_range("isValid: access block not defined");
         }
         // we can't use getChunkSize() here
         return offset < currentChunk->size.read<int32>(currentVersion);
@@ -99,10 +100,11 @@ private:
 
         AccessBlock(const AccessBlock&) = delete;
 
-        AccessBlock(const Chunk::Pointer& heapLocation, int32 size, BlockAccessInfo::Type accessType);
+        AccessBlock(const Chunk::Pointer& heapLocation, int32 size, BlockAccessInfo::Access accessType);
 
-        [[nodiscard]] bool isWritable() const {
-            return !(accessType == BlockAccessInfo::Type::read_only);
+        [[nodiscard]]
+        bool defined(int32 requiredSize) const {
+            return size >= requiredSize && !accessType.denies(BlockAccessInfo::Access::Operation::check);
         }
 
         [[nodiscard]] inline
@@ -153,7 +155,9 @@ private:
         void addInt(int16_t version, T value) {
             static_assert(std::is_integral<T>::value);
             if (sizeof(T) != size) throw std::out_of_range("addInt size");
-            if (accessType != BlockAccessInfo::Type::int_additive) throw std::out_of_range("block is not additive");
+            if (accessType.denies(BlockAccessInfo::Access::Operation::int_add)) {
+                throw std::out_of_range("block is not additive");
+            }
             syncTo(version);
             T current;
             if (versionList.empty()) current = 0;
@@ -177,7 +181,7 @@ private:
 
         Chunk::Pointer heapLocation;
         int32 size = 0;
-        BlockAccessInfo::Type accessType = BlockAccessInfo::Type::read_only;
+        BlockAccessInfo::Access accessType{BlockAccessInfo::Access::Type::read_only};;
         std::vector<Version> versionList;
 
         void syncTo(int16_t version);
@@ -189,33 +193,19 @@ private:
         byte* prepareToWrite(int16_t version, int32 writeSize);
     };
 
-    typedef util::FixedOrderedMap <int32, AccessBlock> AccessTableMap;
+    typedef util::FixedOrderedMap<int32, AccessBlock> AccessTableMap;
 public:
     class ChunkInfo {
         friend class HeapModifier;
 
-    private:
-        AccessTableMap accessTable;
-        AccessBlock size;
-        /// When the size AccessBlock is writable and newSize > 0 the chunk can only be expanded and the value of
-        /// newSize indicates the upper bound of the settable size. If newSize <= 0 the chunk is only shrinkable and
-        /// the magnitude of newSize indicates the lower bound of the chunk's new size.
-        /// When the size AccessBlock is not writable, newSize != 0 indicates that the size block is readable and
-        /// newSize == 0 indicates that the size block is not accessible.
-        const int32 newSize = 0;
-        Chunk* ptr{};
-        int32 initialSize;
-
-        static std::vector<AccessBlock> toBlocks(
-                Chunk* chunk,
-                const std::vector<int32>& offsets,
-                const std::vector<BlockAccessInfo>& accessInfoList
-        );
-
     public:
+        enum class ResizingType {
+            expandable, shrinkable, read_only, non_accessible
+        };
+
         ChunkInfo(
-                Chunk* chunk, int32 newSize,
-                BlockAccessInfo::Type accessType,
+                Chunk* chunk, int32 sizeBound,
+                ResizingType resizingType,
                 std::vector<int32> sortedAccessedOffsets,
                 const std::vector<BlockAccessInfo>& accessInfoList
         );
@@ -229,9 +219,28 @@ public:
             // made to the version array. Therefor we can obtain the initial size this way.
             return initialSize;
         }
+
+    private:
+        AccessTableMap accessTable;
+        AccessBlock size;
+        /// When the size AccessBlock is writable and newSize > 0 the chunk can only be expanded and the value of
+        /// newSize indicates the upper bound of the settable size. If newSize <= 0 the chunk is only shrinkable and
+        /// the magnitude of newSize indicates the lower bound of the chunk's new size.
+        /// When the size AccessBlock is not writable, newSize != 0 indicates that the size block is readable and
+        /// newSize == 0 indicates that the size block is not accessible.
+        const int32 sizeBound = 0;
+        Chunk* ptr{};
+        int32 initialSize;
+        ResizingType resizing;
+
+        static std::vector<AccessBlock> toBlocks(
+                Chunk* chunk,
+                const std::vector<int32>& offsets,
+                const std::vector<BlockAccessInfo>& accessInfoList
+        );
     };
 
-    typedef util::FixedOrderedMap <long_id, ChunkInfo> ChunkMap64;
+    typedef util::FixedOrderedMap<long_id, ChunkInfo> ChunkMap64;
 
     HeapModifier(std::vector<long_id> apps, std::vector<ChunkMap64> chunkMaps) :
             appsAccessMaps(std::move(apps), std::move(chunkMaps)) {}
