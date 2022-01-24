@@ -76,13 +76,13 @@ void maskSignals(int how) {
  * }
  */
 void Executor::guardArea() {
+    session->guardedArea = true;
     maskSignals(SIG_BLOCK);
-    Executor::getSession()->guardedArea = true;
 }
 
 void Executor::unGuard() {
     maskSignals(SIG_UNBLOCK);
-    Executor::getSession()->guardedArea = false;
+    session->guardedArea = false;
 }
 
 void Executor::initHandlers() {

@@ -271,8 +271,8 @@ TEST_F(AsceeExecutorTest, FailedCalls) {
             long_id(19)).toHttpResponse(buf);
     Executor::Error(
             "append: str is too long",
-            StatusCode::internal_error,
-            long_id(19)).toHttpResponse(buf);
+            StatusCode::out_of_range,
+            long_id(21)).toHttpResponse(buf);
     // caller can see out_of_range exception so server is 19
 
     AppTestCase testCase{

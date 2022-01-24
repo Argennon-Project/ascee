@@ -58,6 +58,7 @@ enum class StatusCode : int {
     arithmetic_error = 522,
     reentrancy_attempt = 523,
     memory_fault = 524,
+    out_of_range = 525,
 };
 
 inline const char* gReasonByStatusCode(StatusCode code) {
@@ -82,6 +83,8 @@ inline const char* gReasonByStatusCode(StatusCode code) {
             return "Forbidden";
         case StatusCode::memory_fault:
             return "Internal Memory Fault";
+        case StatusCode::out_of_range:
+            return "Out of Range Access";
     }
     return "Unknown Reason";
 }

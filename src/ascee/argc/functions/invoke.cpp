@@ -71,13 +71,21 @@ int argc::dependant_call(long_id app_id, response_buffer_c& response, string_vie
     Executor::CallContext callContext(app_id);
 
     int jmpRet = sigsetjmp(callContext.env, true);
+    Executor::guardArea();
 
     int ret = 0;
     if (jmpRet == 0) {
-        Executor::unGuard();
-        ret = Executor::getSession()->appTable.callApp(app_id, response, request);
+        try {
+            struct UnGuarder {
+                UnGuarder() { Executor::unGuard(); }
+
+                ~UnGuarder() noexcept { Executor::guardArea(); }
+            } dummy;
+            ret = Executor::getSession()->appTable.callApp(app_id, response, request);
+        } catch (const std::out_of_range& err) {
+            throw Executor::Error(err.what(), StatusCode::out_of_range);
+        }
     }
-    Executor::guardArea();
 
     if (ret >= 400) {
         throw Executor::Error("returning a revert code normally", StatusCode::invalid_operation);
@@ -112,13 +120,8 @@ static
 int invoke_noexcept(long_id app_id, response_buffer_c& response, string_view_c request) {
     int ret;
     try {
-        try {
-            ret = argc::dependant_call(app_id, response, request);
-        } catch (const std::out_of_range& out) {
-            throw Executor::Error(out.what());
-        }
+        ret = argc::dependant_call(app_id, response, request);
     } catch (const Executor::Error& ee) {
-        Executor::guardArea();
         ret = ee.errorCode();
         ee.toHttpResponse(response.clear());
     }

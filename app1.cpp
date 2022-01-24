@@ -40,15 +40,6 @@ void transfer(long_id from, long_id to, int64 amount, signature_c& sig) {
 }
 
 DEF_ARGC_DISPATCHER {
-    signature_c s;
-    try {
-        transfer(0, 0, 0, s);
-    } catch (...) {
-        printf("catch catch\n");
-        return 200;
-    }
-
-
     int32 position = 0;
     string_view_c method = str_match(request, "", " ", position);
     if (method == "PATCH") {

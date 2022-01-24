@@ -23,39 +23,42 @@ using namespace argennon;
 using namespace argennon::ascee::runtime;
 using namespace ascee;
 
+// we don't want to call unGuard() when an exception is thrown.
 int64 argc::load_int64(int32 offset) {
-    try {
-        return Executor::getSession()->heapModifier.load<int64>(offset);
-    } catch (const std::out_of_range& err) {
-        throw ascee::AsceeError(err.what());
-    }
+    Executor::guardArea();
+    auto ret = Executor::getSession()->heapModifier.load<int64>(offset);
+    Executor::unGuard();
+    return ret;
 }
 
 bool argc::invalid(int32 offset, int32 size) {
-    try {
-        return Executor::getSession()->heapModifier.isValid(offset, size);
-    } catch (const std::out_of_range& err) {
-        throw ascee::AsceeError(err.what());
-    }
+    Executor::guardArea();
+    auto ret = Executor::getSession()->heapModifier.isValid(offset, size);
+    Executor::unGuard();
+    return ret;
 }
 
 void argc::load_chunk_long(long_id id) {
-    try {
-        Executor::getSession()->heapModifier.loadChunk(id);
-    } catch (const std::out_of_range& err) {
-        throw ascee::AsceeError(err.what());
-    }
+    Executor::guardArea();
+    Executor::getSession()->heapModifier.loadChunk(id);
+    Executor::unGuard();
 }
 
 void argc::store_int64(int32 offset, int64 value) {
+    Executor::guardArea();
     Executor::getSession()->heapModifier.store(offset, value);
+    Executor::unGuard();
 }
 
 void argc::add_int64_to(int32 offset, int64 amount) {
+    Executor::guardArea();
     Executor::getSession()->heapModifier.addInt(offset, amount);
+    Executor::unGuard();
 }
 
 void argc::resize_chunk(int32 new_size) {
+    Executor::guardArea();
     Executor::getSession()->heapModifier.updateChunkSize(new_size);
+    Executor::unGuard();
 }
 
