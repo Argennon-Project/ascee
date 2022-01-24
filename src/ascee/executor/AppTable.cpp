@@ -27,10 +27,10 @@ int AppTable::callApp(long_id appID, response_buffer_c& response, string_view_c 
 void AppTable::checkApp(long_id appID) const {
     try {
         if (callTable.at(appID) == nullptr) {
-            throw ApplicationError("app does not exist", StatusCode::not_found);
+            throw AsceeError("app does not exist", StatusCode::not_found);
         }
     } catch (const std::out_of_range&) {
-        throw ApplicationError("app/" + std::to_string(appID) + " was not declared in the call list",
-                               StatusCode::limit_violated);
+        throw AsceeError("app/" + std::to_string(appID) + " was not declared in the call list",
+                         StatusCode::limit_violated);
     }
 }

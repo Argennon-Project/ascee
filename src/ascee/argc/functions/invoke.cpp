@@ -17,6 +17,7 @@
 
 #include <executor/Executor.h>
 #include <argc/functions.h>
+#include <csetjmp>
 
 using namespace argennon;
 using namespace ascee;
@@ -28,22 +29,22 @@ void argc::enter_area() {
 
     auto app = Executor::getSession()->currentCall->appID;
     if (Executor::getSession()->isLocked[app]) {
-        throw Executor::GenericError("reentrancy is not allowed", StatusCode::reentrancy_attempt);
+        throw Executor::Error("reentrancy is not allowed", StatusCode::reentrancy_attempt);
     } else {
-        Executor::blockSignals();
+        Executor::guardArea();
         Executor::getSession()->isLocked[app] = true;
         Executor::getSession()->currentCall->hasLock = true;
-        Executor::unBlockSignals();
+        Executor::unGuard();
     }
 }
 
 void argc::exit_area() {
-    Executor::blockSignals();
+    Executor::guardArea();
     if (Executor::getSession()->currentCall->hasLock) {
         Executor::getSession()->isLocked[Executor::getSession()->currentCall->appID] = false;
         Executor::getSession()->currentCall->hasLock = false;
     }
-    Executor::unBlockSignals();
+    Executor::unGuard();
 }
 
 void argc::invoke_deferred(long_id app_id, response_buffer_c& response, string_view_c request) {
@@ -55,29 +56,46 @@ void argc::invoke_deferred(long_id app_id, response_buffer_c& response, string_v
 }
 
 void argc::revert(string_view_c msg) {
-    Executor::blockSignals();
-    throw Executor::GenericError(std::string(msg));
+    Executor::guardArea();
+    throw Executor::Error(std::string(msg));
 }
 
 int argc::dependant_call(long_id app_id, response_buffer_c& response, string_view_c request) {
+    Executor::guardArea();
     try {
         Executor::getSession()->appTable.checkApp(app_id);
-    } catch (const ApplicationError& err) {
-        throw Executor::GenericError(err);
+    } catch (const AsceeError& err) {
+        throw Executor::Error(err);
     }
 
-    Executor::CallInfoContext callContext(app_id);
+    Executor::CallContext callContext(app_id);
 
-    Executor::unBlockSignals();
-    int ret = Executor::getSession()->appTable.callApp(app_id, response, request);
+    int jmpRet = sigsetjmp(callContext.env, true);
+
+    int ret = 0;
+    if (jmpRet == 0) {
+        Executor::unGuard();
+        ret = Executor::getSession()->appTable.callApp(app_id, response, request);
+    }
+    Executor::guardArea();
+
     if (ret >= 400) {
-        throw Executor::GenericError("returning an error code normally", StatusCode::invalid_operation);
+        throw Executor::Error("returning a revert code normally", StatusCode::invalid_operation);
     }
-    // There is no need for blocking signals here.
+
+    switch (StatusCode(jmpRet)) {
+        case StatusCode::memory_fault:
+            throw Executor::Error("segmentation fault (possibly stack overflow)", StatusCode::memory_fault);
+        case StatusCode::execution_timeout:
+            throw Executor::Error("cpu timer expired", StatusCode::execution_timeout);
+        case StatusCode::arithmetic_error:
+            throw Executor::Error("SIGFPE was caught", StatusCode::arithmetic_error);
+        default:
+            if (jmpRet != 0) throw Executor::Error("a signal was caught");
+    }
 
     // before performing deferred calls we release the entrance lock (if any)
     argc::exit_area();
-
     if (!callContext.deferredCalls.empty()) {
         for (const auto& dCall: callContext.deferredCalls) {
             // Discarding the responses of deferred calls
@@ -86,6 +104,7 @@ int argc::dependant_call(long_id app_id, response_buffer_c& response, string_vie
             printf("** deferred call returns: %d %s\n", temp, StringView(tempBuffer).data());
         }
     }
+    Executor::unGuard();
     return ret;
 }
 
@@ -96,10 +115,10 @@ int invoke_noexcept(long_id app_id, response_buffer_c& response, string_view_c r
         try {
             ret = argc::dependant_call(app_id, response, request);
         } catch (const std::out_of_range& out) {
-            throw Executor::GenericError(out.what());
+            throw Executor::Error(out.what());
         }
-    } catch (const Executor::GenericError& ee) {
-        Executor::blockSignals();
+    } catch (const Executor::Error& ee) {
+        Executor::guardArea();
         ret = ee.errorCode();
         ee.toHttpResponse(response.clear());
     }
@@ -107,21 +126,21 @@ int invoke_noexcept(long_id app_id, response_buffer_c& response, string_view_c r
 }
 
 int argc::invoke_dispatcher(byte forwarded_gas, long_id app_id, response_buffer_c& response, string_view_c request) {
-    Executor::blockSignals();
+    Executor::guardArea();
 
     int ret;
     try {
-        Executor::CallResourceContext resourceContext(forwarded_gas);
+        Executor::CallResourceHandler resourceContext(forwarded_gas);
         ret = Executor::controlledExec(invoke_noexcept, app_id, response, request,
                                        resourceContext.getExecTime(), resourceContext.getStackSize());
         if (ret < 400) resourceContext.complete();
-    } catch (const ApplicationError& ae) {
+    } catch (const AsceeError& ae) {
         ret = ae.errorCode();
-        Executor::GenericError(ae).toHttpResponse(response.clear());
+        Executor::Error(ae).toHttpResponse(response.clear());
     }
 
     // unBlockSignals() should be called here, in case resourceContext's constructor throws an exception.
-    Executor::unBlockSignals();
+    Executor::unGuard();
     return ret;
 }
 

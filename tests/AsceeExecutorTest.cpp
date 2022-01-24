@@ -80,7 +80,7 @@ TEST_F(AsceeExecutorTest, ZeroGas) {
             .request = "test request",
             .gas = 1,
             .appAccessList = {11},
-            .wantResponse = string(Executor::GenericError(
+            .wantResponse = string(Executor::Error(
                     "forwarded gas is too low",
                     StatusCode::invalid_operation,
                     long_id(0)).toHttpResponse(buf)),
@@ -123,7 +123,7 @@ TEST_F(AsceeExecutorTest, AppNotFound) {
             .request = "test request",
             .gas = NORMAL_GAS,
             .appAccessList = {16, 555},
-            .wantResponse = string(Executor::GenericError(
+            .wantResponse = string(Executor::Error(
                     "app does not exist",
                     StatusCode::not_found,
                     long_id(16)).toHttpResponse(buf)) + " wrong app!",
@@ -140,7 +140,7 @@ TEST_F(AsceeExecutorTest, AppNotDeclared) {
             .request = "test request",
             .gas = NORMAL_GAS,
             .appAccessList = {15},
-            .wantResponse = string(Executor::GenericError(
+            .wantResponse = string(Executor::Error(
                     "app/11 was not declared in the call list",
                     StatusCode::limit_violated,
                     long_id(15)).toHttpResponse(buf)) + " got in 15",
@@ -157,7 +157,7 @@ TEST_F(AsceeExecutorTest, SimpleTimeOut) {
             .request = "test request",
             .gas = NORMAL_GAS,
             .appAccessList = {10},
-            .wantResponse = string(Executor::GenericError(
+            .wantResponse = string(Executor::Error(
                     "cpu timer expired",
                     StatusCode::execution_timeout,
                     long_id(10)).toHttpResponse(buf)),
@@ -174,7 +174,7 @@ TEST_F(AsceeExecutorTest, CalledTimeOut) {
             .request = "test request",
             .gas = NORMAL_GAS,
             .appAccessList = {12, 10},
-            .wantResponse = string(Executor::GenericError(
+            .wantResponse = string(Executor::Error(
                     "cpu timer expired",
                     StatusCode::execution_timeout,
                     long_id(10)).toHttpResponse(buf)) + " TOO LONG...",
@@ -191,11 +191,11 @@ TEST_F(AsceeExecutorTest, SimpleStackOverflow) {
             .request = "test request",
             .gas = NORMAL_GAS,
             .appAccessList = {13},
-            .wantResponse = string(Executor::GenericError(
+            .wantResponse = string(Executor::Error(
                     "segmentation fault (possibly stack overflow)",
-                    StatusCode::internal_error,
+                    StatusCode::memory_fault,
                     long_id(13)).toHttpResponse(buf)),
-            .wantCode = 500
+            .wantCode = (int) StatusCode::memory_fault
     };
     SUB_TEST("stack overflow", testCase);
 }
@@ -208,9 +208,9 @@ TEST_F(AsceeExecutorTest, CalledStackOverflow) {
             .request = "test request",
             .gas = NORMAL_GAS,
             .appAccessList = {13, 14},
-            .wantResponse = string(Executor::GenericError(
+            .wantResponse = string(Executor::Error(
                     "segmentation fault (possibly stack overflow)",
-                    StatusCode::internal_error,
+                    StatusCode::memory_fault,
                     long_id(13)).toHttpResponse(buf)) + " OVER FLOW... fib: 832040",
             .wantCode = 200
     };
@@ -225,7 +225,7 @@ TEST_F(AsceeExecutorTest, CircularCallLowGas) {
             .request = "test request",
             .gas = LOW_GAS,
             .appAccessList = {17, 18},
-            .wantResponse = string(Executor::GenericError(
+            .wantResponse = string(Executor::Error(
                     "forwarded gas is too low",
                     StatusCode::invalid_operation,
                     long_id(18)).toHttpResponse(buf)),
@@ -242,7 +242,7 @@ TEST_F(AsceeExecutorTest, CircularCallHighGas) {
             .request = "test request",
             .gas = 1000000000,
             .appAccessList = {17, 18},
-            .wantResponse = string(Executor::GenericError(
+            .wantResponse = string(Executor::Error(
                     "max call depth reached",
                     StatusCode::limit_exceeded,
                     long_id(17)).toHttpResponse(buf)),
@@ -253,23 +253,23 @@ TEST_F(AsceeExecutorTest, CircularCallHighGas) {
 
 TEST_F(AsceeExecutorTest, FailedCalls) {
     StringBuffer<1024> buf;
-    Executor::GenericError(
+    Executor::Error(
             "cpu timer expired",
             StatusCode::execution_timeout,
             long_id(10)).toHttpResponse(buf);
-    Executor::GenericError(
+    Executor::Error(
             "SIGFPE was caught",
             StatusCode::arithmetic_error,
             long_id(20)).toHttpResponse(buf);
-    Executor::GenericError(
+    Executor::Error(
             "calling self",
             StatusCode::invalid_operation,
             long_id(19)).toHttpResponse(buf);
-    Executor::GenericError(
+    Executor::Error(
             "app/11 was not declared in the call list",
             StatusCode::limit_violated,
             long_id(19)).toHttpResponse(buf);
-    Executor::GenericError(
+    Executor::Error(
             "append: str is too long",
             StatusCode::internal_error,
             long_id(19)).toHttpResponse(buf);
@@ -288,7 +288,7 @@ TEST_F(AsceeExecutorTest, FailedCalls) {
 }
 
 TEST_F(AsceeExecutorTest, SimpleReentancy) {
-    auto reentrancyErr = Executor::GenericError(
+    auto reentrancyErr = Executor::Error(
             "reentrancy is not allowed",
             StatusCode::reentrancy_attempt,
             long_id(22));
@@ -318,7 +318,7 @@ TEST_F(AsceeExecutorTest, SimpleDeferredCall) {
             .request = "choice: 4",
             .gas = NORMAL_GAS,
             .appAccessList = {22, 23},
-            .wantResponse = string(Executor::GenericError(
+            .wantResponse = string(Executor::Error(
                     "deferred success!",
                     StatusCode::internal_error,
                     long_id(23)).toHttpResponse(buf)),

@@ -32,13 +32,15 @@ void Executor::sig_handler(int sig, siginfo_t* info, void*) {
     printf("Caught signal %d\n", sig);
     // important: session is not valid when sig == SIGALRM
     if (sig != SIGALRM) {
-        if (session->criticalArea) {
-            throw std::runtime_error("signal raised from critical area");
+        if (session->guardedArea) {
+            std::terminate();
+            //siglongjmp(*session->rootEnvPointer, LOOP_DETECTED);
         }
-        if (sig == SIGSEGV) throw GenericError("segmentation fault (possibly stack overflow)");
-        if (sig == SIGUSR1) throw GenericError("cpu timer expired", StatusCode::execution_timeout);
-        if (sig == SIGFPE) throw GenericError("SIGFPE was caught", StatusCode::arithmetic_error);
-        else throw GenericError("a signal was caught");
+        int ret = static_cast<int>(StatusCode::internal_error);
+        if (sig == SIGSEGV) ret = static_cast<int>(StatusCode::memory_fault);
+        if (sig == SIGUSR1) ret = static_cast<int>(StatusCode::execution_timeout);
+        if (sig == SIGFPE) ret = static_cast<int>(StatusCode::arithmetic_error);
+        siglongjmp(session->currentCall->env, ret);
     } else {
         pthread_t thread_id = *static_cast<pthread_t*>(info->si_value.sival_ptr);
         printf("Caught signal %d for app %ld\n", sig, thread_id);
@@ -59,14 +61,28 @@ void maskSignals(int how) {
 
 }
 
-void Executor::blockSignals() {
+/**
+ * The correct usage of this function is to use it at the start of the critical area and only call unGuard() when the
+ * code is completed normally. For example:
+ * @code
+ * int f() {
+ *     guardArea();
+ *
+ *     // no unGuard should be called here.
+ *     throw std::exception();
+ *
+ *     unGuard();
+ *     return 0;
+ * }
+ */
+void Executor::guardArea() {
     maskSignals(SIG_BLOCK);
-    Executor::getSession()->criticalArea = true;
+    Executor::getSession()->guardedArea = true;
 }
 
-void Executor::unBlockSignals() {
+void Executor::unGuard() {
     maskSignals(SIG_UNBLOCK);
-    Executor::getSession()->criticalArea = false;
+    Executor::getSession()->guardedArea = false;
 }
 
 void Executor::initHandlers() {
@@ -109,8 +125,8 @@ AppResponse Executor::executeOne(AppRequest* req) {
         };
         session = &threadSession;
 
-        CallResourceContext rootResourceCtx(req->gas);
-        CallInfoContext rootInfoCtx;
+        CallResourceHandler rootResourceCtx(req->gas);
+        CallContext rootInfoCtx;
         statusCode = argc::invoke_dispatcher(255, req->calledAppID, response, string_view_c(req->httpRequest));
         rootResourceCtx.complete();
         session->heapModifier.writeToHeap();
@@ -199,12 +215,12 @@ int64_t calculateExternalGas(int64_t currentGas) {
 
 #define MIN_GAS 1
 
-Executor::CallResourceContext::CallResourceContext(byte forwardedGas) {
+Executor::CallResourceHandler::CallResourceHandler(byte forwardedGas) {
     prevResources = session->currentResources;
     caller = session->currentCall->appID;
 
     gas = (prevResources->remainingExternalGas * forwardedGas) >> 8;
-    if (gas <= MIN_GAS) throw ApplicationError("forwarded gas is too low", StatusCode::invalid_operation);
+    if (gas <= MIN_GAS) throw AsceeError("forwarded gas is too low", StatusCode::invalid_operation);
 
     id = session->failureManager.nextInvocation();
     prevResources->remainingExternalGas -= gas;
@@ -214,8 +230,7 @@ Executor::CallResourceContext::CallResourceContext(byte forwardedGas) {
     heapVersion = session->heapModifier.saveVersion();
 }
 
-
-Executor::CallResourceContext::CallResourceContext(int_fast32_t initialGas) {
+Executor::CallResourceHandler::CallResourceHandler(int_fast32_t initialGas) {
     id = session->failureManager.nextInvocation();
     caller = 0;
     gas = 0;
@@ -225,8 +240,8 @@ Executor::CallResourceContext::CallResourceContext(int_fast32_t initialGas) {
     heapVersion = 0;
 }
 
-Executor::CallResourceContext::~CallResourceContext() noexcept {
-    blockSignals();
+Executor::CallResourceHandler::~CallResourceHandler() noexcept {
+    guardArea();
     session->currentResources = prevResources;
     session->failureManager.completeInvocation();
     if (!completed) {
@@ -234,23 +249,23 @@ Executor::CallResourceContext::~CallResourceContext() noexcept {
     }
     // CallInfoContext's destructor restores the caller's context, but we also do this here to make sure.
     session->heapModifier.loadContext(caller);
-    unBlockSignals();
+    unGuard();
 }
 
-Executor::CallInfoContext::CallInfoContext(long_id app) : appID(app) {
+Executor::CallContext::CallContext(long_id app) : appID(app) {
     prevCallInfo = session->currentCall;
-    if (prevCallInfo->appID == app) throw GenericError("calling self", StatusCode::invalid_operation, app);
+    if (prevCallInfo->appID == app) throw Error("calling self", StatusCode::invalid_operation, app);
     session->heapModifier.loadContext(app);
     session->currentCall = this;
 }
 
-Executor::CallInfoContext::CallInfoContext() : appID(0) {
+Executor::CallContext::CallContext() : appID(0) {
     prevCallInfo = nullptr;
     session->currentCall = this;
 }
 
-Executor::CallInfoContext::~CallInfoContext() noexcept {
-    blockSignals();
+Executor::CallContext::~CallContext() noexcept {
+    guardArea();
     argc::exit_area();
 
     // restore context
@@ -258,6 +273,6 @@ Executor::CallInfoContext::~CallInfoContext() noexcept {
 
     // restore previous call info
     session->currentCall = prevCallInfo;
-    unBlockSignals();
+    unGuard();
 }
 

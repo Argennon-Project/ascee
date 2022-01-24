@@ -41,7 +41,7 @@ using publickey_c = util::PublicKey;
 using message_c = runtime::StringBuffer<2 * 1024>;
 
 /// HTTP response status codes
-enum class StatusCode {
+enum class StatusCode : int {
     forbidden = 403,
     not_found = 404,
     /// This HTTP status code indicates that the transaction has violated its predeclared resource limits.
@@ -57,6 +57,7 @@ enum class StatusCode {
     ///
     arithmetic_error = 522,
     reentrancy_attempt = 523,
+    memory_fault = 524,
 };
 
 inline const char* gReasonByStatusCode(StatusCode code) {
@@ -79,13 +80,17 @@ inline const char* gReasonByStatusCode(StatusCode code) {
             return "Reentrancy Attempt";
         case StatusCode::forbidden:
             return "Forbidden";
+        case StatusCode::memory_fault:
+            return "Internal Memory Fault";
     }
     return "Unknown Reason";
 }
 
-class ApplicationError : public std::exception {
+class AsceeError : public std::exception {
 public:
-    explicit ApplicationError(
+    ~AsceeError() override = default;
+
+    explicit AsceeError(
             std::string msg,
             StatusCode code = StatusCode::internal_error,
             std::string thrower = ""

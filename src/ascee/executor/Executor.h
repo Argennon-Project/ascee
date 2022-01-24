@@ -27,6 +27,7 @@
 
 #include <executor/FailureManager.h>
 #include <arg/primitives.h>
+#include <csetjmp>
 #include "ThreadCpuTimer.h"
 #include "heap/HeapModifier.h"
 #include "VirtualSigManager.h"
@@ -58,22 +59,22 @@ struct DeferredArgs {
 
 class Executor {
 public:
-    class GenericError : public ApplicationError {
+    class Error : public AsceeError {
     public:
-        explicit GenericError(
-                const ApplicationError& ae,
+        explicit Error(
+                const AsceeError& ae,
                 long_id app = session->currentCall->appID
-        ) : ApplicationError(ae), app(app) {}
+        ) noexcept: AsceeError(ae), app(app) {}
 
-        explicit GenericError(
+        explicit Error(
                 const std::string& msg,
                 StatusCode code = StatusCode::internal_error,
                 const std::string& thrower = "",
                 long_id app = session->currentCall->appID
-        ) noexcept: ApplicationError(msg, code, thrower), app(app) {}
+        ) noexcept: AsceeError(msg, code, thrower), app(app) {}
 
-        explicit GenericError(const std::string& msg, StatusCode code, long_id app) noexcept:
-                ApplicationError(msg, code, ""), app(app) {}
+        explicit Error(const std::string& msg, StatusCode code, long_id app) noexcept:
+                AsceeError(msg, code, ""), app(app) {}
 
         template<int size>
         auto& toHttpResponse(runtime::StringBuffer<size>& response) const {
@@ -88,25 +89,26 @@ public:
         const long_id app;
     };
 
-    class CallInfoContext {
+    class CallContext {
     public:
-        CallInfoContext();
+        CallContext();
 
         const long_id appID;
         bool hasLock = false;
         std::vector<DeferredArgs> deferredCalls;
-        CallInfoContext* prevCallInfo = nullptr;
+        CallContext* prevCallInfo = nullptr;
+        jmp_buf env;
 
-        explicit CallInfoContext(long_id app);
+        explicit CallContext(long_id app);
 
-        ~CallInfoContext() noexcept;
+        ~CallContext() noexcept;
     };
 
-    class CallResourceContext {
+    class CallResourceHandler {
     public:
-        explicit CallResourceContext(byte forwardedGas);
+        explicit CallResourceHandler(byte forwardedGas);
 
-        explicit CallResourceContext(int_fast32_t initialGas);
+        explicit CallResourceHandler(int_fast32_t initialGas);
 
         [[nodiscard]] int_fast64_t getExecTime() const { return session->failureManager.getExecTime(id, gas); }
 
@@ -114,7 +116,7 @@ public:
 
         void complete() { completed = true; }
 
-        ~CallResourceContext() noexcept;
+        ~CallResourceHandler() noexcept;
 
     private:
         int_fast32_t id;
@@ -122,13 +124,13 @@ public:
         int_fast32_t gas;
         int_fast32_t remainingExternalGas;
         int16_t heapVersion;
-        CallResourceContext* prevResources = nullptr;
+        CallResourceHandler* prevResources = nullptr;
         bool completed = false;
     };
 
     struct SessionInfo {
         AppRequest* request = nullptr;
-        bool criticalArea = false;
+        bool guardedArea = false;
 
         HeapModifier& heapModifier = request->modifier;
         const AppTable& appTable = request->appTable;
@@ -136,8 +138,8 @@ public:
         std::unordered_map<uint64_t, bool> isLocked;
         VirtualSigManager virtualSigner;
 
-        CallInfoContext* currentCall = nullptr;
-        CallResourceContext* currentResources = nullptr;
+        CallContext* currentCall = nullptr;
+        CallResourceHandler* currentResources = nullptr;
 
         //SessionInfo(const SessionInfo&) = delete;
     };
@@ -146,9 +148,9 @@ public:
 
     inline static SessionInfo* getSession() { return session; }
 
-    static void blockSignals();
+    static void guardArea();
 
-    static void unBlockSignals();
+    static void unGuard();
 
     AppResponse executeOne(AppRequest* req);
 

@@ -22,7 +22,7 @@
 
 namespace argennon::ascee::argc {
 
-int64 loadInt64(int32 offset);
+int64 load_int64(int32 offset);
 
 int invoke_dispatcher(byte forwarded_gas, long_id app_id, response_buffer_c& response, string_view_c request);
 
@@ -63,10 +63,6 @@ int64 scan_int64(string_view_c input, string_view_c pattern, string_view_c& rest
 
 float64 scan_float64(string_view_c input, string_view_c pattern, string_view_c& rest);
 
-bool verify_by_app(long_id appID, message_c& msg, bool invalidate_msg);
-
-bool verify_by_account(long_id accountID, message_c& msg, signature_c& sig, bool invalidate_msg);
-
 float64 exact_addf64(float64 a, float64 b);
 
 int dependant_call(long_id app_id, response_buffer_c& response, string_view_c request);
@@ -82,6 +78,24 @@ int64 int64_match_pattern(string_view_c str, string_view_c start, string_view_c 
 long_id long_id_match(string_view_c str, string_view_c start, string_view_c end, int32& pos);
 
 string_view_c str_match(string_view_c str, string_view_c start, string_view_c end, int32& pos);
+
+bool verify_by_app_once(long_id app_id, message_c& msg);
+
+bool verify_by_app(long_id app_id, message_c& msg);
+
+bool verify_by_acc_once(long_id account_id, message_c& msg, signature_c& sig);
+
+bool verify_by_acc(long_id account_id, message_c& msg, signature_c& sig);
+
+bool invalid(int32 offset, int32 size);
+
+void load_chunk_long(long_id id);
+
+void store_int64(int32 offset, int64 value);
+
+void add_int64_to(int32 offset, int64 amount);
+
+void resize_chunk(int32 new_size);
 } // namespace argc
 
 #endif // ARGENNON_ARGC_FUNCTIONS_H

@@ -28,7 +28,7 @@ using namespace argennon::ascee::runtime;
 using std::vector;
 
 int16_t HeapModifier::saveVersion() {
-    if (currentVersion == MAX_VERSION) throw ApplicationError("version limit reached", StatusCode::limit_exceeded);
+    if (currentVersion == MAX_VERSION) throw AsceeError("version limit reached", StatusCode::limit_exceeded);
     return currentVersion++;
 }
 

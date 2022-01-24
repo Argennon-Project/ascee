@@ -1,21 +1,54 @@
-#include <stdio.h>
+#include <cstdio>
 #include "argc/types.h"
 #include "argc/functions.h"
+#include "ascee/executor/Executor.h"
 
 using namespace argennon;
 using namespace ascee;
 using namespace argc;
 
-int fib(int n) {
-    if (n <= 1) return n;
-    return fib(n - 1) + fib(n - 2);
-}
+const static long_id nonce_chunk_mask = 0xffffffffffff0000;
+const static long_id balance_chunk_mask = 0xffffffffffff0001;
+const static int32 balance_index = 0;
 
 void transfer(long_id from, long_id to, int64 amount, signature_c& sig) {
-    printf("-->%lx %lx %ld %s\n", from, to, amount, sig.toString().c_str());
+    //todo: we should check this when we are reading the request and remove this check from here
+    if (amount < 0) revert("negative amount");
+
+    load_chunk_long(from | balance_chunk_mask);
+
+    // checking that the balance chunk exists
+    if (invalid(balance_index, sizeof(int64))) revert("invalid sender account or zero balance");
+    int64 balance = load_int64(balance_index);
+    if (balance < amount) revert("not enough balance");
+    balance -= amount;
+    store_int64(balance_index, balance);
+    if (balance == 0) resize_chunk(balance_index);
+
+    load_chunk_long(to | nonce_chunk_mask);
+    if (invalid(0, sizeof(uint16))) revert("invalid recipient account");
+
+    load_chunk_long(to | balance_chunk_mask);
+    if (invalid(balance_index, sizeof(int64))) resize_chunk(balance_index + sizeof(int64));
+    add_int64_to(balance_index, amount);
+
+    message_c msg;
+    append_str(msg, "{\"amount\":");
+    append_int64(msg, amount);
+    append_str(msg, ",");
+    if (!verify_by_acc_once(from, msg, sig)) revert("invalid signature");
 }
 
 DEF_ARGC_DISPATCHER {
+    signature_c s;
+    try {
+        transfer(0, 0, 0, s);
+    } catch (...) {
+        printf("catch catch\n");
+        return 200;
+    }
+
+
     int32 position = 0;
     string_view_c method = str_match(request, "", " ", position);
     if (method == "PATCH") {
@@ -25,6 +58,8 @@ DEF_ARGC_DISPATCHER {
         int64 amount = int64_match_pattern(request, "\"amount\":", ",", position);
         signature_c sig = sig_match_pattern(request, R"("sig":")", "\"", position);
         transfer(account, to, amount, sig);
+        append_str(response, "success and a good response!");
+        return HTTP_OK;
     }
     return HTTP_OK;
 }

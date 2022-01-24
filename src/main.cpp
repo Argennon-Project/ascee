@@ -26,16 +26,12 @@
 #include "storage/ChunkIndex.h"
 #include "storage/PageCache.h"
 
+#include "argc/functions.h"
+
 using namespace argennon;
 using namespace ave;
 using namespace asa;
 using namespace ascee::runtime;
-
-
-int a() {
-    return 10;
-}
-
 
 int main(int argc, char const* argv[]) {
     // initialize a pairing:
