@@ -13,15 +13,19 @@ are valid. Trying to access any offset higher
 than `sizeUpperBound` (`offset >= sizeUpperBound)` will always result in a
 revert.
 
-The value of `chunkSize`  will determine if the location at an offset is
-persistent or not. Offsets lower than this value (`offset < chunkSize`) are
-persistent, and offsets higher than `chunkSize` (`offset >= chunkSize`) are not
-persistent. Non-persistent locations will be re-initialized with zero, **at the
-start of every block validation** or when they are changed to persistent
-locations. (this happens when the chunk is expanded.)
-It is important to remember that the value of a non-persistent location is
-persistent during a single block as long as it stays outside a chunk and will be
-re-initialized only after the validation of the next block starts.
+The value of `chunkSize` at the **end of the execution session** will determine
+if the memory location at an offset is persistent or not. Offsets lower than
+this value (`offset < chunkSize`) are persistent, and offsets higher
+than `chunkSize` (`offset >= chunkSize`) are not persistent. Non-persistent
+locations will be re-initialized with zero, **at the start of every execution
+session**.
+
+Usually an application should not have any assumption about the value of memory
+locations that are outside the chunk. While these locations are zero initialized
+at the start of every execution session, it should be noted that multiple
+invocations of an application may happen in a single execution session and if
+one of them modifies a location outside the chunk, the changes can be seen by
+next invocations.
 
 There is no way for an application to query the chunk capacity. As a result in
 the view of an application, accessing offsets higher than `chunkSize` results in
@@ -52,7 +56,7 @@ As a result, as long as modifying the chunk size does not change the result of
 this check `Scheduler` can parallelize requests using `is_valid` with requests
 that modify the chunk size.*
 
-#### Chunk SizeType
+#### Chunk Resizing
 
 The value of `chunkSize` can be modified during an execution session. However,
 it can only be increased or decreased. More precisely, if a request has declared

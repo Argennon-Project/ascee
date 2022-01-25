@@ -68,7 +68,7 @@ void HeapModifier::writeToHeap() {
                 chunk.ptr->setSize(chunkSize);
             }
             if (chunkSize > 0 && chunk.ptr->isWritable()) {
-                // offset[0] == -1 and we should skip it.
+                // we should skip offset[0] == -1.
                 for (long i = 1; i < chunk.accessTable.size(); ++i) {
                     auto offset = chunk.accessTable.getKeys()[i];
                     if (offset >= chunkSize) break;     // since offsets are sorted.

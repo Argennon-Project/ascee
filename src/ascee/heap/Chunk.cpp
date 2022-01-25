@@ -61,9 +61,10 @@ void Chunk::setSize(int32 newSize) {
 }
 
 void Chunk::resize(int32 newCapacity) {
-    // zero initialization is needed only when we are expanding the chunk
-    auto* newContent = newCapacity > chunkSize ? new byte[newCapacity]() : new byte[newCapacity];
-    if (chunkSize > 0) memcpy(newContent, content.get(), chunkSize);
+    // we need to zero initialize the empty part of the memory.
+    auto* newContent = new byte[newCapacity];
+    memcpy(newContent, content.get(), chunkSize);
+    memset(newContent + chunkSize, 0, newCapacity - chunkSize);
     content.reset(newContent);
     capacity = newCapacity;
 }
