@@ -43,10 +43,20 @@ public:
         native = std::make_unique<Chunk>();
     }
 
-    void addMigrant(full_id id, Chunk* migrant) {};
+    /**
+     *
+     * @param id
+     * @param migrant must be a pointer to a chunk allocated on heap. The page will take the ownership of the pointer.
+     */
+    void addMigrant(full_id id, Chunk* migrant) {
+        if (!migrants.try_emplace(id, migrant).second) {
+            throw BlockError("migrant already exists");
+        }
+    };
 
     byte* getDigest() { return nullptr; };
 
+    [[nodiscard]]
     int64_fast getBlockNumber() const {
         return version;
     }

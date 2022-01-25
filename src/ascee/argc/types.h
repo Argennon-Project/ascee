@@ -42,6 +42,7 @@ using message_c = runtime::StringBuffer<2 * 1024>;
 
 /// HTTP response status codes
 enum class StatusCode : int {
+    bad_request = 400,
     forbidden = 403,
     not_found = 404,
     /// This HTTP status code indicates that the transaction has violated its predeclared resource limits.
@@ -63,6 +64,8 @@ enum class StatusCode : int {
 
 inline const char* gReasonByStatusCode(StatusCode code) {
     switch (code) {
+        case StatusCode::bad_request:
+            return "Bad Request";
         case StatusCode::not_found:
             return "Not Found";
         case StatusCode::limit_violated:
@@ -85,6 +88,7 @@ inline const char* gReasonByStatusCode(StatusCode code) {
             return "Internal Memory Fault";
         case StatusCode::out_of_range:
             return "Out of Range Access";
+
     }
     return "Unknown Reason";
 }

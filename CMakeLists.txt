@@ -12,7 +12,7 @@ add_subdirectory(src/validator)
 add_subdirectory(src/storage)
 add_subdirectory(tests)
 
-add_library(app1 SHARED app1.cpp)
+add_library(app1 SHARED arg.cpp)
 add_library(app2 SHARED app2.cpp)
 
 set_target_properties(app1 app2

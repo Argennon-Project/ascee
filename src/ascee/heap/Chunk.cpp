@@ -16,6 +16,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include <cstring>
+#include <sstream>
 #include <cassert>
 #include "Chunk.h"
 #include "util/PrefixTrie.hpp"
@@ -131,6 +132,15 @@ void Chunk::applyDeltaReversible(const byte* delta, int32_fast len) {
     // later.
 }
 
+/**
+ * @param expectedDigest
+ * @param delta format: [ chunkSize (offsetDiff dataSize data)* ]
+ * offsetDiff is the difference between the end of the last data block and the current data block.
+ * type of all numbers are varSize encoded with gVarSizeTrie PrefixTrie.
+ * data and chunkSize will be XORed with the current chunk contents and size.
+ * offsetDiff and dataSize are used as they are without XORing.
+ * @param len
+ */
 void Chunk::applyDelta(const Digest& expectedDigest, const byte* delta, int32_fast len) {
     applyDeltaReversible(delta, len);
     if (expectedDigest != digest) {
@@ -156,16 +166,16 @@ std::mutex& Chunk::getContentMutex() {
 }
 
 Chunk::operator std::string() const {
-    using std::string, std::to_string;
-    string result;
-    result += "size: " + to_string(chunkSize) + ", ";
-    result += "capacity: " + to_string(capacity) + ", ";
-    result += "content: [ ";
+    using std::stringstream, std::to_string;
+    stringstream result;
+    result << "size: " << chunkSize << ", ";
+    result << "capacity: " << capacity << ", ";
+    result << "content: 0x[ ";
     for (int i = 0; i < chunkSize; ++i) {
-        result += to_string(content[i]) + " ";
+        result << std::hex << (int) content[i] << " ";
     }
-    result += "]";
-    return result;
+    result << "]";
+    return result.str();
 }
 
 const Digest& Chunk::getDigest() const {

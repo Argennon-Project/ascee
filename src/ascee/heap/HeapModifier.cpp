@@ -17,9 +17,9 @@
 
 #include "HeapModifier.h"
 #include "argc/types.h"
-// #define NDEBUG
 #include <cassert>
 #include <utility>
+
 
 #define MAX_VERSION 30000
 
@@ -38,12 +38,12 @@ void HeapModifier::restoreVersion(int16_t version) {
     currentVersion = version;
 }
 
-void HeapModifier::loadChunk(short_id chunkID) {
-    loadChunk(long_id(chunkID));
-}
-
 void HeapModifier::loadChunk(long_id chunkID) {
-    currentChunk = &chunks->at(chunkID);
+    try {
+        currentChunk = &chunks->at(chunkID);
+    } catch (const std::out_of_range&) {
+        throw std::out_of_range("chunk[" + (std::string) chunkID + "] is not defined");
+    }
 }
 
 void HeapModifier::loadContext(long_id appID) {
@@ -85,11 +85,11 @@ void HeapModifier::updateChunkSize(int32 newSize) {
 
     if (currentChunk->resizing == ChunkInfo::ResizingType::expandable) {
         if (newSize < currentChunk->getInitialSize() || newSize > currentChunk->sizeBound) {
-            throw std::out_of_range("invalid chunk size");
+            throw std::out_of_range("invalid chunk size for expanding");
         }
     } else if (currentChunk->resizing == ChunkInfo::ResizingType::shrinkable) {
         if (newSize > currentChunk->getInitialSize() || newSize < currentChunk->sizeBound) {
-            throw std::out_of_range("invalid chunk size");
+            throw std::out_of_range("invalid chunk size for shrinking");
         }
     } else {
         throw std::out_of_range("chunk is not resizable");
@@ -176,12 +176,9 @@ HeapModifier::AccessBlock::AccessBlock(const Chunk::Pointer& heapLocation,
 ///
 /// When resizeable is false and newSize != 0 the size of the chunk can only be read but if newSize == 0
 /// the size of the chunk is not accessible. (not readable nor writable)
-HeapModifier::ChunkInfo::ChunkInfo(
-        Chunk* chunk, int32 sizeBound,
-        ResizingType resizingType,
-        std::vector<int32> sortedAccessedOffsets,
-        const std::vector<BlockAccessInfo>& accessInfoList
-) :
+HeapModifier::ChunkInfo::ChunkInfo(Chunk* chunk, ResizingType resizingType, int32 sizeBound,
+                                   std::vector<int32> sortedAccessedOffsets,
+                                   const std::vector<BlockAccessInfo>& accessInfoList) :
 // todo: explain why we use initialSize member
         size(
                 Chunk::Pointer((byte*) (&initialSize), sizeof(initialSize)),

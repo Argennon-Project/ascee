@@ -100,8 +100,6 @@ struct BlockAccessInfo {
     int32 size;
     Access accessType;
     AppRequestIdType requestID;
-
-
 };
 
 struct AppRequestInfo {
@@ -113,7 +111,7 @@ struct AppRequestInfo {
      *  exactly one request.
      *
      *  If the proposed execution DAG of the block has k nodes with zero in-degree the first k integers
-     *  (integers in the interval [0,k)) must be assigned to nodes (requests) with a zero in-degree, otherwise
+     *  (integers in the interval [0,k)) must be assigned to nodes (requests) with zero in-degree, otherwise
      *  the block will be considered invalid.
      */
     // BlockLoaders must ensure: id >= 0 && id < numOfRequests
@@ -128,17 +126,19 @@ struct AppRequestInfo {
     std::unordered_set<int_fast32_t> cpuTimeFailures;
     /**
      * memoryAccessMap is the sorted list of memory locations that the request will access. The list must be sorted based
-     * on appIDs, chunkIDs and offsets. The first defined access block for every chunk MUST be one of the following
+     * on appIDs, chunkIDs and offsets. The first defined access block for every chunk MUST be ONE of the following
      * access blocks:
      *
-     * {offset = -3, size = 0, access = read_only} which means the request does not access the size of the chunk.
      *
-     * {offset = -2, size != 0, access = read_only} which means the request reads the chunkSize but will not modify it.
+     * {offset = -3, size = *, access = *} which means the request does not access the size of the chunk.
      *
-     * {offset = -1, access = writable}, which means the request may resize the chunk. If size > 0 the request wants to
-     * expands the chunk and maxSize = size. If size <= 0 the request can shrink the chunk and minSize = -size.
+     * {offset = -2, size = *, access = *} which means the request reads the chunkSize but will not modify it.
      *
-     * @note newSize <= maxSize when expanding the chunk and newSize >= minSize when shrinking the chunk.
+     * {offset = -1, size, access = *}, which means the request may resize the chunk. If size > 0 the request wants to
+     * expands the chunk and sizeBound = size, which means newSize <= size. If size <= 0 the request can shrink the
+     * chunk and sizeBound = -size, which means newSize >= -size.
+     *
+     * @note * indicates any value.
     */
     AccessMapType memoryAccessMap;
     /// This list should be checked to make sure no id is out of range.

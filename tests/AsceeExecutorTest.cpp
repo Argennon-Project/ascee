@@ -320,9 +320,9 @@ TEST_F(AsceeExecutorTest, SimpleDeferredCall) {
             .appAccessList = {22, 23},
             .wantResponse = string(Executor::Error(
                     "deferred success!",
-                    StatusCode::internal_error,
+                    StatusCode::bad_request,
                     long_id(23)).toHttpResponse(buf)),
-            .wantCode = 500
+            .wantCode = (int) StatusCode::bad_request
     };
     SUB_TEST("deferred", testCase);
 }

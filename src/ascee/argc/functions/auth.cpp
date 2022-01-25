@@ -27,8 +27,9 @@ using namespace runtime;
 using namespace util;
 
 constexpr uint16 last_reserved_nonce = 7;
-constexpr long_id arg_app_id = 0x0100000000000000;
-constexpr long_id nonce_chunk_mask = 0xffffffffffff0000;
+constexpr long_id arg_app_id = 0x1;
+//constexpr long_id arg_app_id = 0x0100000000000000;
+constexpr long_id account_mask = 0xffffffffffff0000;
 constexpr int nonce16_size = int(sizeof(uint16));
 constexpr int decision_nonce_size = int(sizeof(uint16));
 constexpr uint16 nonce16_max = UINT16_MAX;
@@ -90,7 +91,7 @@ bool verifyByAccount(long_id accountID, message_c& msg, signature_c& sig, bool i
     auto spender = context.caller;
     auto& heap = Executor::getSession()->heapModifier;
 
-    heap.loadChunk(accountID & nonce_chunk_mask);
+    heap.loadChunk(accountID & account_mask);
     if (!heap.isValid(0, nonce16_size)) return false;
 
     auto decisionNonce = heap.load<uint16>(0);

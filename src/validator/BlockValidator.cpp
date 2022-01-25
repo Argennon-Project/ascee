@@ -38,6 +38,25 @@ Digest calculateDigest(vector<AppResponse> responses) {
     return {};
 }
 
+static
+void runAll(const std::function<void(int64_fast)>& task, int64_fast n, int workersCount) {
+    auto step = std::max<int64_fast>(n / workersCount, 1);
+
+    vector<future<void>> pendingTasks;
+    pendingTasks.reserve(workersCount);
+    for (int i = 0; i < workersCount; ++i) {
+        pendingTasks.emplace_back(std::async([&, i] {
+            for (int64_fast taskID = i * step; taskID < (i + 1) * step && taskID < n; ++taskID) {
+                task(taskID);
+            }
+        }));
+    }
+
+    for (const auto& pending: pendingTasks) {
+        pending.wait();
+    }
+}
+
 /// Conditionally validates a block: valid(current | previous). Returns true when the block is valid and false
 /// if the block is not valid.
 /// Throwing an exception indicates that due to an internal error checking the validity of the block was not possible.
@@ -61,24 +80,6 @@ bool BlockValidator::conditionalValidate(const BlockInfo& current, const BlockIn
     } catch (const BlockError& err) {
         std::cout << err.message << std::endl;
         return false;
-    }
-}
-
-void runAll(const std::function<void(int64_fast)>& task, int64_fast n, int workersCount) {
-    auto step = std::max<int64_fast>(n / workersCount, 1);
-
-    vector<future<void>> pendingTasks;
-    pendingTasks.reserve(workersCount);
-    for (int i = 0; i < workersCount; ++i) {
-        pendingTasks.emplace_back(std::async([&, i] {
-            for (int64_fast taskID = i * step; taskID < (i + 1) * step && taskID < n; ++taskID) {
-                task(taskID);
-            }
-        }));
-    }
-
-    for (const auto& pending: pendingTasks) {
-        pending.wait();
     }
 }
 

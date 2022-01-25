@@ -7,15 +7,15 @@ using namespace argennon;
 using namespace ascee;
 using namespace argc;
 
-const static long_id nonce_chunk_mask = 0xffffffffffff0000;
-const static long_id balance_chunk_mask = 0xffffffffffff0001;
+const static long_id account_mask = 0xffffffffffff0000;
 const static int32 balance_index = 0;
 
 void transfer(long_id from, long_id to, int64 amount, signature_c& sig) {
     //todo: we should check this when we are reading the request and remove this check from here
     if (amount < 0) revert("negative amount");
 
-    load_chunk_long(from | balance_chunk_mask);
+    // loading balance chunk
+    load_chunk_long(from & account_mask | 1);
 
     // checking that the balance chunk exists
     if (invalid(balance_index, sizeof(int64))) revert("invalid sender account or zero balance");
@@ -25,10 +25,11 @@ void transfer(long_id from, long_id to, int64 amount, signature_c& sig) {
     store_int64(balance_index, balance);
     if (balance == 0) resize_chunk(balance_index);
 
-    load_chunk_long(to | nonce_chunk_mask);
+    // loading nonce chunk
+    load_chunk_long(to & account_mask);
     if (invalid(0, sizeof(uint16))) revert("invalid recipient account");
 
-    load_chunk_long(to | balance_chunk_mask);
+    load_chunk_long(to & account_mask | 1);
     if (invalid(balance_index, sizeof(int64))) resize_chunk(balance_index + sizeof(int64));
     add_int64_to(balance_index, amount);
 
@@ -36,7 +37,7 @@ void transfer(long_id from, long_id to, int64 amount, signature_c& sig) {
     append_str(msg, "{\"amount\":");
     append_int64(msg, amount);
     append_str(msg, ",");
-    if (!verify_by_acc_once(from, msg, sig)) revert("invalid signature");
+    // if (!verify_by_acc_once(from, msg, sig)) revert("invalid signature");
 }
 
 DEF_ARGC_DISPATCHER {

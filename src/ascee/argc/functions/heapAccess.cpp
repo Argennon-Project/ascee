@@ -33,15 +33,13 @@ int64 argc::load_int64(int32 offset) {
 
 bool argc::invalid(int32 offset, int32 size) {
     Executor::guardArea();
-    auto ret = Executor::getSession()->heapModifier.isValid(offset, size);
+    auto ret = !Executor::getSession()->heapModifier.isValid(offset, size);
     Executor::unGuard();
     return ret;
 }
 
 void argc::load_chunk_long(long_id id) {
-    Executor::guardArea();
     Executor::getSession()->heapModifier.loadChunk(id);
-    Executor::unGuard();
 }
 
 void argc::store_int64(int32 offset, int64 value) {

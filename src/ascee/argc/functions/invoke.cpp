@@ -57,7 +57,7 @@ void argc::invoke_deferred(long_id app_id, response_buffer_c& response, string_v
 
 void argc::revert(string_view_c msg) {
     Executor::guardArea();
-    throw Executor::Error(std::string(msg));
+    throw Executor::Error(std::string(msg), StatusCode::bad_request);
 }
 
 int argc::dependant_call(long_id app_id, response_buffer_c& response, string_view_c request) {

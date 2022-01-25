@@ -34,36 +34,33 @@ class HeapModifier {
 public:
     template<typename T>
     inline
-    T load(int32 offset) { return currentChunk->accessTable.at(offset).read<T>(currentVersion); }
+    T load(int32 offset) { return getAccessBlock(offset).read<T>(currentVersion); }
 
     template<typename T, int h>
     inline
     T loadVarUInt(const util::PrefixTrie<T, h>& trie, int32 offset, int* n = nullptr) {
-        return currentChunk->accessTable.at(offset).readVarUInt(trie, currentVersion, n);
+        return getAccessBlock(offset).readVarUInt(trie, currentVersion, n);
     }
 
     template<typename T, int h>
     inline
     T loadIdentifier(const util::PrefixTrie<T, h>& trie, int32 offset, int* n = nullptr) {
-        return currentChunk->accessTable.at(offset).readIdentifier(trie, currentVersion, n);
+        return getAccessBlock(offset).readIdentifier(trie, currentVersion, n);
     }
 
     template<typename T>
     inline
-    void store(int32 offset, T value) { currentChunk->accessTable.at(offset).write<T>(currentVersion, value); }
+    void store(int32 offset, T value) { getAccessBlock(offset).write<T>(currentVersion, value); }
 
     template<typename T>
     inline
-    void addInt(int32 offset, T value) { currentChunk->accessTable.at(offset).addInt<T>(currentVersion, value); }
+    void addInt(int32 offset, T value) { getAccessBlock(offset).addInt<T>(currentVersion, value); }
 
     template<typename T, int h>
     inline
     int storeVarUInt(const util::PrefixTrie<T, h>& trie, int32 offset, T value) {
-        return currentChunk->accessTable.at(offset).writeVarUInt(trie, currentVersion, value);
+        return getAccessBlock(offset).writeVarUInt(trie, currentVersion, value);
     }
-
-    void loadChunk(short_id chunkID);
-
 
     void loadChunk(long_id chunkID);
 
@@ -80,11 +77,11 @@ public:
         // isValid is properly parallelized with chunk resizing requests. Also, we need to make sure that an access
         // block with the proper size is defined at the offset. We should throw an exception if the block is not
         // defined because that's a violation of proper resource declaration.
-        if (!currentChunk->accessTable.at(offset).defined(size)) {
+        if (!getAccessBlock(offset).defined(size)) {
             throw std::out_of_range("isValid: access block not defined");
         }
         // we can't use getChunkSize() here
-        return offset < currentChunk->size.read<int32>(currentVersion);
+        return offset + size <= currentChunk->size.read<int32>(currentVersion);
     }
 
     int32 getChunkSize();
@@ -203,12 +200,19 @@ public:
             expandable, shrinkable, read_only, non_accessible
         };
 
-        ChunkInfo(
-                Chunk* chunk, int32 sizeBound,
-                ResizingType resizingType,
-                std::vector<int32> sortedAccessedOffsets,
-                const std::vector<BlockAccessInfo>& accessInfoList
-        );
+        /**
+         *
+         * @param chunk
+         * @param resizingType
+         * @param sizeBound If resizingType is expandable this value determines the upper bound of the size. When
+         * it is shrinkable, it determines the lower bound of the chunk size. When @p resizingType is not @p shrinkable
+         * or @p expandable this value does not matter and will be ignored.
+         * @param sortedAccessedOffsets
+         * @param accessInfoList
+         */
+        ChunkInfo(Chunk* chunk, ResizingType resizingType, int32 sizeBound,
+                  std::vector<int32> sortedAccessedOffsets,
+                  const std::vector<BlockAccessInfo>& accessInfoList);
 
         ChunkInfo(ChunkInfo&&) = default;
 
@@ -250,6 +254,15 @@ public:
     HeapModifier(const HeapModifier&) = delete;
 
     HeapModifier(HeapModifier&&) = delete;
+
+    inline
+    AccessBlock& getAccessBlock(int32 offset) {
+        try {
+            return currentChunk->accessTable.at(offset);
+        } catch (const std::out_of_range&) {
+            throw std::out_of_range("no access block is defined at offset: " + std::to_string(offset));
+        }
+    }
 
 private:
     typedef util::FixedOrderedMap<long_id, ChunkMap64> AppMap;

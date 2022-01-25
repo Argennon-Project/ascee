@@ -48,6 +48,12 @@ public:
 
     operator uint64_t() const { return id; } // NOLINT(google-explicit-constructor)
 
+    explicit operator std::string() const {
+        char buf[64];
+        sprintf(buf, "0x%lx", id);
+        return {buf};
+    };
+
 private:
     uint64_t id = 0;
 };

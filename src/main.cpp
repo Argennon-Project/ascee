@@ -75,29 +75,79 @@ int main(int argc, char const* argv[]) {
 
     element_printf("x.y->%B\n", z);
 
+    using Access = BlockAccessInfo::Access::Type;
 
-    AppLoader::global = std::make_unique<AppLoader>("compiled");
-    Executor executor;
-    AppRequest request{
-            .calledAppID = 1,
+    AppRequestInfo testReq{
+            .id = 0,
+            .calledAppID = 0x1,
             .httpRequest = "PATCH /balances/0x14ab HTTP/1.1\r\n"
                            "Content-Type: application/json; charset=utf-8\r\n"
                            "Content-Length: 57\r\n"
                            "\r\n"
-                           "{\"to\":0xabc,\"amount\":123456,\"sig\":\"AAECAw\",\"Price\":1.99}",
+                           "{\"to\":0xabc,\"amount\":1399,\"sig\":\"AAECAw\"}",
             .gas = 1000,
-            .appTable = AppTable({1})
+            .appAccessList = {0x1},
+            .memoryAccessMap = {
+                    {0x1},
+                    {{{0x0abc000000000000, 0x0abc000000000001, 0x14ab000000000000, 0x14ab000000000001},
+                             {
+                                     {{-3, 0}, {{1, Access::writable, 0}, {2, Access::check_only, 0}}},
+                                     {{-3, 0}, {{1, Access::read_only, 0}, {8, Access::int_additive, 0}}},
+                                     {{-3, 0, 2}, {{1, Access::writable, 0}, {2, Access::writable, 0}, {65, Access::read_only, 0}}},
+                                     {{-3, 0}, {{1, Access::writable, 0}, {8, Access::writable, 0}}},
+                             }}}}
     };
-    auto response = executor.executeOne(&request);
 
-    printf("hereeeee@@ \n%s\n", response.httpResponse.c_str());
+    AppLoader::global = std::make_unique<AppLoader>("compiled");
 
+    Page page_1(777);
+    byte delta_1_0[] = {67, 0, 1, 11};
+    page_1.getNative()->applyDelta({}, delta_1_0, sizeof(delta_1_0));
+
+
+    byte delta_1_1[] = {8, 0, 2, 21, 20};
+    auto from_chunk = new Chunk();
+    from_chunk->applyDelta({}, delta_1_1, sizeof(delta_1_1));
+    page_1.addMigrant({0x1, 0x14ab000000000001}, from_chunk);
+
+    std::cout << (std::string) *from_chunk << std::endl;
+
+    Page page_2(777);
+    byte delta_2_0[] = {67, 0, 2, 45, 45};
+    page_2.getNative()->applyDelta({}, delta_2_0, sizeof(delta_2_0));
+
+    byte delta_2_1[] = {8, 0, 2, 1, 1};
+    auto to_chunk = new Chunk();
+    to_chunk->applyDelta({}, delta_2_1, sizeof(delta_2_1));
+    page_2.addMigrant({0x1, 0x0abc000000000001}, to_chunk);
+
+    std::cout << (std::string) *to_chunk << std::endl;
+
+    page_1.setWritableFlag(true);
+    page_2.setWritableFlag(true);
+
+    ChunkIndex index({
+                             {full_id(0x1, 0x14ab000000000000), &page_1},
+                             {full_id(0x1, 0x0abc000000000000), &page_2}
+                     }, {}, 4);
+
+    RequestScheduler scheduler(1, index);
+
+    scheduler.addRequest(std::move(testReq));
+    scheduler.finalizeRequest(0);
+    scheduler.buildExecDag();
+
+    Executor executor;
+    auto response = executor.executeOne(scheduler.nextRequest());
+
+    printf("<<<******* Response *******>>> \n%s\n<<<************************>>>\n", response.httpResponse.c_str());
+
+    std::cout << (std::string) *from_chunk << std::endl;
+    std::cout << (std::string) *to_chunk << std::endl;
 
     PageLoader pl;
     PageCache c(pl);
 
-
-    using Access = BlockAccessInfo::Access::Type;
 
     BlockLoader bl;
     auto chunkID = full_id(10, 100);
