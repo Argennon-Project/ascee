@@ -2,14 +2,14 @@ The [PBC library](https://crypto.stanford.edu/pbc/) needs the GMP library. So yo
 installing the GMP download and extract the [PBC source](https://crypto.stanford.edu/pbc/download.html) and run:
 
 ```shell
-$ ./configure
+./configure
 ```
 
 Install any package that is missing. Then run:
 
 ```shell
-$ make
-$ make install
+make
+make install
 ```
 
 By default, the library is installed in `/usr/local/lib`. On some systems, this may not be in the library path. One way
@@ -19,11 +19,11 @@ For compiling, don't forget to add the `include` directory of PCB to your includ
 library and the GMP library:
 
 ```shell
-$ gcc main.cpp -I ~/pbc-0.5.14/include -lpbc -lgmp
+gcc main.cpp -I ~/pbc-0.5.14/include -lpbc -lgmp
 ```
 
 or
 
 ```shell
-$ gcc main.cpp -I ~/pbc-0.5.14/include -static -lpbc -lgmp
+gcc main.cpp -I ~/pbc-0.5.14/include -static -lpbc -lgmp
 ```
