@@ -38,8 +38,9 @@ static util::CryptoSystem cryptoSigner;
 
 static
 void appendNonceToMsg(message_c& msg, long_id spender, uint32_t nonce) {
-    msg << ",\"spender\":" << std::to_string(spender);
+    msg << ",\"spender\":" << (std::string) spender;
     msg << ",\"nonce\":" << std::to_string(nonce) << "}";
+    std::cout << StringView(msg) << "\n";
 }
 
 static
@@ -58,7 +59,7 @@ bool verifyWithMultiwayNonce(int nonceCount, int32 nonceIndex,
 
     appendNonceToMsg(msg, spender, nonce);
     bool valid = cryptoSigner.verify(StringView(msg), sig, pk);
-    if (valid) heap.store(nonceIndex, nonce + 1);
+    if (valid) heap.store<uint16>(nonceIndex, nonce + 1);
 
     return valid;
 }

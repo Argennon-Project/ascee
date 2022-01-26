@@ -84,7 +84,7 @@ int main(int argc, char const* argv[]) {
                            "Content-Type: application/json; charset=utf-8\r\n"
                            "Content-Length: 57\r\n"
                            "\r\n"
-                           "{\"to\":0xabc,\"amount\":1399,\"sig\":\"AAECAw\"}",
+                           R"({"to":0xabc,"amount":1399,"sig":"OcTd6Oa93sNeQpZVoN4sd7BOGGnRxfyDJnuitYpOr_g8dtGcgAX8XH2g7klAD50vhrl299NyEgGEG2FTqIscgwA"})",
             .gas = 1000,
             .appAccessList = {0x1},
             .memoryAccessMap = {
@@ -101,7 +101,12 @@ int main(int argc, char const* argv[]) {
     AppLoader::global = std::make_unique<AppLoader>("compiled");
 
     Page page_1(777);
-    byte delta_1_0[] = {67, 0, 1, 11};
+    byte delta_1_0[] = {67, 0, 67, 11, 0, 76, 4, 147, 2, 242, 185, 142, 97, 127, 241, 23, 190, 47, 105, 5, 197, 242, 14,
+                        106, 29, 4, 157, 46, 119, 66, 108, 63, 13, 25, 195, 9, 216, 126, 9, 128, 156, 224, 63, 233, 197,
+                        128, 173, 14, 141, 30, 213, 59, 43, 58, 26, 174, 248, 37, 74, 220, 219, 31, 0, 204, 47, 169,
+                        120, 248, 137, 0};
+
+
     page_1.getNative()->applyDelta({}, delta_1_0, sizeof(delta_1_0));
 
 
@@ -144,6 +149,7 @@ int main(int argc, char const* argv[]) {
 
     std::cout << (std::string) *from_chunk << std::endl;
     std::cout << (std::string) *to_chunk << std::endl;
+    std::cout << (std::string) *page_1.getNative() << std::endl;
 
     PageLoader pl;
     PageCache c(pl);

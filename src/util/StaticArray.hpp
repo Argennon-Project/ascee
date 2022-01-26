@@ -53,7 +53,7 @@ public:
     std::string toString() {
         std::string result;
         for (const auto& elem: *this) {
-            result += std::to_string(elem) + " ";
+            result += std::to_string(elem) + ",";
         }
         return result;
     }

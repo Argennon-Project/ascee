@@ -20,6 +20,7 @@
 using namespace argennon::util;
 
 #define PARAMS_FILE "../param/a.param"
+#define G_FILE "../param/g.rand"
 
 CryptoSystem::CryptoSystem() {
     // initialize a pairing:
@@ -44,7 +45,21 @@ CryptoSystem::CryptoSystem() {
     element_init_Zr(secret_key, pairing);
 
     // generate system parameters:
-    element_random(g);
+    int len = element_length_in_bytes(g);
+    uint8_t buf[len + 1];
+    FILE* g_file = fopen(G_FILE, "r");
+    if (g_file == nullptr) {
+        element_random(g);
+        g_file = fopen(G_FILE, "w");
+        element_to_bytes(buf, g);
+        fwrite(buf, 1, len, g_file);
+    } else {
+        fread(buf, 1, len, g_file);
+        if (element_from_bytes(g, buf) != len) throw std::runtime_error("Crypto: could not read g");
+    }
+    fclose(g_file);
+
+    element_printf("generator:%B\n", g);
 
     PublicKey pk;
     if (element_length_in_bytes_compressed(public_key) > pk.size()) throw std::length_error("public key length");

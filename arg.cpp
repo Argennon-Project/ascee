@@ -34,10 +34,12 @@ void transfer(long_id from, long_id to, int64 amount, signature_c& sig) {
     add_int64_to(balance_index, amount);
 
     message_c msg;
-    append_str(msg, "{\"amount\":");
+    append_str(msg, "{\"to\":");
+    append_long_id(msg, to);
+    append_str(msg, ",\"amount\":");
     append_int64(msg, amount);
-    append_str(msg, ",");
-    // if (!verify_by_acc_once(from, msg, sig)) revert("invalid signature");
+    // "," should not be appended to the end.
+    if (!verify_by_acc_once(from, msg, sig)) revert("invalid signature");
 }
 
 DEF_ARGC_DISPATCHER {

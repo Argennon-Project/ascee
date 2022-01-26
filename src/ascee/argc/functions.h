@@ -40,6 +40,11 @@ void append_str(string_buffer_c <maxSize>& buf, string_view_c str) {
 }
 
 template<int maxSize>
+void append_long_id(string_buffer_c <maxSize>& buf, long_id id) {
+    buf.append(std::string(id));
+}
+
+template<int maxSize>
 void append_int64(string_buffer_c <maxSize>& buf, int64 i) {
     buf.append(runtime::StringView((std::to_string(i))));
 }
