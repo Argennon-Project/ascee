@@ -1,6 +1,6 @@
 This project can be built on linux. You'll need to
 have [cmake](https://cmake.org/install/#download-verification)
-and [pcb](https://github.com/Argennon-Project/ascee/tree/main/src/util/crypto#readme)
+and [pcb](#installing-pbc)
 installed on your system in order to be able to build the project completely.
 
 For building the project first clone its repository:
@@ -48,4 +48,31 @@ cd tests
 
 ```shell
 ./Google_Tests_run
+```
+
+### Installing PBC
+
+The [PBC library](https://crypto.stanford.edu/pbc/) needs the GMP library. So
+you need to first install the GMP. After installing the GMP download and extract
+the [PBC source](https://crypto.stanford.edu/pbc/download.html) and run:
+
+```shell
+./configure
+```
+
+Install any package that is missing. Then run:
+
+```shell
+make
+make install
+```
+
+By default, the library is installed in `/usr/local/lib`. On some systems, this
+may not be in the library path. One way to fix this is to edit `/etc/ld.so.conf`
+and run `ldconfig` after adding the path.
+
+Then copy the `include` directory of PCB to your system's include directory:
+
+```shell
+sudo cp -r <pbc-install>/pbc-0.5.14/include/ /usr/include/pbc
 ```

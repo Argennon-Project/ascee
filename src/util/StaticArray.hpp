@@ -21,6 +21,7 @@
 #include <string>
 #include <array>
 #include <cassert>
+#include <stdexcept>
 #include "encoding.h"
 
 namespace argennon::util {

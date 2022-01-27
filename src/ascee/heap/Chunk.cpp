@@ -119,6 +119,7 @@ void Chunk::applyDeltaReversible(const byte* delta, int32_fast len) {
         offset += readVarSize(delta, boundary);
         auto blockSize = readVarSize(delta, boundary);
         if (offset + blockSize > size) {
+            // For being able to remove deltas we need this. Do not change it!
             if (offset < size) blockSize = size - offset;
             else break;
         }

@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#include <pbc.h>
+#include <pbc/pbc.h>
 #include <executor/Executor.h>
 #include <iostream>
 #include <loader/AppLoader.h>

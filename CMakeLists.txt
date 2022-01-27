@@ -4,7 +4,7 @@ project(argennon_core)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_C_STANDARD 99)
 
-include_directories(include src src/ascee ~/pbc-0.5.14/include)
+include_directories(include src src/ascee)
 
 add_subdirectory(src/ascee)
 add_subdirectory(src/util)

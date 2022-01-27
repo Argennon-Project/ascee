@@ -44,13 +44,13 @@ void argc::load_chunk_long(long_id id) {
 
 void argc::store_int64(int32 offset, int64 value) {
     Executor::guardArea();
-    Executor::getSession()->heapModifier.store(offset, value);
+    Executor::getSession()->heapModifier.store<int64>(offset, value);
     Executor::unGuard();
 }
 
 void argc::add_int64_to(int32 offset, int64 amount) {
     Executor::guardArea();
-    Executor::getSession()->heapModifier.addInt(offset, amount);
+    Executor::getSession()->heapModifier.addInt<int64>(offset, amount);
     Executor::unGuard();
 }
 

@@ -18,7 +18,7 @@
 #ifndef ARGENNON_CRYPTO_SYSTEM_H
 #define ARGENNON_CRYPTO_SYSTEM_H
 
-#include <pbc.h>
+#include <pbc/pbc.h>
 #include <openssl/evp.h>
 #include "Keys.h"
 
