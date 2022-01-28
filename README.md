@@ -71,7 +71,7 @@ By default, the library is installed in `/usr/local/lib`. On some systems, this
 may not be in the library path. One way to fix this is to edit `/etc/ld.so.conf`
 and run `ldconfig` after adding the path.
 
-Then copy the `include` directory of PCB to your system's include directory:
+Then copy the `include` directory of PBC to your system's include directory:
 
 ```shell
 sudo cp -r <pbc-install>/pbc-0.5.14/include/ /usr/include/pbc

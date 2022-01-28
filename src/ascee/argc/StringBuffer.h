@@ -51,6 +51,8 @@ class StringView : public std::string_view {
 public:
     static constexpr int max_num64_length = 32;
 
+    void operator=(const StringView&) = delete;
+
     StringView() = default;
 
     StringView(const char* cStr, size_type len);
@@ -134,6 +136,8 @@ public:
     operator StringView() const { // NOLINT(google-explicit-constructor)
         return StringView(buffer, end);
     }
+
+    void operator=(const StringBuffer&) = delete;
 
 private:
     int end = 0;

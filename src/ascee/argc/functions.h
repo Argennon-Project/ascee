@@ -64,10 +64,6 @@ string_view_c buf_to_string(const string_buffer_c <maxSize>& buf) {
     return string_view_c(buf);
 }
 
-int64 scan_int64(string_view_c input, string_view_c pattern, string_view_c& rest);
-
-float64 scan_float64(string_view_c input, string_view_c pattern, string_view_c& rest);
-
 float64 exact_addf64(float64 a, float64 b);
 
 int dependant_call(long_id app_id, response_buffer_c& response, string_view_c request);
@@ -101,6 +97,10 @@ void store_int64(int32 offset, int64 value);
 void add_int64_to(int32 offset, int64 amount);
 
 void resize_chunk(int32 new_size);
+
+string_view_c scan_int64(string_view_c input, string_view_c pattern, int64& output);
+
+string_view_c scan_float64(string_view_c input, string_view_c pattern, float64& output);
 } // namespace argc
 
 #endif // ARGENNON_ARGC_FUNCTIONS_H

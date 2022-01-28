@@ -158,8 +158,8 @@ TEST(ArgcStringTest, ScanInt) {
         int64 wantInt = 0;
 
         void test() const {
-            string_view_c gotRest;
-            int64 gotInt = scan_int64(string_view_c(input), string_view_c(pattern), gotRest);
+            int64 gotInt;
+            string_view_c gotRest = scan_int64(string_view_c(input), string_view_c(pattern), gotInt);;
             EXPECT_EQ(gotInt, wantInt);
             EXPECT_EQ(gotRest, wantRest);
         }
@@ -325,8 +325,8 @@ TEST(ArgcStringTest, ScanFloat) {
         float64 wantFloat = 0;
 
         void test() const {
-            string_view_c gotRest;
-            float64 gotFloat = scan_float64(string_view_c(input), string_view_c(pattern), gotRest);
+            float64 gotFloat;
+            string_view_c gotRest = scan_float64(string_view_c(input), string_view_c(pattern), gotFloat);
             EXPECT_EQ(gotFloat, wantFloat);
             EXPECT_EQ(gotRest, wantRest);
         }

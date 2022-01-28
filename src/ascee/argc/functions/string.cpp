@@ -66,15 +66,11 @@ string_view_c argc::str_match(string_view_c str, string_view_c start, string_vie
     return str.matchPattern<string_view_c>(start, end, pos);
 }
 
-int64 argc::scan_int64(string_view_c input, string_view_c pattern, string_view_c& rest) {
-    int64 ret;
-    rest = input.scan(pattern, ret);
-    return ret;
+string_view_c argc::scan_int64(string_view_c input, string_view_c pattern, int64& output) {
+    return input.scan(pattern, output);
 }
 
-float64 argc::scan_float64(string_view_c input, string_view_c pattern, string_view_c& rest) {
-    float64 ret;
-    rest = input.scan(pattern, ret);
-    return ret;
+string_view_c argc::scan_float64(string_view_c input, string_view_c pattern, float64& output) {
+    return input.scan(pattern, output);
 }
 

@@ -22,6 +22,13 @@ using namespace asa;
 using namespace ascee::runtime;
 using std::vector, std::pair;
 
+/**
+ *
+ * @param requiredPages
+ * @param chunkBounds
+ * @param numOfChunks number of chunks, that will be used for pre-allocating memory. An incorrect value will not
+ * cause problems.
+ */
 ChunkIndex::ChunkIndex(
         vector<pair<full_id, Page*>>&& requiredPages,
         util::FixedOrderedMap<full_id, ChunkBoundsInfo>&& chunkBounds,

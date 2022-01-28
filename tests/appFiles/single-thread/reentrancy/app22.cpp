@@ -55,8 +55,8 @@ int h() {
 
 DEF_ARGC_DISPATCHER {
     STRING(pattern, "choice: ");
-    string_view_c rest;
-    int64 choice = scan_int64(request, pattern, rest);
+    int64 choice;
+    string_view_c rest = scan_int64(request, pattern, choice);;
 
     if (choice == 1) f(response, 0);
     else if (choice == 2) g();

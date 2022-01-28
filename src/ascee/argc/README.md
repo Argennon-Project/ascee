@@ -5,8 +5,8 @@ struct like types which always are allocated on the stack. All ArgC types have
 lower case names and use snake_case naming convention. Class types always end
 with `_c` suffix. There are clear differences between primitive and class types:
 
-Primitive types are always passed by value, class types are **always** passed by
-reference.
+Primitive types can be passed by value or reference, class types are **always**
+passed by reference.
 
 A function can return a primitive type, but it can not return a class type.
 
