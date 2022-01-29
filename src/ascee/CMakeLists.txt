@@ -18,5 +18,5 @@ add_library(ascee SHARED
         argc/functions/heapAccess.cpp
         argc/StringBuffer.cpp
         heap/Chunk.cpp
-        heap/HeapModifier.cpp
-        executor/AppTable.cpp executor/AppTable.h)
+        heap/RestrictedModifier.cpp
+        executor/AppTable.cpp)

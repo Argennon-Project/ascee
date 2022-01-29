@@ -21,13 +21,14 @@
 #include <memory>
 
 #include "heap/Chunk.h"
-#include "heap/HeapModifier.h"
+#include "heap/RestrictedModifier.h"
 
 using namespace argennon;
 using namespace ascee;
 using namespace runtime;
 using std::vector;
 
+using HeapModifier = RestrictedModifier;
 using Access = BlockAccessInfo::Access::Type;
 using SizeType = HeapModifier::ChunkInfo::ResizingType;
 

@@ -27,13 +27,43 @@ using namespace ascee::runtime;
 using std::unique_ptr, std::string, std::to_string, std::function;
 
 thread_local Executor::SessionInfo* Executor::session = nullptr;
+bool Executor::initialized = false;
+
+static inline
+void maskSignals(int how) {
+    sigset_t set;
+
+// Block timer's signal
+    sigemptyset(&set);
+    sigaddset(&set, SIGUSR1);
+    sigaddset(&set, SIGKILL);
+    int s = pthread_sigmask(how, &set, nullptr);
+    if (s != 0) throw std::runtime_error("error in masking signals");
+
+}
+
+static
+void* registerRecoveryStack() {
+    stack_t sig_stack;
+
+    sig_stack.ss_sp = malloc(SIGSTKSZ);
+    if (sig_stack.ss_sp == nullptr) throw std::runtime_error("could not allocate memory for the recovery stack");
+
+    sig_stack.ss_size = SIGSTKSZ;
+    sig_stack.ss_flags = 0;
+
+    int err = sigaltstack(&sig_stack, nullptr);
+    if (err) throw std::runtime_error("error in registering the recovery stack");
+
+    return sig_stack.ss_sp;
+}
 
 void Executor::sig_handler(int sig, siginfo_t* info, void*) {
     printf("Caught signal %d\n", sig);
     // important: session is not valid when sig == SIGALRM
     if (sig != SIGALRM) {
         if (session->guardedArea) {
-            std::terminate();
+            exit(25);
             //siglongjmp(*session->rootEnvPointer, LOOP_DETECTED);
         }
         int ret = static_cast<int>(StatusCode::internal_error);
@@ -48,17 +78,19 @@ void Executor::sig_handler(int sig, siginfo_t* info, void*) {
     }
 }
 
-static inline
-void maskSignals(int how) {
-    sigset_t set;
+void Executor::initHandlers() {
+    struct sigaction action{};
+    action.sa_flags = SA_SIGINFO | SA_ONSTACK;
+    action.sa_sigaction = sig_handler;
+    sigfillset(&action.sa_mask);
 
-// Block timer's signal
-    sigemptyset(&set);
-    sigaddset(&set, SIGUSR1);
-    sigaddset(&set, SIGKILL);
-    int s = pthread_sigmask(how, &set, nullptr);
-    if (s != 0) throw std::runtime_error("error in masking signals");
-
+    int err = 0;
+    err += sigaction(SIGALRM, &action, nullptr);
+    err += sigaction(SIGFPE, &action, nullptr);
+    err += sigaction(SIGSEGV, &action, nullptr);
+    err += sigaction(SIGBUS, &action, nullptr);
+    err += sigaction(SIGUSR1, &action, nullptr);
+    if (err) throw std::runtime_error("error in creating handlers");
 }
 
 /**
@@ -85,36 +117,6 @@ void Executor::unGuard() {
     session->guardedArea = false;
 }
 
-void Executor::initHandlers() {
-    struct sigaction action{};
-    action.sa_flags = SA_SIGINFO | SA_ONSTACK;
-    action.sa_sigaction = Executor::sig_handler;
-    sigfillset(&action.sa_mask);
-
-    int err = 0;
-    err += sigaction(SIGALRM, &action, nullptr);
-    err += sigaction(SIGFPE, &action, nullptr);
-    err += sigaction(SIGSEGV, &action, nullptr);
-    err += sigaction(SIGBUS, &action, nullptr);
-    err += sigaction(SIGUSR1, &action, nullptr);
-    if (err) throw std::runtime_error("error in creating handlers");
-}
-
-void* Executor::registerRecoveryStack() {
-    stack_t sig_stack;
-
-    sig_stack.ss_sp = malloc(SIGSTKSZ);
-    if (sig_stack.ss_sp == nullptr) throw std::runtime_error("could not allocate memory for the recovery stack");
-
-    sig_stack.ss_size = SIGSTKSZ;
-    sig_stack.ss_flags = 0;
-
-    int err = sigaltstack(&sig_stack, nullptr);
-    if (err) throw std::runtime_error("error in registering the recovery stack");
-
-    return sig_stack.ss_sp;
-}
-
 AppResponse Executor::executeOne(AppRequest* req) {
     response_buffer_c response;
     int statusCode;
@@ -139,10 +141,6 @@ AppResponse Executor::executeOne(AppRequest* req) {
     return {statusCode, string(response)};
 }
 
-Executor::Executor() {
-    initHandlers();
-}
-
 struct InvocationArgs {
     const function<int(long_id, ascee::response_buffer_c&, ascee::string_view_c)>& invoker;
 
@@ -156,7 +154,7 @@ struct InvocationArgs {
 void* Executor::threadStart(void* voidArgs) {
     auto* args = (InvocationArgs*) voidArgs;
 
-    void* recoveryStack = Executor::registerRecoveryStack();
+    void* recoveryStack = registerRecoveryStack();
     session = args->session;
 
     int* ret = (int*) malloc(sizeof(int));
@@ -205,6 +203,13 @@ int Executor::controlledExec(const function<int(long_id, response_buffer_c&, str
 
     free(retPtr);
     return ret;
+}
+
+void Executor::initialize() {
+    if (!initialized) {
+        initHandlers();
+        initialized = true;
+    }
 }
 
 static inline

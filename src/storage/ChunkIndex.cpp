@@ -47,13 +47,13 @@ ChunkIndex::ChunkIndex(
     }
 }
 
-HeapModifier ChunkIndex::buildModifier(const AppRequestInfo::AccessMapType& rawAccessMap) {
-    vector<HeapModifier::ChunkMap64> chunkMapList;
+RestrictedModifier ChunkIndex::buildModifier(const AppRequestInfo::AccessMapType& rawAccessMap) {
+    vector<RestrictedModifier::ChunkMap64> chunkMapList;
     chunkMapList.reserve(rawAccessMap.size());
     for (long i = 0; i < rawAccessMap.size(); ++i) {
         auto appID = rawAccessMap.getKeys()[i];
         auto& chunkMap = rawAccessMap.getValues()[i];
-        vector<HeapModifier::ChunkInfo> chunkInfoList;
+        vector<RestrictedModifier::ChunkInfo> chunkInfoList;
         chunkInfoList.reserve(chunkMap.size());
         for (long j = 0; j < chunkMap.size(); ++j) {
             auto chunkID = chunkMap.getKeys()[j];
@@ -62,7 +62,7 @@ HeapModifier ChunkIndex::buildModifier(const AppRequestInfo::AccessMapType& rawA
             auto offset = chunkMap.getValues()[j].getKeys()[0];
             auto chunkNewSize = chunkMap.getValues()[j].getValues()[0].size;
 
-            using Resizing = HeapModifier::ChunkInfo::ResizingType;
+            using Resizing = RestrictedModifier::ChunkInfo::ResizingType;
 
             Resizing resizingType = Resizing::non_accessible;
             if (offset == -2) resizingType = Resizing::read_only;

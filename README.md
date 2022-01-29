@@ -1,6 +1,6 @@
 This project can be built on linux. You'll need to
 have [cmake](https://cmake.org/install/#download-verification)
-and [pcb](#installing-pbc)
+and [pbc](#installing-pbc)
 installed on your system in order to be able to build the project completely.
 
 For building the project first clone its repository:

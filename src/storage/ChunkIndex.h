@@ -24,7 +24,7 @@
 #include "Page.h"
 #include "util/FixedOrderedMap.hpp"
 #include "heap/Chunk.h"
-#include "heap/HeapModifier.h"
+#include "heap/RestrictedModifier.h"
 
 
 namespace argennon::asa {
@@ -43,7 +43,7 @@ public:
 
     int32_fast getSizeLowerBound(full_id chunkID);;
 
-    ascee::runtime::HeapModifier buildModifier(const AppRequestInfo::AccessMapType& rawAccessMap);
+    ascee::runtime::RestrictedModifier buildModifier(const AppRequestInfo::AccessMapType& rawAccessMap);
 
 private:
     std::vector<std::pair<full_id, Page*>> pageList;

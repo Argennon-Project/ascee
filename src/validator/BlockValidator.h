@@ -35,7 +35,6 @@ public:
     bool conditionalValidate(const BlockInfo& current, const BlockInfo& previous);
 
 private:
-    ascee::runtime::Executor executor;
     asa::PageCache& cache;
     BlockLoader& blockLoader;
     int workersCount = -1;

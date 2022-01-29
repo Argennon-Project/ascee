@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_C_STANDARD 99)
 
 include_directories(include src src/ascee)
+include_directories(${gtest_SOURCE_DIR}/include ${gmock_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
 
 add_subdirectory(src/ascee)
 add_subdirectory(src/util)

@@ -29,11 +29,27 @@
 #include <arg/primitives.h>
 #include <csetjmp>
 #include "ThreadCpuTimer.h"
-#include "heap/HeapModifier.h"
+#include "arg/info.h"
 #include "VirtualSigManager.h"
 #include "AppTable.h"
+#include "heap/RestrictedModifier.h"
+#include "../tests/MockModifier_test.h"
+
+//#define MOCK_ASCEE_HEAP_MODIFIER
 
 namespace argennon::ascee::runtime {
+// We can not use virtual function since runtime binding can hurt performance. The better option for us is to use
+// templates. However, since the session object needs to be available in almost all argc functions it has to be defined
+// static or the code will really get ugly. (argc function can not be defined as members of a class)
+// Defining session as a static thread_local variable makes using templates a bit tricky. So I decided to use the
+// aliasing technique instead.
+#if defined(MOCK_ASCEE_HEAP_MODIFIER)
+using HeapModifier = argennon::mocking::ascee::MockModifier;
+#elif defined(ASCEE_ORACLE_BUILD)
+using HeapModifier = OracleModifier;
+#else
+using HeapModifier = RestrictedModifier;
+#endif
 
 struct AppRequest {
     AppRequestIdType id;
@@ -93,11 +109,11 @@ public:
     public:
         CallContext();
 
-        const long_id appID;
+        const long_id appID = 0;
         bool hasLock = false;
         std::vector<DeferredArgs> deferredCalls;
         CallContext* prevCallInfo = nullptr;
-        jmp_buf env;
+        jmp_buf env{};
 
         explicit CallContext(long_id app);
 
@@ -144,7 +160,7 @@ public:
         //SessionInfo(const SessionInfo&) = delete;
     };
 
-    Executor();
+    Executor() = delete;
 
     inline static SessionInfo* getSession() { return session; }
 
@@ -152,7 +168,7 @@ public:
 
     static void unGuard();
 
-    AppResponse executeOne(AppRequest* req);
+    static AppResponse executeOne(AppRequest* req);
 
     static
     int controlledExec(const std::function<int(long_id, response_buffer_c&, string_view_c)>& invoker,
@@ -160,10 +176,12 @@ public:
                        response_buffer_c& response, string_view_c request,
                        int_fast64_t execTime, size_t stackSize);
 
-private:
-    static void* registerRecoveryStack();
+    static void initialize();
 
+private:
     static thread_local SessionInfo* session;
+
+    static bool initialized;
 
     static void sig_handler(int sig, siginfo_t* info, void* ucontext);
 

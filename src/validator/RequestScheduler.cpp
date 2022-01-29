@@ -16,7 +16,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include "RequestScheduler.h"
-#include "ascee/heap/HeapModifier.h"
+#include "ascee/heap/RestrictedModifier.h"
 
 
 using namespace argennon;

@@ -30,7 +30,7 @@
 
 namespace argennon::ascee::runtime {
 
-class HeapModifier {
+class RestrictedModifier {
 public:
     template<typename T>
     inline
@@ -193,7 +193,7 @@ private:
     typedef util::FixedOrderedMap<int32, AccessBlock> AccessTableMap;
 public:
     class ChunkInfo {
-        friend class HeapModifier;
+        friend class RestrictedModifier;
 
     public:
         enum class ResizingType {
@@ -246,14 +246,14 @@ public:
 
     typedef util::FixedOrderedMap<long_id, ChunkInfo> ChunkMap64;
 
-    HeapModifier(std::vector<long_id> apps, std::vector<ChunkMap64> chunkMaps) :
+    RestrictedModifier(std::vector<long_id> apps, std::vector<ChunkMap64> chunkMaps) :
             appsAccessMaps(std::move(apps), std::move(chunkMaps)) {}
 
-    HeapModifier() = default;
+    RestrictedModifier() = default;
 
-    HeapModifier(const HeapModifier&) = delete;
+    RestrictedModifier(const RestrictedModifier&) = delete;
 
-    HeapModifier(HeapModifier&&) = delete;
+    RestrictedModifier(RestrictedModifier&&) = delete;
 
     inline
     AccessBlock& getAccessBlock(int32 offset) {

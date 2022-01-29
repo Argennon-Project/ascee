@@ -32,19 +32,11 @@ using std::string, std::vector, std::to_string;
 
 class AsceeExecutorTest : public ::testing::Test {
 protected:
-    Executor executor;
 public:
     AsceeExecutorTest() {
         AppLoader::global = std::make_unique<AppLoader>("appFiles/compiled");
+        Executor::initialize();
     }
-};
-
-#include <gmock/gmock.h>
-
-class MockModifier {
-public:
-    MOCK_METHOD(void, restoreVersion, (int16_t version));
-    MOCK_METHOD(int16_t, saveVersion, ());
 };
 
 struct AppTestCase {
@@ -62,9 +54,11 @@ struct AppTestCase {
                 .calledAppID = calledApp,
                 .httpRequest = request,
                 .gas = gas,
-                .appTable = AppTable(appAccessList)
+                .modifier = argennon::mocking::ascee::MockModifier(),
+                .appTable = AppTable(appAccessList),
         };
-        auto result = executor->executeOne(&req);
+        //EXPECT_CALL(req.modifier, saveVersion()).Times(1);
+        auto result = Executor::executeOne(&req);
 
         EXPECT_EQ(result.httpResponse, wantResponse);
 
@@ -75,7 +69,6 @@ struct AppTestCase {
 TEST_F(AsceeExecutorTest, ZeroGas) {
     StringBuffer<1024> buf;
     AppTestCase testCase{
-            .executor = &executor,
             .calledApp = 11,
             .request = "test request",
             .gas = 1,
@@ -91,7 +84,6 @@ TEST_F(AsceeExecutorTest, ZeroGas) {
 
 TEST_F(AsceeExecutorTest, OneLevelCall) {
     AppTestCase testCase{
-            .executor = &executor,
             .calledApp = 11,
             .request = "test request",
             .gas = NORMAL_GAS,
@@ -104,7 +96,6 @@ TEST_F(AsceeExecutorTest, OneLevelCall) {
 
 TEST_F(AsceeExecutorTest, TwoLevelCall) {
     AppTestCase testCase{
-            .executor = &executor,
             .calledApp = 15,
             .request = "test request",
             .gas = NORMAL_GAS,
@@ -118,7 +109,6 @@ TEST_F(AsceeExecutorTest, TwoLevelCall) {
 TEST_F(AsceeExecutorTest, AppNotFound) {
     StringBuffer<1024> buf;
     AppTestCase testCase{
-            .executor = &executor,
             .calledApp = 16,
             .request = "test request",
             .gas = NORMAL_GAS,
@@ -135,7 +125,6 @@ TEST_F(AsceeExecutorTest, AppNotFound) {
 TEST_F(AsceeExecutorTest, AppNotDeclared) {
     StringBuffer<1024> buf;
     AppTestCase testCase{
-            .executor = &executor,
             .calledApp = 15,
             .request = "test request",
             .gas = NORMAL_GAS,
@@ -146,13 +135,13 @@ TEST_F(AsceeExecutorTest, AppNotDeclared) {
                     long_id(15)).toHttpResponse(buf)) + " got in 15",
             .wantCode = 200
     };
+
     SUB_TEST("not declared", testCase);
 }
 
 TEST_F(AsceeExecutorTest, SimpleTimeOut) {
     StringBuffer<1024> buf;
     AppTestCase testCase{
-            .executor = &executor,
             .calledApp = 10,
             .request = "test request",
             .gas = NORMAL_GAS,
@@ -169,7 +158,6 @@ TEST_F(AsceeExecutorTest, SimpleTimeOut) {
 TEST_F(AsceeExecutorTest, CalledTimeOut) {
     StringBuffer<1024> buf;
     AppTestCase testCase{
-            .executor = &executor,
             .calledApp = 12,
             .request = "test request",
             .gas = NORMAL_GAS,
@@ -186,7 +174,6 @@ TEST_F(AsceeExecutorTest, CalledTimeOut) {
 TEST_F(AsceeExecutorTest, SimpleStackOverflow) {
     StringBuffer<1024> buf;
     AppTestCase testCase{
-            .executor = &executor,
             .calledApp = 13,
             .request = "test request",
             .gas = NORMAL_GAS,
@@ -203,7 +190,6 @@ TEST_F(AsceeExecutorTest, SimpleStackOverflow) {
 TEST_F(AsceeExecutorTest, CalledStackOverflow) {
     StringBuffer<1024> buf;
     AppTestCase testCase{
-            .executor = &executor,
             .calledApp = 14,
             .request = "test request",
             .gas = NORMAL_GAS,
@@ -220,7 +206,6 @@ TEST_F(AsceeExecutorTest, CalledStackOverflow) {
 TEST_F(AsceeExecutorTest, CircularCallLowGas) {
     StringBuffer<1024> buf;
     AppTestCase testCase{
-            .executor = &executor,
             .calledApp = 17,
             .request = "test request",
             .gas = LOW_GAS,
@@ -237,7 +222,6 @@ TEST_F(AsceeExecutorTest, CircularCallLowGas) {
 TEST_F(AsceeExecutorTest, CircularCallHighGas) {
     StringBuffer<1024> buf;
     AppTestCase testCase{
-            .executor = &executor,
             .calledApp = 17,
             .request = "test request",
             .gas = 1000000000,
@@ -276,7 +260,6 @@ TEST_F(AsceeExecutorTest, FailedCalls) {
     // caller can see out_of_range exception so server is 19
 
     AppTestCase testCase{
-            .executor = &executor,
             .calledApp = 19,
             .request = "test request",
             .gas = NORMAL_GAS,
@@ -299,7 +282,6 @@ TEST_F(AsceeExecutorTest, SimpleReentancy) {
     reentrancyErr.toHttpResponse(buf);
 
     AppTestCase testCase{
-            .executor = &executor,
             .calledApp = 22,
             .request = "choice: 1",
             .gas = NORMAL_GAS,
@@ -313,7 +295,6 @@ TEST_F(AsceeExecutorTest, SimpleReentancy) {
 TEST_F(AsceeExecutorTest, SimpleDeferredCall) {
     StringBuffer<1024> buf;
     AppTestCase testCase{
-            .executor = &executor,
             .calledApp = 22,
             .request = "choice: 4",
             .gas = NORMAL_GAS,

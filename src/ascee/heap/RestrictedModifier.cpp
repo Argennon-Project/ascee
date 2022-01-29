@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#include "HeapModifier.h"
+#include "RestrictedModifier.h"
 #include "argc/types.h"
 #include <cassert>
 #include <utility>
@@ -27,18 +27,18 @@ using namespace argennon;
 using namespace argennon::ascee::runtime;
 using std::vector;
 
-int16_t HeapModifier::saveVersion() {
+int16_t RestrictedModifier::saveVersion() {
     if (currentVersion == MAX_VERSION) throw AsceeError("version limit reached", StatusCode::limit_exceeded);
     return currentVersion++;
 }
 
-void HeapModifier::restoreVersion(int16_t version) {
+void RestrictedModifier::restoreVersion(int16_t version) {
     // todo: assert?
     if (version >= currentVersion || version < 0) throw std::runtime_error("restoring an invalid version");
     currentVersion = version;
 }
 
-void HeapModifier::loadChunk(long_id chunkID) {
+void RestrictedModifier::loadChunk(long_id chunkID) {
     try {
         currentChunk = &chunks->at(chunkID);
     } catch (const std::out_of_range&) {
@@ -46,7 +46,7 @@ void HeapModifier::loadChunk(long_id chunkID) {
     }
 }
 
-void HeapModifier::loadContext(long_id appID) {
+void RestrictedModifier::loadContext(long_id appID) {
     // When `appID` does not exist in the map, this function should not throw an exception. Smart contracts do not
     // call this function directly and failing can be problematic for `invoke_dispatcher` function.
     try {
@@ -57,7 +57,7 @@ void HeapModifier::loadContext(long_id appID) {
     currentChunk = nullptr;
 }
 
-void HeapModifier::writeToHeap() {
+void RestrictedModifier::writeToHeap() {
     if (currentVersion == 0) return;
 
     for (auto& appMap: appsAccessMaps.getValues()) {
@@ -80,7 +80,7 @@ void HeapModifier::writeToHeap() {
     }
 }
 
-void HeapModifier::updateChunkSize(int32 newSize) {
+void RestrictedModifier::updateChunkSize(int32 newSize) {
     if (newSize == currentChunk->size.read<int32>(currentVersion)) return;
 
     if (currentChunk->resizing == ChunkInfo::ResizingType::expandable) {
@@ -97,20 +97,20 @@ void HeapModifier::updateChunkSize(int32 newSize) {
     currentChunk->size.write(currentVersion, newSize);
 }
 
-int32 HeapModifier::getChunkSize() {
+int32 RestrictedModifier::getChunkSize() {
     if (currentChunk->resizing == ChunkInfo::ResizingType::non_accessible) {
         throw std::out_of_range("chunkSize is not accessible");
     }
     return currentChunk->size.read<int32>(currentVersion);
 }
 
-void HeapModifier::AccessBlock::syncTo(int16_t version) {
+void RestrictedModifier::AccessBlock::syncTo(int16_t version) {
     while (!versionList.empty() && versionList.back().number > version) {
         versionList.pop_back();
     }
 }
 
-bool HeapModifier::AccessBlock::addVersion(int16_t version) {
+bool RestrictedModifier::AccessBlock::addVersion(int16_t version) {
     assert(version >= 1);
     // checks are ordered for having the best performance on average
     if (!versionList.empty()) {
@@ -123,14 +123,14 @@ bool HeapModifier::AccessBlock::addVersion(int16_t version) {
     return true;
 }
 
-byte* HeapModifier::AccessBlock::prepareToRead(int16_t version, int32 readSize) {
+byte* RestrictedModifier::AccessBlock::prepareToRead(int16_t version, int32 readSize) {
     if (readSize > size) throw std::out_of_range("read size");
     if (accessType.denies(BlockAccessInfo::Access::Operation::read)) throw std::out_of_range("not readable");
     syncTo(version);
     return versionList.empty() ? heapLocation.get(readSize) : versionList.back().getContent();
 }
 
-byte* HeapModifier::AccessBlock::prepareToWrite(int16_t version, int32 writeSize) {
+byte* RestrictedModifier::AccessBlock::prepareToWrite(int16_t version, int32 writeSize) {
     if (writeSize > size) throw std::out_of_range("write size");
     if (accessType.denies(BlockAccessInfo::Access::Operation::write)) {
         throw std::out_of_range("block is not writable");
@@ -145,7 +145,7 @@ byte* HeapModifier::AccessBlock::prepareToWrite(int16_t version, int32 writeSize
     return versionList.back().getContent();
 }
 
-void HeapModifier::AccessBlock::wrToHeap(Chunk* chunk, int16_t version, int32 maxWriteSize) {
+void RestrictedModifier::AccessBlock::wrToHeap(Chunk* chunk, int16_t version, int32 maxWriteSize) {
     syncTo(version);
     if (versionList.empty()) return;
 
@@ -164,11 +164,11 @@ void HeapModifier::AccessBlock::wrToHeap(Chunk* chunk, int16_t version, int32 ma
     }
 }
 
-HeapModifier::AccessBlock::AccessBlock(const Chunk::Pointer& heapLocation,
-                                       int32 size,
-                                       BlockAccessInfo::Access accessType) : heapLocation(heapLocation),
-                                                                             size(size),
-                                                                             accessType(accessType) {}
+RestrictedModifier::AccessBlock::AccessBlock(const Chunk::Pointer& heapLocation,
+                                             int32 size,
+                                             BlockAccessInfo::Access accessType) : heapLocation(heapLocation),
+                                                                                   size(size),
+                                                                                   accessType(accessType) {}
 
 /// When resizeable is true and newSize > 0 the chunk can only be expanded and the value of
 /// newSize indicates the upper-bound of the settable size. If resizable == true and newSize <= 0 the chunk is
@@ -176,9 +176,9 @@ HeapModifier::AccessBlock::AccessBlock(const Chunk::Pointer& heapLocation,
 ///
 /// When resizeable is false and newSize != 0 the size of the chunk can only be read but if newSize == 0
 /// the size of the chunk is not accessible. (not readable nor writable)
-HeapModifier::ChunkInfo::ChunkInfo(Chunk* chunk, ResizingType resizingType, int32 sizeBound,
-                                   std::vector<int32> sortedAccessedOffsets,
-                                   const std::vector<BlockAccessInfo>& accessInfoList) :
+RestrictedModifier::ChunkInfo::ChunkInfo(Chunk* chunk, ResizingType resizingType, int32 sizeBound,
+                                         std::vector<int32> sortedAccessedOffsets,
+                                         const std::vector<BlockAccessInfo>& accessInfoList) :
 // todo: explain why we use initialSize member
         size(
                 Chunk::Pointer((byte*) (&initialSize), sizeof(initialSize)),
@@ -194,7 +194,7 @@ HeapModifier::ChunkInfo::ChunkInfo(Chunk* chunk, ResizingType resizingType, int3
     initialSize = chunk->getsize();
 }
 
-vector<HeapModifier::AccessBlock> HeapModifier::ChunkInfo::toBlocks(
+vector<RestrictedModifier::AccessBlock> RestrictedModifier::ChunkInfo::toBlocks(
         Chunk* chunk,
         const vector<int32>& offsets,
         const vector<BlockAccessInfo>& accessInfoList

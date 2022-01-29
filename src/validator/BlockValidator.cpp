@@ -18,8 +18,6 @@
 #include <future>
 #include "BlockValidator.h"
 
-#define RUN_TASK(lambda) std::async(lambda)
-
 using namespace argennon;
 using namespace ave;
 using namespace asa;
@@ -117,7 +115,7 @@ vector<AppResponse> BlockValidator::executeRequests(RequestScheduler& scheduler)
     for (auto& worker: pool) {
         worker = std::thread([&] {
             while (auto* request = scheduler.nextRequest()) {
-                responseList[request->id] = executor.executeOne(request);
+                responseList[request->id] = Executor::executeOne(request);
                 scheduler.submitResult(request->id, responseList[request->id].statusCode);
             }
         });

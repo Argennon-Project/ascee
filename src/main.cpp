@@ -142,8 +142,7 @@ int main(int argc, char const* argv[]) {
     scheduler.finalizeRequest(0);
     scheduler.buildExecDag();
 
-    Executor executor;
-    auto response = executor.executeOne(scheduler.nextRequest());
+    auto response = Executor::executeOne(scheduler.nextRequest());
 
     printf("<<<******* Response *******>>> \n%s\n<<<************************>>>\n", response.httpResponse.c_str());
 

@@ -35,7 +35,6 @@ set_target_properties(app10 app11 app12 app13 app14 app15 app16 app17 app18 app1
 # adding the Google_Tests_run target
 add_executable(Google_Tests_run
         ArgcStringTest.cpp
-        AsceeExecutorTest.cpp
         HeapModifierDeathTest.cpp
         ArgcFloatTest.cpp
         #AsceeHeapDeathTest.cpp
@@ -48,5 +47,9 @@ add_executable(Google_Tests_run
 
 # linking Google_Tests_run with libraries
 
-target_link_libraries(Google_Tests_run gtest gtest_main m ascee asa ave argutil stdc++ pthread rt pbc gmp crypto dl)
+target_link_libraries(Google_Tests_run gmock gtest gtest_main m ascee asa ave argutil stdc++ pthread rt pbc gmp crypto dl)
+
+add_executable(Google_Mock_run AsceeExecutorTest.cpp)
+
+target_link_libraries(Google_Mock_run gmock gtest gtest_main m ascee argutil stdc++ pthread rt pbc gmp crypto dl)
 
