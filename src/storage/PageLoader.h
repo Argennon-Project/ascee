@@ -37,15 +37,17 @@ public:
         return Page::Delta();
     }
 
-    void loadPage(full_id pageID, Page& page) {
+    void updatePage(full_id pageID, Page& page) {
         int tries = 0;
         while (true) {
             // submitGetDeltaRequest() needs to be called before.
             auto delta = getDelta(pageID, page.getBlockNumber(), previousBlock.blockNumber, tries++);
-            page.applyDelta(delta, previousBlock.blockNumber);
-
-            if (verify(pageID, page.getDigest())) break;
-            else page.removeDelta(delta);
+            try {
+                page.applyDelta(pageID, delta, previousBlock.blockNumber);
+                break;
+            } catch (const std::invalid_argument& err) {
+                // remove invalid page from cache
+            }
         }
     }
 

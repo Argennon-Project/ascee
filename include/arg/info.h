@@ -24,20 +24,9 @@
 #include "primitives.h"
 #include "util/FixedOrderedMap.hpp"
 #include "util/PrefixTrie.hpp"
+#include "util/crypto/DigestCalculator.h"
 
 namespace argennon {
-
-struct Digest {
-    int x = 0;
-public:
-    bool operator==(const Digest& rhs) const {
-        return x == rhs.x;
-    }
-
-    bool operator!=(const Digest& rhs) const {
-        return !(rhs == *this);
-    }
-};
 
 using AppRequestIdType = int32_fast;
 
@@ -156,7 +145,7 @@ struct AppRequestInfo {
     std::vector<AppRequestIdType> attachments;
     // BlockLoader needs to verify that all integers in the list are in [0, numOfRequests)
 
-    Digest digest;
+    util::Digest digest;
 };
 
 struct PageAccessInfo {

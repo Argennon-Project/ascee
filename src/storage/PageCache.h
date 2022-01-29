@@ -42,6 +42,14 @@ public:
             const std::vector<MigrationInfo>& chunkMigrations
     );
 
+    void commit(const std::vector<PageAccessInfo>& modifiedPages);
+
+    /**
+     * in a usual implementation this function simply removes any page that is modified.
+     * @param modifiedPages
+     */
+    void rollback(const std::vector<PageAccessInfo>& modifiedPages) {}
+
 private:
     std::unordered_map<int128, Page> cache;
     PageLoader& loader;

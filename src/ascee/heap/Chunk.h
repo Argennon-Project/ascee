@@ -23,6 +23,7 @@
 #include <memory>
 #include <atomic>
 #include <mutex>
+#include "util/crypto/DigestCalculator.h"
 
 namespace argennon::ascee::runtime {
 
@@ -67,12 +68,8 @@ public:
     /// This function should only be called at the end of block validation.
     bool shrinkSpace();
 
-    void applyDelta(const Digest& expectedDigest, const byte* delta, int32_fast len);
-
-    void updateDigest();
-
     [[nodiscard]]
-    const Digest& getDigest() const;
+    util::Digest calculateDigest() const { return {}; };
 
     [[nodiscard]]
     bool isWritable() const;;
@@ -80,6 +77,8 @@ public:
     Pointer getContentPointer(int32 offset, int32 size);
 
     std::mutex& getContentMutex();
+
+    const byte* applyDelta(const byte* delta, const byte* boundary);
 
     /// This is used to indicate that a chunk will not be modified in a block. Knowing that a chunk is not modified
     /// in the block helps in efficient calculation of commitments.
@@ -95,11 +94,8 @@ private:
     int32 capacity = 0;
     bool writable = true;
     std::mutex contentMutex;
-    Digest digest;
 
     void resize(int32 newCapacity);
-
-    void applyDeltaReversible(const byte* delta, int32_fast len);
 };
 
 } // namespace argennon::ascee::runtime::heap

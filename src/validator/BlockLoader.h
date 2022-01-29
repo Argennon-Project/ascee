@@ -53,7 +53,7 @@ public:
 
     std::vector<MigrationInfo> getMigrationList() { return {}; };
 
-    Digest getResponseListDigest() {
+    util::Digest getResponseListDigest() {
         return {};
     }
 };

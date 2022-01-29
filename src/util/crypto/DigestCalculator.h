@@ -18,16 +18,35 @@
 #ifndef ARGENNON_DIGEST_CALCULATOR_H
 #define ARGENNON_DIGEST_CALCULATOR_H
 
-namespace argennon::ascee::runtime {
+#include <cstdint>
+#include <cstddef>
+
+namespace argennon::util {
+
+struct Digest {
+    int x = 0;
+public:
+    bool operator==(const Digest& rhs) const {
+        return x == rhs.x;
+    }
+
+    bool operator!=(const Digest& rhs) const {
+        return !(rhs == *this);
+    }
+};
 
 class DigestCalculator {
 public:
-    template<typename T>
-    void append(T value) {}
+    void append(uint8_t* binary, size_t len) {};
 
+    template<typename T>
+    auto& operator<<(const T& value) {
+        return *this;
+    }
+
+    Digest CalculateDigest() { return {}; };
 private:
     int x;
-
 };
 
 } // namespace argennon::ascee::runtime

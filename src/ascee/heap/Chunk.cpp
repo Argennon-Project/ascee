@@ -23,6 +23,7 @@
 
 using namespace argennon;
 using namespace argennon::ascee::runtime;
+using namespace util;
 using std::unique_ptr, std::make_unique;
 
 /// new chunks always have a size of zero. Their size usually should be changed by using reSize() function.
@@ -86,37 +87,34 @@ bool Chunk::shrinkSpace() {
 
 
 static
-int32_fast readVarSize(const byte*& readPtr, const byte* boundary) {
+auto readVarSize(const byte*& readPtr, const byte* boundary) {
     auto len = 0;
     auto size = gVarSizeTrie.decodeVarUInt(readPtr, &len, int(boundary - readPtr));
     readPtr += len;
-    return int32_fast(size);
+    return size;
 }
 
-/// computes x[0:size - 1] ^= a[0:size - 1]
-void fastXOR(byte* x, const byte* a, int32_fast size) {
-    int32_fast count = size / int32_fast(sizeof(int64_fast));
-    auto x_fast = (int64_fast*) x;
-    auto a_fast = (int64_fast*) a;
-
-    for (int32_fast i = 0; i < count; ++i) {
-        x_fast[i] ^= a_fast[i];
-    }
-
-    for (int32_fast i = count * int32_fast(sizeof(int64_fast)); i < size; ++i) {
-        x[i] ^= a[i];
-    }
-}
-
-void Chunk::applyDeltaReversible(const byte* delta, int32_fast len) {
-    auto boundary = delta + len;
+/**
+ * @param expectedDigest
+ * @param delta format: [ chunkSize (offsetDiff dataSize data)* ]
+ * offsetDiff is the difference between the end of the last data block and the start of the current data block + 1.
+ * type of all numbers are varSize encoded with gVarSizeTrie PrefixTrie.
+ * chunkSize will be XORed with the current chunk size.
+ * offsetDiff and dataSize are used as they are without XORing.
+ * data is the data to be copied in chunk
+ * @param maxLen
+ */
+const byte* Chunk::applyDelta(const byte* delta, const byte* boundary) {
+    if (delta >= boundary) return delta;
 
     auto size = chunkSize ^ (int32) readVarSize(delta, boundary);
     reserveSpace(size);
 
     int32_fast offset = 0;
     while (delta < boundary) {
-        offset += readVarSize(delta, boundary);
+        auto diff = readVarSize(delta, boundary);
+        if (diff == 0) break;
+        offset += diff - 1;
         auto blockSize = readVarSize(delta, boundary);
         if (offset + blockSize > size) {
             // For being able to remove deltas we need this. Do not change it!
@@ -124,39 +122,14 @@ void Chunk::applyDeltaReversible(const byte* delta, int32_fast len) {
             else break;
         }
 
-        fastXOR(content.get() + offset, delta, blockSize);
+        memcpy(content.get() + offset, delta, blockSize);
         delta += blockSize;
         offset += blockSize;
     }
     chunkSize = size;
-    updateDigest();
-    // Still we need to call shrinkSpace() to complete the operation, but if we do it here the delta can not be removed
-    // later.
-}
-
-/**
- * @param expectedDigest
- * @param delta format: [ chunkSize (offsetDiff dataSize data)* ]
- * offsetDiff is the difference between the end of the last data block and the current data block.
- * type of all numbers are varSize encoded with gVarSizeTrie PrefixTrie.
- * data and chunkSize will be XORed with the current chunk contents and size.
- * offsetDiff and dataSize are used as they are without XORing.
- * @param len
- */
-void Chunk::applyDelta(const Digest& expectedDigest, const byte* delta, int32_fast len) {
-    applyDeltaReversible(delta, len);
-    if (expectedDigest != digest) {
-        // first we remove incorrect delta.
-        applyDeltaReversible(delta, len);
-        shrinkSpace();
-        throw std::invalid_argument("incorrect chunk delta");
-    }
     // important!
     shrinkSpace();
-}
-
-void Chunk::updateDigest() {
-
+    return delta;
 }
 
 bool Chunk::isWritable() const {
@@ -178,8 +151,4 @@ Chunk::operator std::string() const {
     }
     result << "]";
     return result.str();
-}
-
-const Digest& Chunk::getDigest() const {
-    return digest;
 }

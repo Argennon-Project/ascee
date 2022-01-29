@@ -60,7 +60,7 @@ struct AppRequest {
     AppTable appTable;
     FailureManager failureManager;
     std::vector<AppRequestIdType> attachments;
-    Digest digest;
+    util::Digest digest;
 };
 
 struct AppResponse {

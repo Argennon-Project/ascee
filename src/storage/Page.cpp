@@ -18,3 +18,62 @@
 
 #include "Page.h"
 
+using namespace argennon;
+using namespace asa;
+
+void Page::applyDelta(full_id pageID, const Page::Delta& delta, int64_fast blockNumber) {
+    auto keysDigest = util::DigestCalculator();
+    auto boundary = delta.content.data() + delta.content.size();
+
+    auto reader = native->applyDelta(delta.content.data(), boundary);
+    keysDigest << pageID << native->calculateDigest();
+    for (const auto& item: migrants) {
+        reader = item.second->applyDelta(reader, boundary);
+        keysDigest << item.first << item.second->calculateDigest();
+    }
+
+    if (keysDigest.CalculateDigest() != delta.finalDigest) {
+        // ensure that the page will be rollback.
+        throw std::invalid_argument("final digest of page[" + (std::string) pageID + "] is not valid");
+    }
+
+    // = is needed for creating new pages
+    assert(blockNumber >= version);
+    version = blockNumber;
+}
+
+Page::Chunk* Page::extractMigrant(full_id id) {
+    try {
+        auto ret = migrants.at(id).release();
+        migrants.erase(id);
+        return ret;
+    } catch (const std::out_of_range&) {
+        throw BlockError("is not a migrant");
+    }
+}
+
+Page::Chunk* Page::extractNative() {
+    if (!migrants.empty()) throw BlockError("migrating native chunk of a page containing migrants");
+    return native.release();
+}
+
+void Page::addMigrant(full_id id, Chunk* migrant) {
+    if (!migrants.try_emplace(id, migrant).second) {
+        throw BlockError("migrant already exists");
+    }
+}
+
+void Page::setWritableFlag(bool writable) {
+    native->setWritable(writable);
+    for (const auto& pair: migrants) {
+        pair.second->setWritable(writable);
+    }
+}
+
+const std::map<full_id, std::unique_ptr<Page::Chunk>>& Page::getMigrants() {
+    return migrants;
+}
+
+Page::Chunk* Page::getNative() {
+    return native.get();
+}

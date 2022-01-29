@@ -107,7 +107,7 @@ private:
 
     void registerDependency(AppRequestIdType u, AppRequestIdType v);
 
-    void injectDigest(Digest digest, std::string& httpRequest) {}
+    void injectDigest(util::Digest digest, std::string& httpRequest) {}
 };
 
 } // namespace argennon::ave

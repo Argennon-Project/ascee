@@ -22,39 +22,31 @@ using namespace argennon;
 using namespace ascee::runtime;
 
 TEST(HeapChunkTest, ApplyDelta) {
-    Digest good{}, bad{1};
     Chunk c;
     using std::string;
 
 
-    byte d1[] = {10, 0, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    byte d1[] = {10, 1, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 
-    EXPECT_THROW(c.applyDelta(bad, d1, sizeof(d1)), std::invalid_argument);
     EXPECT_EQ("size: 0, capacity: 0, content: 0x[ ]", (string) c);
-    c.applyDelta(good, d1, sizeof(d1));
+    c.applyDelta(d1, d1 + sizeof(d1));
     EXPECT_EQ("size: 10, capacity: 10, content: 0x[ 1 2 3 4 5 6 7 8 9 a ]", (string) c);
 
 
-    byte d2[] = {0, 0, 2, 1, 4, 7, 1, 5};
+    byte d2[] = {0, 1, 2, 1, 4, 8, 1, 5};
 
-    EXPECT_THROW(c.applyDelta(bad, d2, sizeof(d2)), std::invalid_argument);
-    EXPECT_EQ("size: 10, capacity: 10, content: 0x[ 1 2 3 4 5 6 7 8 9 a ]", (string) c);
-    c.applyDelta(good, d2, sizeof(d2));
-    EXPECT_EQ("size: 10, capacity: 10, content: 0x[ 0 6 3 4 5 6 7 8 9 f ]", (string) c);
+    c.applyDelta(d2, d2 + sizeof(d2));
+    EXPECT_EQ("size: 10, capacity: 10, content: 0x[ 1 4 3 4 5 6 7 8 9 5 ]", (string) c);
 
 
-    byte d3[] = {15, 3, 2, 4, 7};
+    byte d3[] = {15, 4, 2, 1, 2};
 
-    EXPECT_THROW(c.applyDelta(bad, d3, sizeof(d3)), std::invalid_argument);
-    EXPECT_EQ("size: 10, capacity: 10, content: 0x[ 0 6 3 4 5 6 7 8 9 f ]", (string) c);
-    c.applyDelta(good, d3, sizeof(d3));
-    EXPECT_EQ("size: 5, capacity: 5, content: 0x[ 0 6 3 0 2 ]", (string) c);
+    c.applyDelta(d3, d3 + sizeof(d3));
+    EXPECT_EQ("size: 5, capacity: 5, content: 0x[ 1 4 3 1 2 ]", (string) c);
 
 
-    byte d4[] = {10, 13, 1, 2, 0, 1, 7};
+    byte d4[] = {10, 14, 1, 2, 1, 1, 7};
 
-    EXPECT_THROW(c.applyDelta(bad, d4, sizeof(d4)), std::invalid_argument);
-    EXPECT_EQ("size: 5, capacity: 5, content: 0x[ 0 6 3 0 2 ]", (string) c);
-    c.applyDelta(good, d4, sizeof(d4));
-    EXPECT_EQ("size: 15, capacity: 15, content: 0x[ 0 6 3 0 2 0 0 0 0 0 0 0 0 2 7 ]", (string) c);
+    c.applyDelta(d4, d4 + sizeof(d4));
+    EXPECT_EQ("size: 15, capacity: 15, content: 0x[ 1 4 3 1 2 0 0 0 0 0 0 0 0 2 7 ]", (string) c);
 }

@@ -20,9 +20,11 @@
 
 #include "arg/primitives.h"
 #include <map>
+#include <cassert>
 #include <vector>
 #include <memory>
 #include "heap/Chunk.h"
+#include "util/crypto/DigestCalculator.h"
 
 namespace argennon::asa {
 /**
@@ -35,8 +37,9 @@ namespace argennon::asa {
 class Page {
     using Chunk = ascee::runtime::Chunk;
 public:
-    class Delta {
-
+    struct Delta {
+        std::vector<byte> content;
+        util::Digest finalDigest;
     };
 
     explicit Page(int64_fast blockNumber) : version(blockNumber) {
@@ -48,11 +51,7 @@ public:
      * @param id
      * @param migrant must be a pointer to a chunk allocated on heap. The page will take the ownership of the pointer.
      */
-    void addMigrant(full_id id, Chunk* migrant) {
-        if (!migrants.try_emplace(id, migrant).second) {
-            throw BlockError("migrant already exists");
-        }
-    };
+    void addMigrant(full_id id, Chunk* migrant);
 
     byte* getDigest() { return nullptr; };
 
@@ -61,45 +60,19 @@ public:
         return version;
     }
 
-    void applyDelta(Delta delta, int64_fast blockNumber) {
-        version = blockNumber;
-    }
+    void applyDelta(full_id pageID, const Delta& delta, int64_fast blockNumber);
 
-    void setWritableFlag(bool writable) {
-        native->setWritable(writable);
-        for (const auto& pair: migrants) {
-            pair.second->setWritable(writable);
-        }
-    }
-
-    void removeDelta(Delta delta) {
-
-    }
+    void setWritableFlag(bool writable);
 
     [[nodiscard]]
-    Chunk* getNative() {
-        return native.get();
-    }
+    Chunk* getNative();
 
     [[nodiscard]]
-    const std::map<full_id, std::unique_ptr<Chunk>>& getMigrants() {
-        return migrants;
-    }
+    const std::map<full_id, std::unique_ptr<Chunk>>& getMigrants();
 
-    Chunk* extractMigrant(full_id id) {
-        try {
-            auto ret = migrants.at(id).release();
-            migrants.erase(id);
-            return ret;
-        } catch (const std::out_of_range&) {
-            throw BlockError("is not a migrant");
-        }
-    }
+    Chunk* extractMigrant(full_id id);
 
-    Chunk* extractNative() {
-        if (!migrants.empty()) throw BlockError("migrating native chunk of a page containing migrants");
-        return native.release();
-    }
+    Chunk* extractNative();
 
 private:
     int64_fast version = 0;

@@ -101,32 +101,31 @@ int main(int argc, char const* argv[]) {
     AppLoader::global = std::make_unique<AppLoader>("compiled");
 
     Page page_1(777);
-    byte delta_1_0[] = {67, 0, 67, 11, 0, 76, 4, 147, 2, 242, 185, 142, 97, 127, 241, 23, 190, 47, 105, 5, 197, 242, 14,
-                        106, 29, 4, 157, 46, 119, 66, 108, 63, 13, 25, 195, 9, 216, 126, 9, 128, 156, 224, 63, 233, 197,
-                        128, 173, 14, 141, 30, 213, 59, 43, 58, 26, 174, 248, 37, 74, 220, 219, 31, 0, 204, 47, 169,
-                        120, 248, 137, 0};
-
-
-    page_1.getNative()->applyDelta({}, delta_1_0, sizeof(delta_1_0));
-
-
-    byte delta_1_1[] = {8, 0, 2, 21, 20};
-    auto from_chunk = new Chunk();
-    from_chunk->applyDelta({}, delta_1_1, sizeof(delta_1_1));
-    page_1.addMigrant({0x1, 0x14ab000000000001}, from_chunk);
-
-    std::cout << (std::string) *from_chunk << std::endl;
+    page_1.addMigrant({0x1, 0x14ab000000000001}, new Chunk());
+    page_1.applyDelta({0x1, 0x14ab000000000000},
+                      Page::Delta{.content = {67, 1, 67, 11, 0, 76, 4, 147, 2, 242, 185, 142, 97, 127, 241, 23, 190, 47,
+                                              105, 5, 197, 242, 14,
+                                              106, 29, 4, 157, 46, 119, 66, 108, 63, 13, 25, 195, 9, 216, 126, 9, 128,
+                                              156, 224, 63, 233, 197,
+                                              128, 173, 14, 141, 30, 213, 59, 43, 58, 26, 174, 248, 37, 74, 220, 219,
+                                              31, 0, 204, 47, 169,
+                                              120, 248, 137, 0, 0,
+                                              8, 1, 2, 21, 20},
+                              .finalDigest = {}},
+                      780);
 
     Page page_2(777);
-    byte delta_2_0[] = {67, 0, 2, 45, 45};
-    page_2.getNative()->applyDelta({}, delta_2_0, sizeof(delta_2_0));
+    page_2.addMigrant({0x1, 0x0abc000000000001}, new Chunk());
+    page_2.applyDelta({0x1, 0x0abc000000000000},
+                      {{67, 1, 2, 45, 45, 0,
+                               8, 1, 2, 1, 1},
+                       {}},
+                      780);
 
-    byte delta_2_1[] = {8, 0, 2, 1, 1};
-    auto to_chunk = new Chunk();
-    to_chunk->applyDelta({}, delta_2_1, sizeof(delta_2_1));
-    page_2.addMigrant({0x1, 0x0abc000000000001}, to_chunk);
-
-    std::cout << (std::string) *to_chunk << std::endl;
+    std::cout << (std::string) *page_1.getNative() << std::endl;
+    std::cout << (std::string) *page_1.getMigrants().at({0x1, 0x14ab000000000001}) << std::endl;
+    std::cout << (std::string) *page_2.getNative() << std::endl;
+    std::cout << (std::string) *page_2.getMigrants().at({0x1, 0x0abc000000000001}) << std::endl;
 
     page_1.setWritableFlag(true);
     page_2.setWritableFlag(true);
@@ -146,8 +145,8 @@ int main(int argc, char const* argv[]) {
 
     printf("<<<******* Response *******>>> \n%s\n<<<************************>>>\n", response.httpResponse.c_str());
 
-    std::cout << (std::string) *from_chunk << std::endl;
-    std::cout << (std::string) *to_chunk << std::endl;
+    std::cout << (std::string) *page_1.getMigrants().at({0x1, 0x14ab000000000001}) << std::endl;
+    std::cout << (std::string) *page_2.getMigrants().at({0x1, 0x0abc000000000001}) << std::endl;
     std::cout << (std::string) *page_1.getNative() << std::endl;
 
     PageLoader pl;

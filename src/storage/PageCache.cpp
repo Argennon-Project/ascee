@@ -47,14 +47,16 @@ PageCache::prepareBlockPages(const BlockInfo& block, const vector<PageAccessInfo
         result.emplace_back(info.pageID, &page);
     }
 
+    // Building the request that will be sent to the PV-DB server
     loader.setCurrentBlock(block);
     for (const auto& pair: result) {
         loader.preparePage(pair.first, *pair.second);
     }
 
+    // Downloading and updating required pages
     for (const auto& pair: result) {
         //todo: this should be done using async
-        loader.loadPage(pair.first, *pair.second);
+        loader.updatePage(pair.first, *pair.second);
     }
 
     for (const auto& migration: chunkMigrations) {
@@ -65,5 +67,9 @@ PageCache::prepareBlockPages(const BlockInfo& block, const vector<PageAccessInfo
     }
 
     return result;
+}
+
+void PageCache::commit(const std::vector<PageAccessInfo>& modifiedPages) {
+
 }
 

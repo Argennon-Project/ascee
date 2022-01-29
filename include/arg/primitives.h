@@ -65,6 +65,12 @@ public:
     FullID(long_id up, long_id down) { id = __int128_t(up) << 64 | down; }
 
     operator __int128_t() const { return id; } // NOLINT(google-explicit-constructor)
+
+    explicit operator std::string() const {
+        char buf[128];
+        sprintf(buf, "%lx::%lx", uint64_t(id >> 64), uint64_t(id));
+        return {buf};
+    };
 private:
     __int128_t id = 0;
 };

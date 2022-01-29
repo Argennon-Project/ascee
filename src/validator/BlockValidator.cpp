@@ -20,16 +20,10 @@
 
 using namespace argennon;
 using namespace ave;
+using namespace util;
 using namespace asa;
 using namespace ascee::runtime;
 using std::vector, std::future;
-
-static
-void waitForAll(const vector<future<void>>& pendingTasks) {
-    for (const auto& task: pendingTasks) {
-        task.wait();
-    }
-}
 
 static
 Digest calculateDigest(vector<AppResponse> responses) {
@@ -74,9 +68,14 @@ bool BlockValidator::conditionalValidate(const BlockInfo& current, const BlockIn
 
         buildDependencyGraph(scheduler);
 
-        return calculateDigest(executeRequests(scheduler)) == blockLoader.getResponseListDigest();
+        auto responses = executeRequests(scheduler);
+
+        cache.commit(blockLoader.getPageAccessList());
+
+        return calculateDigest(responses) == blockLoader.getResponseListDigest();
     } catch (const BlockError& err) {
         std::cout << err.message << std::endl;
+        cache.rollback(blockLoader.getPageAccessList());
         return false;
     }
 }
@@ -132,5 +131,6 @@ BlockValidator::BlockValidator(
         PageCache& cache,
         BlockLoader& blockLoader,
         int workersCount) : cache(cache), blockLoader(blockLoader) {
+    Executor::initialize();
     this->workersCount = workersCount < 1 ? (int) std::thread::hardware_concurrency() * 2 : workersCount;
 }
