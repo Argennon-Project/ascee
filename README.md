@@ -30,18 +30,15 @@ which is a small test right now)
 ./ascee_run
 ```
 
-For being able to run tests, first you'll need to copy the `param` directory
-from the main directory of the project to the build directory:
-
-```shell
-cp -r ../param/ param
-```
-
-Then to run tests **navigate to `tests` directory** and run tests:
+For running tests **navigate to `tests` directory** and run tests:
 
 ```shell
 cd tests
 ./Google_Tests_run
+```
+
+```shell
+./Google_Mock_run
 ```
 
 ### Installing PBC
