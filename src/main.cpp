@@ -98,7 +98,7 @@ int main(int argc, char const* argv[]) {
                              }}}}
     };
 
-    AppLoader::global = std::make_unique<AppLoader>("compiled");
+    AppLoader::global = std::make_unique<AppLoader>("apps");
 
     Page page_1(777);
     page_1.addMigrant({0x1, 0x14ab000000000001}, new Chunk());

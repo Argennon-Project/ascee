@@ -20,9 +20,6 @@ Now you can build the project:
 
 ```shell
 cmake ..
-```
-
-```shell
 cmake --build .
 ```
 
@@ -44,9 +41,6 @@ Then to run tests **navigate to `tests` directory** and run tests:
 
 ```shell
 cd tests
-```
-
-```shell
 ./Google_Tests_run
 ```
 

@@ -3,34 +3,9 @@ project(tests)
 
 # 'lib' is the folder with Google Test sources
 add_subdirectory(lib)
-include_directories(${gtest_SOURCE_DIR}/include ${gmock_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_C_STANDARD 99)
-
-add_library(app10 SHARED appFiles/single-thread/timeout/app10.cpp)
-add_library(app12 SHARED appFiles/single-thread/timeout/app12.cpp)
-
-add_library(app11 SHARED appFiles/single-thread/call/app11.cpp)
-add_library(app15 SHARED appFiles/single-thread/call/app15.cpp)
-add_library(app16 SHARED appFiles/single-thread/call/app16.cpp)
-
-add_library(app13 SHARED appFiles/single-thread/stack-overflow/app13.cpp)
-add_library(app14 SHARED appFiles/single-thread/stack-overflow/app14.cpp)
-
-add_library(app17 SHARED appFiles/single-thread/circular/app17.cpp)
-add_library(app18 SHARED appFiles/single-thread/circular/app18.cpp)
-
-add_library(app19 SHARED appFiles/single-thread/failed-call/app19.cpp)
-add_library(app20 SHARED appFiles/single-thread/failed-call/app20.cpp)
-add_library(app21 SHARED appFiles/single-thread/failed-call/app21.cpp)
-
-add_library(app22 SHARED appFiles/single-thread/reentrancy/app22.cpp)
-add_library(app23 SHARED appFiles/single-thread/reentrancy/app23.cpp)
-
-
-set_target_properties(app10 app11 app12 app13 app14 app15 app16 app17 app18 app19 app20 app21 app22 app23
-        PROPERTIES LIBRARY_OUTPUT_DIRECTORY appFiles/compiled)
 
 # adding the Google_Tests_run target
 add_executable(Google_Tests_run
@@ -50,6 +25,5 @@ add_executable(Google_Tests_run
 target_link_libraries(Google_Tests_run gmock gtest gtest_main m ascee asa ave argutil stdc++ pthread rt pbc gmp crypto dl)
 
 add_executable(Google_Mock_run AsceeExecutorTest.cpp)
-
-target_link_libraries(Google_Mock_run gmock gtest gtest_main m ascee argutil stdc++ pthread rt pbc gmp crypto dl)
-
+target_link_libraries(Google_Mock_run gmock gtest gtest_main m ascee_mock argutil stdc++ pthread rt pbc gmp crypto dl)
+target_compile_definitions(Google_Mock_run PUBLIC ASCEE_MOCK_BUILD)

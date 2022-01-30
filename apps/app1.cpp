@@ -1,7 +1,5 @@
-#include <cstdio>
 #include "argc/types.h"
 #include "argc/functions.h"
-#include "ascee/executor/Executor.h"
 
 using namespace argennon;
 using namespace ascee;
@@ -13,7 +11,6 @@ const static int32 balance_index = 0;
 void transfer(long_id from, long_id to, int64 amount, signature_c& sig) {
     //todo: we should check this when we are reading the request and remove this check from here
     if (amount < 0) revert("negative amount");
-
     // loading balance chunk
     load_chunk_long(from & account_mask | 1);
 

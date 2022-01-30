@@ -23,33 +23,40 @@
 #include <string>
 #include <unordered_map>
 #include <memory>
+#include <csetjmp>
 #include <vector>
 
-#include <executor/FailureManager.h>
-#include <arg/primitives.h>
-#include <csetjmp>
+#include "executor/FailureManager.h"
+#include "arg/primitives.h"
 #include "ThreadCpuTimer.h"
 #include "arg/info.h"
 #include "VirtualSigManager.h"
 #include "AppTable.h"
 #include "heap/RestrictedModifier.h"
-#include "../tests/MockModifier_test.h"
 
-//#define MOCK_ASCEE_HEAP_MODIFIER
+// #define ASCEE_MOCK_BUILD
 
-namespace argennon::ascee::runtime {
 // We can not use virtual function since runtime binding can hurt performance. The better option for us is to use
 // templates. However, since the session object needs to be available in almost all argc functions it has to be defined
 // static or the code will really get ugly. (argc function can not be defined as members of a class)
 // Defining session as a static thread_local variable makes using templates a bit tricky. So I decided to use the
 // aliasing technique instead.
-#if defined(MOCK_ASCEE_HEAP_MODIFIER)
-using HeapModifier = argennon::mocking::ascee::MockModifier;
+#if defined(ASCEE_MOCK_BUILD)
+
+#include "mock/heap/MockModifier_test.h"
+
+namespace argennon::ascee::runtime { using HeapModifier = argennon::mocking::ascee::MockModifier; }
 #elif defined(ASCEE_ORACLE_BUILD)
-using HeapModifier = OracleModifier;
+namespace argennon::ascee::runtime { using HeapModifier = OracleModifier; }
 #else
-using HeapModifier = RestrictedModifier;
+
+#include "heap/RestrictedModifier.h"
+
+namespace argennon::ascee::runtime { using HeapModifier = RestrictedModifier; }
 #endif
+
+
+namespace argennon::ascee::runtime {
 
 struct AppRequest {
     AppRequestIdType id;

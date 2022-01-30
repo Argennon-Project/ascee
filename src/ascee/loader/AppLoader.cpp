@@ -40,14 +40,25 @@ AppLoader::~AppLoader() {
 void AppLoader::loadApp(long_id appID) {
     void* handle;
     char* error;
-    auto appFile = libraryPath / ("libapp" + std::to_string(appID) + ".so");
+    auto appLib = libraryPath / ("libapp" + std::to_string(appID) + ".so");
+    auto appSrc = libraryPath / ("app" + std::to_string(appID) + ".cpp");
+    string includePath = "-I include -I ../include";
 
-    printf("loading: %s...\n", appFile.c_str());
+    printf("loading: %s...\n", appLib.c_str());
 
-    handle = dlopen(appFile.c_str(), RTLD_LAZY);
-    if (handle == nullptr) {
-        throw runtime_error(dlerror());
+    handle = dlopen(appLib.c_str(), RTLD_LAZY);
+    if (!handle) {
+        auto cmd = "gcc -std=c++2a " + includePath + " -fPIC -shared -o " +
+                   appLib.string() + " " + appSrc.string();
+        printf("%s\n", cmd.c_str());
+        auto pipe = popen(cmd.c_str(), "r");
+        if (pipe) {
+            pclose(pipe);
+            handle = dlopen(appLib.c_str(), RTLD_LAZY);
+        }
+        if (!handle) throw runtime_error(dlerror());
     }
+
     dlerror(); /* Clear any existing error */
 
     auto dispatcher = (dispatcher_ptr) dlsym(handle, "dispatcher");

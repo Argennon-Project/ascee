@@ -4,8 +4,7 @@ project(ascee)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_C_STANDARD 99)
 
-# Should be compiled as shared lib so apps can find argc functions.
-add_library(ascee SHARED
+set(SOURCE_FILES
         executor/ThreadCpuTimer.cpp
         executor/Executor.cpp
         executor/FailureManager.cpp
@@ -19,4 +18,11 @@ add_library(ascee SHARED
         argc/StringBuffer.cpp
         heap/Chunk.cpp
         heap/RestrictedModifier.cpp
-        executor/AppTable.cpp)
+        executor/AppTable.cpp
+        )
+
+# Should be compiled as shared lib so apps can find argc functions.
+add_library(ascee SHARED ${SOURCE_FILES})
+
+add_library(ascee_mock SHARED ${SOURCE_FILES})
+target_compile_definitions(ascee_mock PUBLIC ASCEE_MOCK_BUILD)

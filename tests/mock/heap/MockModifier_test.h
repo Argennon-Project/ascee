@@ -18,7 +18,7 @@
 #ifndef ARGENNON_CORE_MOCK_MODIFIER_HPP
 #define ARGENNON_CORE_MOCK_MODIFIER_HPP
 
-#include "gmock/gmock.h"
+#include <gmock/gmock.h>
 #include "arg/primitives.h"
 
 namespace argennon::mocking::ascee {
