@@ -4,8 +4,20 @@ project(ArgennonCore)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_C_STANDARD 99)
 
+include(FetchContent)
+FetchContent_Declare(
+        googletest
+        GIT_REPOSITORY https://github.com/google/googletest.git
+        GIT_TAG e2239ee6043f73722e7aa812a459f54a28552929 # release-1.11.0
+)
+
+# For Windows: Prevent overriding the parent project's compiler/linker settings
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(googletest)
+
+# include directories
 include_directories(include src src/ascee)
-include_directories(tests tests/lib/googlemock/include tests/lib/googletest/include)
+include_directories(tests ${gtest_SOURCE_DIR}/include ${gmock_SOURCE_DIR}/include)
 
 file(COPY param DESTINATION .)
 file(COPY param DESTINATION tests)

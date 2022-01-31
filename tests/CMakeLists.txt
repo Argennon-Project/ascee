@@ -1,9 +1,6 @@
 # 'test' is the subproject name
 project(tests)
 
-# 'lib' is the folder with Google Test sources
-add_subdirectory(lib)
-
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_C_STANDARD 99)
 
@@ -21,8 +18,8 @@ add_executable(Google_Tests_run
         validator/RequestSchedulerTest.cpp
         apps/ArgAppTest.cpp)
 
-# linking Google_Tests_run with libraries
 
+# linking Google_Tests_run with libraries
 target_link_libraries(Google_Tests_run gmock gtest gtest_main m ascee asa ave argutil stdc++ pthread rt pbc gmp crypto dl)
 
 add_executable(Google_Mock_run
