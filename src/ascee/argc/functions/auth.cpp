@@ -26,10 +26,6 @@ using namespace ascee;
 using namespace runtime;
 using namespace util;
 
-constexpr uint16 last_reserved_nonce = 7;
-constexpr long_id arg_app_id = 0x1;
-//constexpr long_id arg_app_id = 0x0100000000000000;
-constexpr long_id account_mask = 0xffffffffffff0000;
 constexpr int nonce16_size = int(sizeof(uint16));
 constexpr int decision_nonce_size = int(sizeof(uint16));
 constexpr uint16 nonce16_max = UINT16_MAX;
@@ -67,7 +63,7 @@ bool verifyWithMultiwayNonce(int nonceCount, int32 nonceIndex,
 class Context {
 public:
     Context() : caller(Executor::getSession()->currentCall->appID) {
-        Executor::getSession()->heapModifier.loadContext(arg_app_id);
+        Executor::getSession()->heapModifier.loadContext(arg_app_id_g);
     }
 
     ~Context() {
@@ -92,7 +88,7 @@ bool verifyByAccount(long_id accountID, message_c& msg, signature_c& sig, bool i
     auto spender = context.caller;
     auto& heap = Executor::getSession()->heapModifier;
 
-    heap.loadChunk(accountID & account_mask);
+    heap.loadChunk(accountID & acc_id_mask_g);
     if (!heap.isValid(0, nonce16_size)) return false;
 
     auto decisionNonce = heap.load<uint16>(0);
@@ -115,7 +111,7 @@ bool verifyByAccount(long_id accountID, message_c& msg, signature_c& sig, bool i
     }
 
     // if decisionNonce > LAST_RESERVED_NONCE this account is a normal account which uses a 2 bytes nonce.
-    if (decisionNonce > last_reserved_nonce) {
+    if (decisionNonce >= nonce_start_g) {
         return verifyWithMultiwayNonce(1, 0, spender, msg, sig, invalidateMsg);
     }
 
@@ -132,13 +128,6 @@ bool argc::verify_by_acc_once(long_id account_id, message_c& msg, signature_c& s
     return ret;
 }
 
-bool argc::verify_by_acc(long_id account_id, message_c& msg, signature_c& sig) {
-    Executor::guardArea();
-    auto ret = verifyByAccount(account_id, msg, sig, false);
-    Executor::unGuard();
-    return ret;
-}
-
 bool argc::verify_by_app_once(long_id app_id, message_c& msg) {
     Executor::guardArea();
     auto ret = verifyByApp(app_id, msg, true);
@@ -146,9 +135,15 @@ bool argc::verify_by_app_once(long_id app_id, message_c& msg) {
     return ret;
 }
 
-bool argc::verify_by_app(long_id app_id, message_c& msg) {
-    Executor::guardArea();
-    auto ret = verifyByApp(app_id, msg, false);
-    Executor::unGuard();
-    return ret;
+bool argc::verify_by_acc(long_id account_id, message_c& msg, signature_c& sig) {
+    return verifyByAccount(account_id, msg, sig, false);
 }
+
+bool argc::verify_by_app(long_id app_id, message_c& msg) {
+    return verifyByApp(app_id, msg, false);
+}
+
+bool argc::validate_pk(publickey_c& pk, signature_c& proof) {
+    return true;
+}
+

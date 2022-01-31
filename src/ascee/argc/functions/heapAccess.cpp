@@ -48,6 +48,20 @@ void argc::store_int64(int32 offset, int64 value) {
     Executor::unGuard();
 }
 
+
+void argc::store_byte(int32 offset, byte value) {
+    Executor::guardArea();
+    Executor::getSession()->heapModifier.store<byte>(offset, value);
+    Executor::unGuard();
+}
+
+
+void argc::store_pk(int32 offset, publickey_c& value) {
+    Executor::guardArea();
+    Executor::getSession()->heapModifier.store<publickey_c>(offset, value);
+    Executor::unGuard();
+}
+
 void argc::add_int64_to(int32 offset, int64 amount) {
     Executor::guardArea();
     Executor::getSession()->heapModifier.addInt<int64>(offset, amount);

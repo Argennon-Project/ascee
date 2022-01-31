@@ -50,19 +50,24 @@ void buf_to_string(const string_buffer& buf, string_t &str) {
 }
 */
 
-signature_c argc::sig_match_pattern(string_view_c str, string_view_c start, string_view_c end, int32& pos) {
+signature_c argc::p_scan_sig(string_view_c str, string_view_c start, string_view_c end, int32& pos) {
     return str.matchPattern<signature_c>(start, end, pos);
 }
 
-int64 argc::int64_match_pattern(string_view_c str, string_view_c start, string_view_c end, int32& pos) {
+
+publickey_c argc::p_scan_pk(string_view_c str, string_view_c start, string_view_c end, int32& pos) {
+    return str.matchPattern<publickey_c>(start, end, pos);
+}
+
+int64 argc::p_scan_int64(string_view_c str, string_view_c start, string_view_c end, int32& pos) {
     return str.matchPattern<int64>(start, end, pos);
 }
 
-long_id argc::long_id_match(string_view_c str, string_view_c start, string_view_c end, int32& pos) {
+long_id argc::p_scan_long_id(string_view_c str, string_view_c start, string_view_c end, int32& pos) {
     return str.matchPattern<long_id>(start, end, pos);
 }
 
-string_view_c argc::str_match(string_view_c str, string_view_c start, string_view_c end, int32& pos) {
+string_view_c argc::p_scan_str(string_view_c str, string_view_c start, string_view_c end, int32& pos) {
     return str.matchPattern<string_view_c>(start, end, pos);
 }
 

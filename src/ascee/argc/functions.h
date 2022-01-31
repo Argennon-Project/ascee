@@ -72,13 +72,13 @@ void invoke_deferred(long_id app_id, response_buffer_c& response, string_view_c 
 
 void revert(string_view_c msg);
 
-signature_c sig_match_pattern(string_view_c str, string_view_c start, string_view_c end, int32& pos);
+signature_c p_scan_sig(string_view_c str, string_view_c start, string_view_c end, int32& pos);
 
-int64 int64_match_pattern(string_view_c str, string_view_c start, string_view_c end, int32& pos);
+int64 p_scan_int64(string_view_c str, string_view_c start, string_view_c end, int32& pos);
 
-long_id long_id_match(string_view_c str, string_view_c start, string_view_c end, int32& pos);
+long_id p_scan_long_id(string_view_c str, string_view_c start, string_view_c end, int32& pos);
 
-string_view_c str_match(string_view_c str, string_view_c start, string_view_c end, int32& pos);
+string_view_c p_scan_str(string_view_c str, string_view_c start, string_view_c end, int32& pos);
 
 bool verify_by_app_once(long_id app_id, message_c& msg);
 
@@ -101,6 +101,14 @@ void resize_chunk(int32 new_size);
 string_view_c scan_int64(string_view_c input, string_view_c pattern, int64& output);
 
 string_view_c scan_float64(string_view_c input, string_view_c pattern, float64& output);
+
+void store_byte(int32 offset, byte value);
+
+void store_pk(int32 offset, publickey_c& value);
+
+bool validate_pk(publickey_c& pk, signature_c& proof);
+
+publickey_c p_scan_pk(string_view_c str, string_view_c start, string_view_c end, int32& pos);
 } // namespace argc
 
 #endif // ARGENNON_ARGC_FUNCTIONS_H

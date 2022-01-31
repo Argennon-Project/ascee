@@ -40,8 +40,8 @@ AppLoader::~AppLoader() {
 void AppLoader::loadApp(long_id appID) {
     void* handle;
     char* error;
-    auto appLib = libraryPath / ("libapp" + std::to_string(appID) + ".so");
-    auto appSrc = libraryPath / ("app" + std::to_string(appID) + ".cpp");
+    auto appLib = libraryPath / ("libapp" + (string) appID + ".so");
+    auto appSrc = libraryPath / ("app" + (string) appID + ".cpp");
     string includePath = "-I include -I ../include";
 
     printf("loading: %s...\n", appLib.c_str());

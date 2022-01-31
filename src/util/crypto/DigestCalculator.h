@@ -37,16 +37,40 @@ public:
 
 class DigestCalculator {
 public:
-    void append(uint8_t* binary, size_t len) {};
+    DigestCalculator& append(const uint8_t* binary, size_t len) {
+        printf("len=%ld ", len);
+        for (int i = 0; i < len; ++i) {
+            printf("%x ", binary[i]);
+        }
+        printf("\n");
+        return *this;
+    };
 
     template<typename T>
-    auto& operator<<(const T& value) {
+    auto& append(T value) {
+        return append((byte * ) & value, sizeof(value));
+    };
+
+    auto& operator<<(int32_t value) {
+        return append(value);
+    }
+
+    auto& operator<<(uint64_t value) {
+        return append(value);
+    }
+
+    auto& operator<<(__uint128_t value) {
+        return append(value);
+    }
+
+    auto& operator<<(const Digest& value) {
         return *this;
     }
 
+
     Digest CalculateDigest() { return {}; };
 private:
-    int x;
+    int x = 0;
 };
 
 } // namespace argennon::ascee::runtime

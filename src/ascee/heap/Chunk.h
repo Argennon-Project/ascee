@@ -69,7 +69,12 @@ public:
     bool shrinkSpace();
 
     [[nodiscard]]
-    util::Digest calculateDigest() const { return {}; };
+    util::Digest calculateDigest() const {
+        util::DigestCalculator calculator;
+        calculator << int32(chunkSize);
+        calculator.append(content.get(), chunkSize);
+        return calculator.CalculateDigest();
+    };
 
     [[nodiscard]]
     bool isWritable() const;;

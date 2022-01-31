@@ -20,7 +20,7 @@ file(COPY src/util/PrefixTrie.hpp DESTINATION include/util)
 file(COPY src/util/encoding.h DESTINATION include/util)
 file(COPY src/util/crypto/Keys.h DESTINATION include/util/crypto)
 
-file(COPY tests/appFiles DESTINATION tests)
+file(COPY tests/testdata DESTINATION tests)
 
 add_subdirectory(src/ascee)
 add_subdirectory(src/util)
@@ -28,6 +28,8 @@ add_subdirectory(src/validator)
 add_subdirectory(src/storage)
 add_subdirectory(tests)
 
-add_executable(ascee_run src/main.cpp)
-
+add_executable(ascee_run src/main.cpp apps/app0x100000000000000.cpp)
 target_link_libraries(ascee_run ascee asa ave argutil stdc++ pthread rt pbc gmp crypto dl)
+
+add_executable(signer src/signer.cpp)
+target_link_libraries(signer argutil stdc++ rt pbc gmp crypto dl)

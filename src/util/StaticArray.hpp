@@ -22,6 +22,7 @@
 #include <array>
 #include <cassert>
 #include <stdexcept>
+#include <cstring>
 #include "encoding.h"
 
 namespace argennon::util {
@@ -31,12 +32,14 @@ class StaticArray : public std::array<T, size> {
 public:
     StaticArray() = default;
 
+    StaticArray(const std::array<T, size>& a) : std::array<T, size>(a) {} // NOLINT(google-explicit-constructor)
+
     explicit StaticArray(std::string_view base64) : std::array<T, size>() {
         auto sizeInBytes = size * sizeof(T);
         if (base64DecodeLen(base64.length()) > sizeInBytes) throw std::out_of_range("array is too small");
         auto modified = base64urlDecode(base64.data(), base64.length(), this->data());
         assert(modified <= sizeInBytes);
-        memset(this->data() + modified, 0, sizeInBytes - modified);
+        std::memset(this->data() + modified, 0, sizeInBytes - modified);
     }
 
     std::string toBase64() {
@@ -45,7 +48,7 @@ public:
 
     StaticArray(const StaticArray&) { std::terminate(); }
 
-    StaticArray& operator=(const StaticArray&) = default;
+    StaticArray& operator=(const StaticArray&) = delete;
 
     T* operator&() { // NOLINT(google-runtime-operator)
         return this->data();

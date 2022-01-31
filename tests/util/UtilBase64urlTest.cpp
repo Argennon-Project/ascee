@@ -22,7 +22,7 @@
 using namespace argennon;
 using namespace util;
 
-TEST(UtilBase64utilTest, SimpleTest) {
+TEST(UtilBase64urlTest, SimpleTest) {
     uint8_t binary[] = {0x11, 0x0, 0x4a, 0xff, 0x01};
 
     char buf[10];

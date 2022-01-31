@@ -118,11 +118,15 @@ public:
         return *this;
     }
 
-    StringBuffer& operator<<(const std::string_view& str) {
+    StringBuffer& operator<<(std::string_view str) {
         return append(str);
     }
 
-    StringBuffer& operator<<(int64_t v) {
+    StringBuffer& operator<<(long_id v) {
+        return append(std::string(v));
+    }
+
+    StringBuffer& operator<<(uint64_t v) {
         return append(std::to_string(v));
     }
 

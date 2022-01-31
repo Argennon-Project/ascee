@@ -1,5 +1,5 @@
-// Copyright (c) 2021-2022 aybehrouz <behrouz_ayati@yahoo.com>. All rights
-// reserved. This file is part of the C++ implementation of the Argennon smart
+// Copyright (c) 2021-2022 aybehrouz <behrouz_ayati@yahoo.com>. All rights 
+// reserved. This file is part of the C++ implementation of the Argennon smart 
 // contract Execution Environment (AscEE).
 //
 // This program is free software: you can redistribute it and/or modify it under
@@ -23,7 +23,7 @@
 using namespace argennon;
 using namespace util;
 
-TEST(AsceeIdentifiersTest, SimpleTrie) {
+TEST(PrefixTrieTest, SimpleTrie) {
     struct {
         byte input[16] = {};
         int maxLength = 4;
@@ -169,7 +169,7 @@ TEST(AsceeIdentifiersTest, SimpleTrie) {
 }
 
 
-TEST(AsceeIdentifiersTest, VarUIntTest) {
+TEST(PrefixTrieTest, VarUIntTest) {
     PrefixTrie<uint32_t, 4> varSize({0xd0, 0xf000, 0xfc0000, 0xffffff00});
 
     auto x = varSize.encodeVarUInt(8 * 1024);
@@ -230,7 +230,7 @@ TEST(AsceeIdentifiersTest, VarUIntTest) {
     printf("%s\n", buf.toString().c_str());
 }
 
-TEST(AsceeIdentifiersTest, DifferentTries) {
+TEST(PrefixTrieTest, DifferentTries) {
     uint32_t id;
     int n;
 
@@ -261,7 +261,7 @@ TEST(AsceeIdentifiersTest, DifferentTries) {
     EXPECT_EQ(n, 3);
 }
 
-TEST(AsceeIdentifiersTest, ParseSymbolic) {
+TEST(PrefixTrieTest, ParseSymbolic) {
     PrefixTrie<uint8_t, 1> t({0x10});
 
     uint8_t id;

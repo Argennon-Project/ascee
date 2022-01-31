@@ -60,11 +60,11 @@ private:
 
 class FullID {
 public:
-    constexpr FullID(__int128_t id) : id(id) {} // NOLINT(google-explicit-constructor)
+    constexpr FullID(__uint128_t id) : id(id) {} // NOLINT(google-explicit-constructor)
 
-    FullID(long_id up, long_id down) { id = __int128_t(up) << 64 | down; }
+    FullID(long_id up, long_id down) { id = __uint128_t(up) << 64 | down; }
 
-    operator __int128_t() const { return id; } // NOLINT(google-explicit-constructor)
+    operator __uint128_t() const { return id; } // NOLINT(google-explicit-constructor)
 
     explicit operator std::string() const {
         char buf[128];
@@ -72,9 +72,12 @@ public:
         return {buf};
     };
 private:
-    __int128_t id = 0;
+    __uint128_t id = 0;
 };
 
+constexpr long_id arg_app_id_g = 0x100000000000000;
+constexpr long_id acc_id_mask_g = 0xffffffffffff0000;
+constexpr uint16 nonce_start_g = 8;
 
 } // namespace argennon
 #endif // ASCEE_PRIMITIVES_H

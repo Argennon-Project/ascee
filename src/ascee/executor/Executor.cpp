@@ -63,8 +63,8 @@ void Executor::sig_handler(int sig, siginfo_t* info, void*) {
     // important: session is not valid when sig == SIGALRM
     if (sig != SIGALRM) {
         if (session->guardedArea) {
-            exit(25);
-            //siglongjmp(*session->rootEnvPointer, LOOP_DETECTED);
+            std::cerr << "A signal was raised from guarded area." << std::endl;
+            std::terminate();
         }
         int ret = static_cast<int>(StatusCode::internal_error);
         if (sig == SIGSEGV) ret = static_cast<int>(StatusCode::memory_fault);
@@ -117,7 +117,10 @@ void Executor::unGuard() {
     session->guardedArea = false;
 }
 
+// must be thread-safe
 AppResponse Executor::executeOne(AppRequest* req) {
+    // Do not call initialize() here. It can break thread-safety
+    if (!initialized) throw std::runtime_error("Executor not initialized");
     response_buffer_c response;
     int statusCode;
     session = nullptr;
