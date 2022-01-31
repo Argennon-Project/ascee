@@ -33,7 +33,7 @@ typedef int64_t int64;
 typedef int_fast64_t int64_fast;
 typedef __int128_t int128;
 typedef double float64;
-typedef __float128 float128;
+//typedef __float128 float128;
 typedef uint32_t short_id;
 typedef struct LongID long_id;
 typedef struct FullID full_id;
