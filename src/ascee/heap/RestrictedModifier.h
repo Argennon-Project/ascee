@@ -50,7 +50,7 @@ public:
 
     template<typename T>
     inline
-    void store(int32 offset, T value) { getAccessBlock(offset).write<T>(currentVersion, value); }
+    void store(int32 offset, const T& value) { getAccessBlock(offset).write<T>(currentVersion, value); }
 
     template<typename T>
     inline
@@ -143,7 +143,7 @@ private:
 
         template<typename T>
         inline
-        void write(int16_t version, T value) {
+        void write(int16_t version, const T& value) {
             memcpy(prepareToWrite(version, sizeof(value)), (byte*) &value, sizeof(value));
         }
 

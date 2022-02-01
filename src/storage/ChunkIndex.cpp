@@ -20,7 +20,7 @@
 using namespace argennon;
 using namespace asa;
 using namespace ascee::runtime;
-using std::vector, std::pair;
+using std::vector, std::pair, std::string;
 
 /**
  *
@@ -81,11 +81,11 @@ RestrictedModifier ChunkIndex::buildModifier(const AppRequestInfo::AccessMapType
                         chunkNewSize > 0 && chunkNewSize > chunkBounds.sizeUpperBound ||
                         chunkNewSize <= 0 && -chunkNewSize < chunkBounds.sizeLowerBound) {
                         throw BlockError("invalid sizeBounds for chunk [" +
-                                         std::to_string(appID) + "::" + std::to_string(chunkID) + "]");
+                                         string(appID) + "::" + string(chunkID) + "]");
                     }
                 } catch (const std::out_of_range&) {
                     throw BlockError("missing sizeBounds for chunk ["
-                                     + std::to_string(appID) + "::" + std::to_string(chunkID) + "]");
+                                     + string(appID) + "::" + string(chunkID) + "]");
                 }
             }
 

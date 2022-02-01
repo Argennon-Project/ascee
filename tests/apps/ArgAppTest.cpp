@@ -127,31 +127,42 @@ TEST_F(ArgAppTest, SimpleTransfer) {
     EXPECT_EQ(0xc, content[0]);
     EXPECT_EQ(0, content[1]);
 }
-/*
+
 TEST_F(ArgAppTest, SimpleCreateAcc) {
     AppRequestInfo createReq{
-            .id = 1,
-            .calledAppID = 0x1,
+            .id = 0,
+            .calledAppID = arg_app_id_g,
             .httpRequest = "PUT /balances/0x777 HTTP/1.1\r\n"
                            "Content-Type: application/json; charset=utf-8\r\n"
                            "Content-Length: 57\r\n"
                            "\r\n"
-                           R"({"pk":"kjijdfienjfdsifjksdfjksdfsdfdjsfk","sig":"OcTd6Oa93sNeQpZVoN4sd7BOGGnRxfyDJnuitYpOr_g8dtGcgAX8XH2g7klAD50vhrl299NyEgGEG2FTqIscgwA"})",
+                           R"({"pk":"pz_jr84r5yc-ViuR-_Djst2C6ikRQ3l3TQBfmSaC2O9QWVUAl3cAgCJtI2HVpFog66bezRfVdcso4AeA82wlRgA","sig":"OcTd6Oa93sNeQpZVoN4sd7BOGGnRxfyDJnuitYpOr_g8dtGcgAX8XH2g7klAD50vhrl299NyEgGEG2FTqIscgwA"})",
             .gas = 1000,
-            .appAccessList = {0x1},
+            .appAccessList = {arg_app_id_g},
             .memoryAccessMap = {
-                    {0x1},
+                    {arg_app_id_g},
                     {{{0x777000000000000},
                              {
-                                     {{-1, 0, 2}, {{67, Access::writable, 1}, {2, Access::check_only, 1}, {1, Access::writable, 1}}},
+                                     {{-1, 0, 2}, {{67, Access::writable, 0}, {2, Access::writable, 0}, {65, Access::writable, 0}}},
                              }}}}
     };
 
-    AppLoader::global = std::make_unique<AppLoader>("apps");
+    Page p(46);
+    auto newChunkID = full_id(arg_app_id_g, 0x777000000000000);
+    ChunkIndex index({{newChunkID, &p}}, {{newChunkID},
+                                          {{67, 0}}}, 4);
 
-    Page page11(777);
-    page_1.addMigrant({0x1, 0x14ab000000000001}, new Chunk());
+    RequestScheduler scheduler(1, index);
 
+    scheduler.addRequest(std::move(createReq));
+    scheduler.finalizeRequest(0);
+    scheduler.buildExecDag();
 
+    auto response = Executor::executeOne(scheduler.nextRequest());
 
-}*/
+    printf("<<<******* Response *******>>> \n%s\n<<<************************>>>\n", response.httpResponse.c_str());
+
+    EXPECT_EQ(response.statusCode, 200);
+    EXPECT_EQ((std::string) *p.getNative(),
+              "size: 67, capacity: 67, content: 0x[ 8 0 a7 3f e3 af ce 2b e7 27 3e 56 2b 91 fb f0 e3 b2 dd 82 ea 29 11 43 79 77 4d 0 5f 99 26 82 d8 ef 50 59 55 0 97 77 0 80 22 6d 23 61 d5 a4 5a 20 eb a6 de cd 17 d5 75 cb 28 e0 7 80 f3 6c 25 46 0 ]");
+}
