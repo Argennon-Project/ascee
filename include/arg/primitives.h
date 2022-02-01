@@ -19,7 +19,7 @@
 #define ASCEE_PRIMITIVES_H
 
 #include <cstdint>
-#include <string>
+#include <sstream>
 #include "util/PrefixTrie.hpp"
 
 namespace argennon {
@@ -48,10 +48,11 @@ public:
 
     operator uint64_t() const { return id; } // NOLINT(google-explicit-constructor)
 
+
     explicit operator std::string() const {
-        char buf[64];
-        sprintf(buf, "0x%lx", id);
-        return {buf};
+        std::stringstream buf;
+        buf << "0x" << std::hex << id;
+        return {buf.str()};
     };
 
 private:
@@ -67,10 +68,24 @@ public:
     operator __uint128_t() const { return id; } // NOLINT(google-explicit-constructor)
 
     explicit operator std::string() const {
-        char buf[128];
-        sprintf(buf, "%lx::%lx", uint64_t(id >> 64), uint64_t(id));
-        return {buf};
+        using namespace std;
+        stringstream buf;
+        buf << "0x" << hex << uint64_t(id >> 64) << ":" << hex << uint64_t(id);
+        return {buf.str()};
     };
+
+    /**
+     * gives a 32-bit hash value.
+     * @return
+     */
+    struct Hash {
+        std::size_t operator()(full_id key) const noexcept {
+            uint64_t prime1 = 8602280293;
+            uint64_t prime2 = 17184414901;
+            return uint64_t(key.id >> 64) % prime1 ^ uint64_t(key.id) % prime2;
+        }
+    };
+
 private:
     __uint128_t id = 0;
 };

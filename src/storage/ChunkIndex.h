@@ -47,7 +47,7 @@ public:
 
 private:
     std::vector<std::pair<full_id, Page*>> pageList;
-    std::unordered_map<int128, Chunk*> chunkIndex;
+    std::unordered_map<full_id, Chunk*, full_id::Hash> chunkIndex;
 
     // this map usually is small. That's why we didn't merge it with chunkIndex.
     util::FixedOrderedMap<full_id, ChunkBoundsInfo> sizeBoundsInfo;
