@@ -1,9 +1,15 @@
-This project can be built on linux. You'll need to
-have [cmake](https://cmake.org/install/#download-verification)
-and [pbc](#installing-pbc)
-installed on your system in order to be able to build the project completely.
+This project can be built on linux. You'll need to have [PBC](#installing-pbc)
+library installed on your system in order to be able to build the project
+completely.
 
-For building the project first clone its repository:
+If you are using an IDE, like [CLion](https://www.jetbrains.com/clion/), that
+supports CMake and GoogleTest, after installing [PBC](#installing-pbc) you'll
+just need to clone the project. The IDE will do the rest for you.
+
+If you want to build the project without an IDE you'll need to
+have [CMake](https://cmake.org/download/) >= 3.2 installed on your system.
+
+For building the project without an IDE, first clone its repository:
 
 ```shell
 git clone https://github.com/Argennon-Project/ascee.git

@@ -103,4 +103,57 @@ memory and can be easily parallelized.*
 **Collision detection:** We assume a request that wants to expand a chunk is a
 writer for all offsets such that: `offset < maxSize && offset >= sizeLowerbound`
 . And a request that wants to shrink a chunk is a writer
-for: `offset < sizeUpperBound && offset >= minSize` 
+for: `offset < sizeUpperBound && offset >= minSize`
+
+#### Page
+
+Every page has a native chunk that has the same id as the page. In addition to
+the native chunk, a page can host any number of migrant chunks.
+
+When a page contains migrants, its native chunk can not be migrated. If the page
+does not have any migrants, its native can be migrated and after that, in the
+merkle tree the page will be converted into a special `<<moved>>` page.
+(we don't need to implement this here) When a non-native chunk is migrated to
+another page, it must be removed from the page. (it must NOT be replaced with a
+zero size chunk.)
+
+When a migrant chunk is removed, it will always be replaced with a zero size
+chunk. When a native chunk is removed, if its page does not contain any migrants
+the page will be converted into a special `<<nil>>` page. If the page contains
+other chunks the native chunk will be replaced with a zero size chunk.
+
+**Important results:**
+
+- A zero size chunk proves non-existence of a chunk.
+- A page containing a zero size native chunk can be safely converted into
+  a `<<nil>>` page if it doesn't have migrants.
+
+#### ArgC Types
+
+ArgC has two kinds of types: primitive types and class types. Class types are
+struct like types which always are allocated on the stack. All ArgC types have
+lower case names and use snake_case naming convention. Class types always end
+with `_c` suffix. There are clear differences between primitive and class types:
+
+Primitive types can be passed by value or reference, class types are **always**
+passed by reference.
+
+A function can return a primitive type, but it can not return a class type.
+
+```C
+string_c convert(int32 x);    // compiler error!
+```
+
+Assignment operator `=` is not defined for class types.
+
+All ArgC types must be explicitly initialized. (primitive or class type)
+
+A class type can be initialized by either a constructor or a factory method:
+
+```C
+string_c str("constructor");           // initialization using a constructor
+string_c str = to_string(msg_buffer);  // initialization using a factory method
+```
+
+All ArgC types (primitive or class) are allocated on stack and their lifetime
+ends at the end of the scope in which they are defined. 
