@@ -65,11 +65,18 @@ make install
 ```
 
 By default, the library is installed in `/usr/local/lib`. On some systems, this
-may not be in the library path. One way to fix this is to edit `/etc/ld.so.conf`
-and run `ldconfig` after adding the library path.
+may not be in the library path. One way to fix this is to
+edit `/etc/ld.so.conf`: add the library path to it, and then run `ldconfig`.
 
 Then copy the `include` directory of PBC to your system's include directory:
 
 ```shell
 sudo cp -r <pbc-install>/pbc-0.5.14/include/ /usr/include/pbc
+```
+
+*Note: For installing PBC, you might be able to use the script used for the
+GitHub testing workflow. Navigate to its directory and run `install.sh` script:*
+
+```shell
+cd ascee/.github/workflows/pbc && /bin/sh install.sh
 ```
