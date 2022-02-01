@@ -8,3 +8,5 @@ make
 sudo make install
 echo Creating header files...
 sudo cp -r include /usr/include/pbc
+echo 'usr/local/lib' | sudo tee -a /etc/ld.so.conf
+sudo ldconfig
