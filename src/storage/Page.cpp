@@ -20,16 +20,17 @@
 
 using namespace argennon;
 using namespace asa;
+using std::pair, std::unique_ptr;
 
-void Page::applyDelta(full_id pageID, const Page::Delta& delta, int64_fast blockNumber) {
+void Page::applyDelta(const VarLenID& pageID, const Page::Delta& delta, int64_fast blockNumber) {
     auto keysDigest = util::DigestCalculator();
     auto boundary = delta.content.data() + delta.content.size();
 
     auto reader = native->applyDelta(delta.content.data(), boundary);
     keysDigest << pageID << native->calculateDigest();
-    for (const auto& item: migrants) {
-        reader = item.second->applyDelta(reader, boundary);
-        keysDigest << item.first << item.second->calculateDigest();
+    for (const auto& m: migrants) {
+        reader = m.chunk->applyDelta(reader, boundary);
+        keysDigest << m.id << m.chunk->calculateDigest();
     }
 
     if (keysDigest.CalculateDigest() != delta.finalDigest) {
@@ -42,13 +43,14 @@ void Page::applyDelta(full_id pageID, const Page::Delta& delta, int64_fast block
     version = blockNumber;
 }
 
-Page::Chunk* Page::extractMigrant(full_id id) {
+Page::Migrant Page::extractMigrant(int32_fast index) {
     try {
-        auto ret = migrants.at(id).release();
-        migrants.erase(id);
+        // todo needs optimization
+        auto ret = Migrant(std::move(migrants.at(index).id), migrants.at(index).chunk.release());
+        migrants.erase(migrants.begin() + index);
         return ret;
     } catch (const std::out_of_range&) {
-        throw BlockError("is not a migrant");
+        throw BlockError("invalid migrant index: " + std::to_string(index));
     }
 }
 
@@ -57,20 +59,19 @@ Page::Chunk* Page::extractNative() {
     return native.release();
 }
 
-void Page::addMigrant(full_id id, Chunk* migrant) {
-    if (!migrants.try_emplace(id, migrant).second) {
-        throw BlockError("migrant already exists");
-    }
+void Page::addMigrant(Migrant m) {
+    // we don't need to check to see if a chunk with the same id exists.
+    migrants.emplace_back(std::move(m));
 }
 
 void Page::setWritableFlag(bool writable) {
     native->setWritable(writable);
-    for (const auto& pair: migrants) {
-        pair.second->setWritable(writable);
+    for (const auto& m: migrants) {
+        m.chunk->setWritable(writable);
     }
 }
 
-const std::map<full_id, std::unique_ptr<Page::Chunk>>& Page::getMigrants() {
+const std::vector<Page::Migrant>& Page::getMigrants() {
     return migrants;
 }
 

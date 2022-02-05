@@ -117,8 +117,8 @@ merkle tree the page will be converted into a special `<<moved>>` page.
 another page, it must be removed from the page. (it must NOT be replaced with a
 zero size chunk.)
 
-When a migrant chunk is removed, it will always be replaced with a zero size
-chunk. When a native chunk is removed, if its page does not contain any migrants
+When a migrant chunk is deleted, it will always be replaced with a zero size
+chunk. When a native chunk is deleted, if its page does not contain any migrants
 the page will be converted into a special `<<nil>>` page. If the page contains
 other chunks the native chunk will be replaced with a zero size chunk.
 

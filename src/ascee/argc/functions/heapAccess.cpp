@@ -23,6 +23,8 @@ using namespace argennon;
 using namespace argennon::ascee::runtime;
 using namespace ascee;
 
+constexpr uint64_t first_valid_acc = 0x400000000000000;
+
 // we don't want to call unGuard() when an exception is thrown.
 int64 argc::load_int64(int32 offset) {
     Executor::guardArea();
@@ -38,8 +40,13 @@ bool argc::invalid(int32 offset, int32 size) {
     return ret;
 }
 
-void argc::load_chunk_long(long_id id) {
+void argc::load_local_chunk(long_id id) {
     Executor::getSession()->heapModifier.loadChunk(id);
+}
+
+void argc::load_account_chunk(long_id acc_id, long_id local_id) {
+    if (acc_id < first_valid_acc) throw Executor::Error("invalid account id", StatusCode::bad_request);
+    Executor::getSession()->heapModifier.loadChunk(acc_id, local_id);
 }
 
 void argc::store_int64(int32 offset, int64 value) {

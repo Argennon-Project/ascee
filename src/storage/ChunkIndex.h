@@ -39,7 +39,7 @@ public:
     );
 
     /// this function must be thread-safe
-    Chunk* getChunk(full_id id);;
+    Chunk* getChunk(const full_id& id);;
 
     int32_fast getSizeLowerBound(full_id chunkID);;
 

@@ -33,11 +33,11 @@ public:
         submitGetPageRequest(pageID, page.getBlockNumber(), previousBlock.blockNumber);
     }
 
-    Page::Delta getDelta(full_id pageID, int_fast64_t from, int_fast64_t to, int tries) {
+    Page::Delta getDelta(const VarLenID& pageID, int_fast64_t from, int_fast64_t to, int tries) {
         return Page::Delta();
     }
 
-    void updatePage(full_id pageID, Page& page) {
+    void updatePage(const VarLenID& pageID, Page& page) {
         int tries = 0;
         while (true) {
             // submitGetDeltaRequest() needs to be called before.

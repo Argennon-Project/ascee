@@ -38,13 +38,13 @@ public:
 
     template<typename T, int h>
     inline
-    T loadVarUInt(const util::PrefixTrie<T, h>& trie, int32 offset, int* n = nullptr) {
+    T loadVarUInt(const util::PrefixTrie<T, h>& trie, int32 offset, int32* n = nullptr) {
         return getAccessBlock(offset).readVarUInt(trie, currentVersion, n);
     }
 
     template<typename T, int h>
     inline
-    T loadIdentifier(const util::PrefixTrie<T, h>& trie, int32 offset, int* n = nullptr) {
+    T loadIdentifier(const util::PrefixTrie<T, h>& trie, int32 offset, int32* n = nullptr) {
         return getAccessBlock(offset).readIdentifier(trie, currentVersion, n);
     }
 
@@ -62,7 +62,9 @@ public:
         return getAccessBlock(offset).writeVarUInt(trie, currentVersion, value);
     }
 
-    void loadChunk(long_id chunkID);
+    void loadChunk(long_id localID);
+
+    void loadChunk(long_id accountID, long_id localID);
 
     void loadContext(long_id appID);
 
@@ -109,13 +111,13 @@ private:
 
         template<typename T, int h>
         inline
-        T readIdentifier(const util::PrefixTrie<T, h>& trie, int16_t version, int* n = nullptr) {
+        T readIdentifier(const util::PrefixTrie<T, h>& trie, int16_t version, int32* n = nullptr) {
             return trie.readPrefixCode(prepareToRead(version, size), n, size);
         }
 
         template<typename T, int h>
         inline
-        T readVarUInt(const util::PrefixTrie<T, h>& trie, int16_t version, int* n = nullptr) {
+        T readVarUInt(const util::PrefixTrie<T, h>& trie, int16_t version, int32* n = nullptr) {
             return trie.decodeVarUInt(prepareToRead(version, size), n, size);
         }
 
@@ -244,7 +246,7 @@ public:
         );
     };
 
-    typedef util::FixedOrderedMap<long_id, ChunkInfo> ChunkMap64;
+    typedef util::FixedOrderedMap<long_long_id, ChunkInfo> ChunkMap64;
 
     RestrictedModifier(std::vector<long_id> apps, std::vector<ChunkMap64> chunkMaps) :
             appsAccessMaps(std::move(apps), std::move(chunkMaps)) {}

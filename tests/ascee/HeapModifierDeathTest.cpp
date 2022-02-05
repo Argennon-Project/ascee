@@ -87,8 +87,11 @@ public:
                                    });
 
         vector<HeapModifier::ChunkMap64> appMaps;
-        appMaps.emplace_back(vector<long_id>{10, 11, 100}, std::move(chunksForApp1));
-        appMaps.emplace_back(vector<long_id>{10, 11}, std::move(chunksForApp2));
+        appMaps.emplace_back(vector<long_long_id>{{0, 10},
+                                                  {0, 11},
+                                                  {0, 100}}, std::move(chunksForApp1));
+        appMaps.emplace_back(vector<long_long_id>{{0, 10},
+                                                  {0, 11}}, std::move(chunksForApp2));
 
         modifier = std::make_unique<HeapModifier>(vector<long_id>{1, 2}, std::move(appMaps));
 

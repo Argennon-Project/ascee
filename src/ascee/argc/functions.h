@@ -84,13 +84,9 @@ bool verify_by_app_once(long_id app_id, message_c& msg);
 
 bool verify_by_app(long_id app_id, message_c& msg);
 
-bool verify_by_acc_once(long_id account_id, message_c& msg, signature_c& sig);
-
 bool verify_by_acc(long_id account_id, message_c& msg, signature_c& sig);
 
 bool invalid(int32 offset, int32 size);
-
-void load_chunk_long(long_id id);
 
 void store_int64(int32 offset, int64 value);
 
@@ -109,6 +105,12 @@ void store_pk(int32 offset, publickey_c& value);
 bool validate_pk(publickey_c& pk, signature_c& proof);
 
 publickey_c p_scan_pk(string_view_c str, string_view_c start, string_view_c end, int32& pos);
+
+void load_account_chunk(long_id acc_id, long_id local_id);
+
+void load_local_chunk(long_id id);
+
+bool verify_by_acc_once(long_id account_id, message_c& msg, signature_c& sig, int32& balance_offset);
 } // namespace argc
 
 #endif // ARGENNON_ARGC_FUNCTIONS_H

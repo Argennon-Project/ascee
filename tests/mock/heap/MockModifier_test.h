@@ -61,12 +61,13 @@ public:
 
     int32 getChunkSize();
 
-    MOCK_METHOD(void, loadChunk, (argennon::long_id chunkID));
-    MOCK_METHOD(void, loadContext, (argennon::long_id appID));
+    MOCK_METHOD(void, loadChunk, (long_id accountID, long_id localID));
+    MOCK_METHOD(void, loadChunk, (long_id chunkID));
+    MOCK_METHOD(void, loadContext, (long_id appID));
     MOCK_METHOD(void, writeToHeap, ());
     MOCK_METHOD(void, restoreVersion, (int16_t version));
     MOCK_METHOD(int16_t, saveVersion, ());
-    MOCK_METHOD(void, updateChunkSize, (argennon::int32 newSize));
+    MOCK_METHOD(void, updateChunkSize, (int32 newSize));
 };
 
 } // namespace test::mocking::ascee

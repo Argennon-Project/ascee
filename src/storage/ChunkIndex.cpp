@@ -102,7 +102,7 @@ RestrictedModifier ChunkIndex::buildModifier(const AppRequestInfo::AccessMapType
     return {rawAccessMap.getKeys(), std::move(chunkMapList)};
 }
 
-Chunk* ChunkIndex::getChunk(full_id id) {
+Chunk* ChunkIndex::getChunk(const full_id& id) {
     try {
         return chunkIndex.at(id);
     } catch (const std::out_of_range&) {
@@ -114,7 +114,7 @@ void ChunkIndex::indexPage(const pair<full_id, Page*>& pageInfo) {
     chunkIndex.emplace(pageInfo.first, pageInfo.second->getNative());
 
     for (auto& migrant: pageInfo.second->getMigrants()) {
-        chunkIndex.emplace(migrant.first, migrant.second.get());
+        chunkIndex.emplace(migrant.id, migrant.chunk.get());
     }
 }
 

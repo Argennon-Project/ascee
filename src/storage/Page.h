@@ -37,6 +37,13 @@ namespace argennon::asa {
 class Page {
     using Chunk = ascee::runtime::Chunk;
 public:
+    struct Migrant {
+        VarLenID id;
+        std::unique_ptr<Chunk> chunk;
+
+        Migrant(VarLenID id, Chunk* chunk) : id(std::move(id)), chunk(chunk) {}
+    };
+
     struct Delta {
         std::vector<byte> content;
         util::Digest finalDigest;
@@ -51,7 +58,7 @@ public:
      * @param id
      * @param migrant must be a pointer to a chunk allocated on heap. The page will take the ownership of the pointer.
      */
-    void addMigrant(full_id id, Chunk* migrant);
+    void addMigrant(Migrant m);
 
     byte* getDigest() { return nullptr; };
 
@@ -60,7 +67,7 @@ public:
         return version;
     }
 
-    void applyDelta(full_id pageID, const Delta& delta, int64_fast blockNumber);
+    void applyDelta(const VarLenID& pageID, const Delta& delta, int64_fast blockNumber);
 
     void setWritableFlag(bool writable);
 
@@ -68,9 +75,9 @@ public:
     Chunk* getNative();
 
     [[nodiscard]]
-    const std::map<full_id, std::unique_ptr<Chunk>>& getMigrants();
+    const std::vector<Migrant>& getMigrants();
 
-    Chunk* extractMigrant(full_id id);
+    Migrant extractMigrant(int32_fast index);
 
     Chunk* extractNative();
 
@@ -78,7 +85,7 @@ private:
     int64_fast version = 0;
     bool writableFlag = false;
     std::unique_ptr<Chunk> native;
-    std::map<full_id, std::unique_ptr<Chunk>> migrants;
+    std::vector<Migrant> migrants;
 };
 
 } // namespace argennon::asa

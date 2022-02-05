@@ -37,7 +37,7 @@ PageCache::PageCache(PageLoader& loader) : loader(loader) {
 }
 
 vector<pair<full_id, Page*>>
-PageCache::prepareBlockPages(const BlockInfo& block, const vector<PageAccessInfo>& pageAccessList,
+PageCache::prepareBlockPages(const BlockInfo& block, vector<PageAccessInfo>&& pageAccessList,
                              const vector<MigrationInfo>& chunkMigrations) {
     vector<pair<full_id, Page*>> result;
     result.reserve(pageAccessList.size());
@@ -54,19 +54,22 @@ PageCache::prepareBlockPages(const BlockInfo& block, const vector<PageAccessInfo
     }
 
     // Downloading and updating required pages
-    for (const auto& pair: result) {
+    for (int i = 0; i < pageAccessList.size(); ++i) {
         //todo: this should be done using async
-        loader.updatePage(pair.first, *pair.second);
+        loader.updatePage(pageAccessList[i].pageID, *result[i].second);
     }
 
     for (const auto& migration: chunkMigrations) {
-        auto from = result.at(migration.fromIndex);
-        auto* chunk = from.first == migration.chunkID ?
-                      from.second->extractNative() : from.second->extractMigrant(migration.chunkID);
-        result.at(migration.toIndex).second->addMigrant(migration.chunkID, chunk);
+        Page* from = result.at(migration.fromIndex).second;
+        Page* to = result.at(migration.toIndex).second;
+        auto migrant = migration.chunkIndex == -1 ?
+                       Page::Migrant(std::move(pageAccessList[migration.fromIndex].pageID), from->getNative()) :
+                       from->extractMigrant(migration.chunkIndex);
+
+        result[migration.toIndex].second->addMigrant(std::move(migrant));
     }
 
-    return result;
+    return std::move(result);
 }
 
 void PageCache::commit(const std::vector<PageAccessInfo>& modifiedPages) {

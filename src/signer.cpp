@@ -38,12 +38,12 @@ int main(int argc, char const* argv[]) {
     cout << sk.toString() << "\n";
     cout << pk.toString() << "\n";
 
-    std::string_view msg = R"({"to":0xabc000000000000,"amount":1399,"spender":0x100000000000000,"nonce":11})";
+    std::string_view msg = R"({"to":0xaabc000000000000,"amount":1399,"spender":0x100000000000000,"nonce":11})";
 
     Signature sig = signer.sign(msg, sk);
 
-    cout << sig.toBase64() << "\n";
-    cout << pk.toBase64() << "\n";
+    cout << "sig: " << sig.toBase64() << "\n";
+    cout << "pk: " << pk.toBase64() << "\n";
 
     Signature sigTest("XbmMJ1msy7QCnWwZqTwG5xRWCP9-VxmMWgsqfj80N-8XfF0KJQ5J9GCXKw1hgmu9X7a6o6jckpSTJzIMWokM_AA");
     cout << signer.verify(msg, sigTest, pk) << std::endl;

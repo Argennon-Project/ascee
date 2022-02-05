@@ -29,6 +29,7 @@ using namespace util;
 constexpr int nonce16_size = int(sizeof(uint16));
 constexpr int decision_nonce_size = int(sizeof(uint16));
 constexpr uint16 nonce16_max = UINT16_MAX;
+constexpr long_id nonce_chunk = 0;
 
 static util::CryptoSystem cryptoSigner;
 
@@ -41,9 +42,15 @@ void appendNonceToMsg(message_c& msg, long_id spender, uint32_t nonce) {
 
 static
 bool verifyWithMultiwayNonce(int nonceCount, int32 nonceIndex,
-                             long_id spender, message_c& msg, signature_c& sig, bool invalidate) {
+                             long_id spender, message_c& msg, signature_c& sig,
+                             int32& balanceIndex, bool invalidate) {
     auto& heap = Executor::getSession()->heapModifier;
-    auto pk = heap.load<PublicKey>(nonceIndex + nonceCount * nonce16_size);
+
+    auto pkIndex = nonceIndex + nonceCount * nonce16_size;
+    balanceIndex = pkIndex + public_key_size_k;
+    if (msg.size() == 0) return true;
+
+    auto pk = heap.load<PublicKey>(pkIndex);
 
     if (!invalidate) {
         return cryptoSigner.verify(StringView(msg), sig, pk);
@@ -75,6 +82,7 @@ public:
 
 static
 bool verifyByApp(long_id appID, message_c& msg, bool invalidateMsg) {
+    if (msg.size() == 0) return true;
     if (!invalidateMsg) {
         return Executor::getSession()->virtualSigner.verify(appID, StringView(msg));
     }
@@ -83,36 +91,37 @@ bool verifyByApp(long_id appID, message_c& msg, bool invalidateMsg) {
     return Executor::getSession()->virtualSigner.verifyAndInvalidate(appID, StringView(msg));
 }
 
-bool verifyByAccount(long_id accountID, message_c& msg, signature_c& sig, bool invalidateMsg) {
+bool verifyByAccount(long_id accountID, message_c& msg, signature_c& sig, int32& balanceIndex, bool invalidateMsg) {
     Context context;
     auto spender = context.caller;
     auto& heap = Executor::getSession()->heapModifier;
 
-    heap.loadChunk(accountID & acc_id_mask_g);
+    heap.loadChunk(accountID, nonce_chunk);
     if (!heap.isValid(0, nonce16_size)) return false;
 
     auto decisionNonce = heap.load<uint16>(0);
 
     // decisionNonce == 0 means that the owner of the account is an app
     if (decisionNonce == 0) {
-        auto app = heap.loadIdentifier(gAppTrie, nonce16_size);
+        auto app = heap.loadIdentifier(app_trie_g, nonce16_size, &balanceIndex);
+        balanceIndex += decision_nonce_size;
         return verifyByApp(app, msg, invalidateMsg);
     }
 
     // decisionNonce == 1 means that the owner account has 5 nonce values. This improves parallelization for
     // that account. The nonce will be selected based on the id of the spender.
     if (decisionNonce == 1) {
-        return verifyWithMultiwayNonce(5, decision_nonce_size, spender, msg, sig, invalidateMsg);
+        return verifyWithMultiwayNonce(5, decision_nonce_size, spender, msg, sig, balanceIndex, invalidateMsg);
     }
 
     // decisionNonce == 2 means that the owner account has an 11 way nonce value.
     if (decisionNonce == 2) {
-        return verifyWithMultiwayNonce(11, decision_nonce_size, spender, msg, sig, invalidateMsg);
+        return verifyWithMultiwayNonce(11, decision_nonce_size, spender, msg, sig, balanceIndex, invalidateMsg);
     }
 
     // if decisionNonce > LAST_RESERVED_NONCE this account is a normal account which uses a 2 bytes nonce.
     if (decisionNonce >= nonce_start_g) {
-        return verifyWithMultiwayNonce(1, 0, spender, msg, sig, invalidateMsg);
+        return verifyWithMultiwayNonce(1, 0, spender, msg, sig, balanceIndex, invalidateMsg);
     }
 
     // decisionNonce > 2 && decisionNonce <= LAST_RESERVED_NONCE: non-used decision values. These
@@ -121,9 +130,9 @@ bool verifyByAccount(long_id accountID, message_c& msg, signature_c& sig, bool i
 }
 
 // C does not have default values or overloading we want to keep this api similar to the real argC api.
-bool argc::verify_by_acc_once(long_id account_id, message_c& msg, signature_c& sig) {
+bool argc::verify_by_acc_once(long_id account_id, message_c& msg, signature_c& sig, int32& balance_offset) {
     Executor::guardArea();
-    auto ret = verifyByAccount(account_id, msg, sig, true);
+    auto ret = verifyByAccount(account_id, msg, sig, balance_offset, true);
     Executor::unGuard();
     return ret;
 }
@@ -136,7 +145,8 @@ bool argc::verify_by_app_once(long_id app_id, message_c& msg) {
 }
 
 bool argc::verify_by_acc(long_id account_id, message_c& msg, signature_c& sig) {
-    return verifyByAccount(account_id, msg, sig, false);
+    int32 dummy;
+    return verifyByAccount(account_id, msg, sig, dummy, false);
 }
 
 bool argc::verify_by_app(long_id app_id, message_c& msg) {

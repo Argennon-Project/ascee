@@ -48,7 +48,7 @@ public:
 
     template<typename T>
     auto& append(T value) {
-        return append((byte * ) & value, sizeof(value));
+        return append((uint8_t*) &value, sizeof(value));
     };
 
     auto& operator<<(int32_t value) {
@@ -56,10 +56,6 @@ public:
     }
 
     auto& operator<<(uint64_t value) {
-        return append(value);
-    }
-
-    auto& operator<<(__uint128_t value) {
         return append(value);
     }
 

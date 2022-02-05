@@ -78,39 +78,40 @@ int main(int argc, char const* argv[]) {
     PageLoader pl;
     PageCache pc(pl);
     BlockLoader bl;
-    auto chunkID = full_id(10, 100);
+    long_id app = 0x1000000000000000, acc = 0x2200000000000000, loc = 0x3300000000000000;
+    VarLenID chunkID(std::unique_ptr<byte[]>(new byte[3]{0x10, 0x22, 0x33}));
     ChunkIndex ind(pc.prepareBlockPages({7878}, {{chunkID, true}}, {}),
                    {
-                           {chunkID},
+                           {full_id(chunkID)},
                            {{20, 0}}
                    }, 0);
     RequestScheduler rs(3, ind);
     rs.addRequest({
                           .id = 0, .memoryAccessMap = {
-                    {10},
-                    {{{100}, {
-                                     {{-1, 3}, {{1, Access::read_only, 0}, {4, Access::writable, 0}}},
-                             }}}},
+                    {app},
+                    {{{{acc, loc}}, {
+                                            {{-1, 3}, {{1, Access::read_only, 0}, {4, Access::writable, 0}}},
+                                    }}}},
                           .adjList = {1, 2}
                   });
     rs.addRequest({
                           .id = 1, .memoryAccessMap = {
-                    {10},
-                    {{{100}, {
-                                     {{-1, 2}, {{1, Access::read_only, 1}, {4, Access::read_only, 1}}},
-                             }}}},
+                    {app},
+                    {{{{acc, loc}}, {
+                                            {{-1, 2}, {{1, Access::read_only, 1}, {4, Access::read_only, 1}}},
+                                    }}}},
                           .adjList = {2}
                   });
     rs.addRequest({
                           .id = 2, .memoryAccessMap = {
-                    {10},
-                    {{{100}, {
-                                     {{-1, 2}, {{1, Access::read_only, 2}, {5, Access::writable, 2}}},
-                             }}}}
+                    {app},
+                    {{{{acc, loc}}, {
+                                            {{-1, 2}, {{1, Access::read_only, 2}, {5, Access::writable, 2}}},
+                                    }}}}
                   });;
 
-    auto temp = rs.sortAccessBlocks(8).at(10).at(100);
-    rs.findCollisions(full_id(10, 100), temp.getKeys(), temp.getValues());
+    auto temp = rs.sortAccessBlocks(8).at(app).at({acc, loc});
+    rs.findCollisions(full_id(app, {acc, loc}), temp.getKeys(), temp.getValues());
 
     util::FixedOrderedMap<int, std::string> m1({10, 15, 24}, {"Hi", "Yo", "Bye"});
 

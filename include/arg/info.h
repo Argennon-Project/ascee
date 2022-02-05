@@ -23,8 +23,6 @@
 #include <unordered_set>
 #include "primitives.h"
 #include "util/FixedOrderedMap.hpp"
-#include "util/PrefixTrie.hpp"
-#include "util/crypto/DigestCalculator.h"
 
 namespace argennon {
 
@@ -93,7 +91,7 @@ struct BlockAccessInfo {
 
 struct AppRequestInfo {
     using AccessMapType = util::FixedOrderedMap<long_id,
-            util::FixedOrderedMap<long_id, util::FixedOrderedMap<int32, BlockAccessInfo>>>;
+            util::FixedOrderedMap<long_long_id, util::FixedOrderedMap<int32, BlockAccessInfo>>>;
     /**
      *  The unique identifier of a request in a block. It must be a 32 bit integer in the interval [0,n), where n is
      *  the total number of requests of the block. Obviously any integer in the interval should be assigned to
@@ -149,12 +147,12 @@ struct AppRequestInfo {
 };
 
 struct PageAccessInfo {
-    full_id pageID;
+    VarLenID pageID;
     bool isWritable;
 };
 
 struct MigrationInfo {
-    full_id chunkID;
+    int32_fast chunkIndex;
     /// The index of the page that the chunk should be migrated from. Here, index means the sequence number of the
     /// page in the PageAccessInfo list. The sequence numbers starts from zero.
     int32_fast fromIndex;
@@ -178,11 +176,6 @@ public:
 
     [[nodiscard]] const char* what() const noexcept override { return message.c_str(); }
 };
-
-inline const util::PrefixTrie<uint16_t, 2> gNonceTrie({0xe0, 0xff00});
-inline const util::PrefixTrie<uint64_t, 6> gAppTrie({});
-inline const util::PrefixTrie<uint32_t, 4> gVarSizeTrie({0xd0, 0xf000, 0xfc0000, 0xffffff00});
-
 
 } // namespace argennon
 #endif // ARGENNON_INFO_H

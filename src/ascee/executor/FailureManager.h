@@ -32,7 +32,7 @@ public:
     FailureManager(std::unordered_set<InvocationID> stackFailures,
                    std::unordered_set<InvocationID> cpuTimeFailures);
 
-    int_fast32_t nextInvocation();
+    int32_fast nextInvocation();
 
     void completeInvocation();
 

@@ -55,7 +55,7 @@ public:
      * @param maxLength
      * @return
      */
-    T readPrefixCode(const byte* binary, int* len = nullptr, int maxLength = height) const {
+    T readPrefixCode(const byte* binary, int32_t* len = nullptr, int maxLength = height) const {
         T id = 0;
         if (maxLength > height) maxLength = height;
         for (int i = 0; i < maxLength; ++i) {
@@ -69,6 +69,13 @@ public:
         throw std::out_of_range("readPrefixCode: invalid identifier");
     }
 
+    T readPrefixCode(const byte** const binary, int maxLength = height) const {
+        int len = 0;
+        auto ret = readPrefixCode(*binary, &len, maxLength);
+        *binary += len;
+        return ret;
+    }
+
     /**
      * reads a prefix code from a data type which is not a byte*, assuming the data type contains a fixed-length
      * representation of the prefix code. That means the root of the tree is written in the highest order byte
@@ -78,7 +85,7 @@ public:
      * @param maxLength
      * @return
      */
-    T readPrefixCode(T binary, int* len = nullptr, int maxLength = height) const {
+    T readPrefixCode(T binary, int32_t* len = nullptr, int maxLength = height) const {
         if (maxLength > height) maxLength = height;
         for (int i = 0; i < maxLength; ++i) {
             if (binary < boundary[i]) {
@@ -118,11 +125,11 @@ public:
         if (n != i) throw std::invalid_argument("parsePrefixCode: input too long");
     }
 
-    T encodeVarUInt(T value, int* len = nullptr) const {
+    T encodeVarUInt(T value, int32_t* len = nullptr) const {
         for (int i = 0; i < height; ++i) {
             if (value < sum[i]) {
                 auto bound = trie[i];
-                if (len != nullptr) *len = i + 1;
+                if (len != nullptr) *len = int32_t(i + 1);
                 return (bound - (sum[i] - value)) << ((sizeof(T) - i - 1) * 8);
             }
         }
@@ -140,7 +147,7 @@ public:
      * @return
      */
     template<typename U>
-    T decodeVarUInt(U binary, int* len = nullptr, int maxLength = height) const {
+    T decodeVarUInt(U binary, int32_t* len = nullptr, int maxLength = height) const {
         int n;
         T code = readPrefixCode(binary, &n, maxLength);
         code >>= (sizeof(T) - n) * 8;

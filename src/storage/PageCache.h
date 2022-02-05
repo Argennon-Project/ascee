@@ -38,7 +38,7 @@ public:
     std::vector<std::pair<full_id, Page*>>
     prepareBlockPages(
             const BlockInfo& block,
-            const std::vector<PageAccessInfo>& pageAccessList,
+            std::vector<PageAccessInfo>&& pageAccessList,
             const std::vector<MigrationInfo>& chunkMigrations
     );
 
@@ -51,7 +51,7 @@ public:
     void rollback(const std::vector<PageAccessInfo>& modifiedPages) {}
 
 private:
-    std::unordered_map<full_id, Page, full_id::Hash> cache;
+    std::unordered_map<VarLenID, Page, VarLenID::Hash> cache;
     PageLoader& loader;
 };
 

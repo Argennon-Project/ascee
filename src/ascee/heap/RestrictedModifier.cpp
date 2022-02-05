@@ -38,11 +38,15 @@ void RestrictedModifier::restoreVersion(int16_t version) {
     currentVersion = version;
 }
 
-void RestrictedModifier::loadChunk(long_id chunkID) {
+void RestrictedModifier::loadChunk(long_id localID) {
+    loadChunk(0, localID);
+}
+
+void RestrictedModifier::loadChunk(long_id accountID, long_id localID) {
     try {
-        currentChunk = &chunks->at(chunkID);
+        currentChunk = &chunks->at({accountID, localID});
     } catch (const std::out_of_range&) {
-        throw std::out_of_range("chunk[" + (std::string) chunkID + "] is not defined");
+        throw std::out_of_range("chunk[" + (std::string) accountID + "." + (std::string) localID + "] is not defined");
     }
 }
 
@@ -125,7 +129,9 @@ bool RestrictedModifier::AccessBlock::addVersion(int16_t version) {
 
 byte* RestrictedModifier::AccessBlock::prepareToRead(int16_t version, int32 readSize) {
     if (readSize > size) throw std::out_of_range("read size");
-    if (accessType.denies(BlockAccessInfo::Access::Operation::read)) throw std::out_of_range("not readable");
+    if (accessType.denies(BlockAccessInfo::Access::Operation::read)) {
+        throw std::out_of_range("access block is not readable");
+    }
     syncTo(version);
     return versionList.empty() ? heapLocation.get(readSize) : versionList.back().getContent();
 }

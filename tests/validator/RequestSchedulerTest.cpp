@@ -28,6 +28,9 @@ using namespace asa;
 
 using Access = BlockAccessInfo::Access::Type;
 
+constexpr long_long_id chunk1_local_id(0x6400000000000000, 0x0500000000000000);
+constexpr long_id app_1_id(0x1000000000000000);
+
 class RequestSchedulerTest : public ::testing::Test {
 protected:
     PageLoader pl{};
@@ -37,10 +40,14 @@ protected:
 public:
     RequestSchedulerTest()
             : pc(pl),
-              singleChunk(pc.prepareBlockPages({10}, {{{10, 100}, true}}, {}),
-                          {{{10, 100}},
-                           {{8,  3}}}, 0) {
-        singleChunk.getChunk({10, 100})->setSize(5);
+              singleChunk(
+                      pc.prepareBlockPages({10},
+                                           {{VarLenID(std::unique_ptr<byte[]>(new byte[4]{0x10, 0x64, 0x5, 0})), true}},
+                                           {}),
+                      {{{app_1_id, chunk1_local_id}},
+                       {{8,        3}}},
+                      0) {
+        singleChunk.getChunk({app_1_id, chunk1_local_id})->setSize(5);
     }
 };
 
@@ -48,82 +55,83 @@ TEST_F(RequestSchedulerTest, CollisionsFromRequests) {
     RequestScheduler scheduler(14, singleChunk);
 
     scheduler.addRequest({.id = 12, .memoryAccessMap = {
-            {10},
-            {{{100}, {
-                             {{-3}, {{0, Access::read_only, 12},}},
-                     }}}},
+            {app_1_id},
+            {{{chunk1_local_id}, {
+                                         {{-3}, {{0, Access::read_only, 12},}},
+                                 }}}},
                                  .adjList = {}});
     scheduler.addRequest({.id = 13, .memoryAccessMap = {
-            {10},
-            {{{100}, {
-                             {{-2}, {{1, Access::read_only, 13},}},
-                     }}}},
+            {app_1_id},
+            {{{chunk1_local_id}, {
+                                         {{-2}, {{1, Access::read_only, 13},}},
+                                 }}}},
                                  .adjList = {}});
     scheduler.addRequest({.id = 10, .memoryAccessMap = {
-            {10},
-            {{{100}, {
-                             {{-1}, {{6, Access::writable, 10},}},
-                     }}}},
+            {app_1_id},
+            {{{chunk1_local_id}, {
+                                         {{-1}, {{6, Access::writable, 10},}},
+                                 }}}},
                                  .adjList = {13, 11}});
     scheduler.addRequest({.id = 11, .memoryAccessMap = {
-            {10},
-            {{{100}, {
-                             {{-1}, {{-3, Access::writable, 11},}},
-                     }}}},
+            {app_1_id},
+            {{{chunk1_local_id}, {
+                                         {{-1}, {{-3, Access::writable, 11},}},
+                                 }}}},
                                  .adjList = {13}});
     scheduler.addRequest({.id = 4, .memoryAccessMap = {
-            {10},
-            {{{100}, {
-                             {{0}, {{2, Access::read_only, 4},}},
-                     }}}},
+            {app_1_id},
+            {{{chunk1_local_id}, {
+                                         {{0}, {{2, Access::read_only, 4},}},
+                                 }}}},
                                  .adjList = {}});
     scheduler.addRequest({.id = 1, .memoryAccessMap = {
-            {10},
-            {{{100}, {
-                             {{1}, {{2, Access::writable, 1},}},
-                     }}}},
+            {app_1_id},
+            {{{chunk1_local_id}, {
+                                         {{1}, {{2, Access::writable, 1},}},
+                                 }}}},
                                  .adjList = {4, 2, 5}});
     scheduler.addRequest({.id = 5, .memoryAccessMap = {
-            {10},
-            {{{100}, {
-                             {{2}, {{3, Access::read_only, 5},}},
-                     }}}},
+            {app_1_id},
+            {{{chunk1_local_id}, {
+                                         {{2}, {{3, Access::read_only, 5},}},
+                                 }}}},
                                  .adjList = {10, 11}});
     scheduler.addRequest({.id = 2, .memoryAccessMap = {
-            {10},
-            {{{100}, {
-                             {{2}, {{2, Access::writable, 2},}},
-                     }}}},
+            {app_1_id},
+            {{{chunk1_local_id}, {
+                                         {{2}, {{2, Access::writable, 2},}},
+                                 }}}},
                                  .adjList = {5, 10, 11}});
     scheduler.addRequest({.id = 3, .memoryAccessMap = {
-            {10},
-            {{{100}, {
-                             {{4}, {{2, Access::writable, 3},}},
-                     }}}},
+            {app_1_id},
+            {{{chunk1_local_id}, {
+                                         {{4}, {{2, Access::writable, 3},}},
+                                 }}}},
                                  .adjList = {5, 6, 10, 11}});
     scheduler.addRequest({.id = 6, .memoryAccessMap = {
-            {10},
-            {{{100}, {
-                             {{5}, {{1, Access::read_only, 6},}},
-                     }}}},
+            {app_1_id},
+            {{{chunk1_local_id}, {
+                                         {{5}, {{1, Access::read_only, 6},}},
+                                 }}}},
                                  .adjList = {10, 11}});
     scheduler.addRequest({.id = 7, .memoryAccessMap = {
-            {10},
-            {{{100}, {
-                             {{6}, {{2, Access::read_only, 7},}},
-                     }}}},
+            {app_1_id},
+            {{{chunk1_local_id}, {
+                                         {{6}, {{2, Access::read_only, 7},}},
+                                 }}}},
                                  .adjList = {11}});
     scheduler.addRequest({.id = 8, .memoryAccessMap = {
-            {10},
-            {{{100}, {
-                             {{7}, {{1, Access::read_only, 8},}},
-                     }}}},
+            {app_1_id},
+            {{{chunk1_local_id}, {
+                                         {{7}, {{1, Access::read_only, 8},}},
+                                 }}}},
                                  .adjList = {11}});
 
 
     auto sortedMap = scheduler.sortAccessBlocks(8);
 
-    scheduler.findCollisions({10, 100}, sortedMap.at(10).at(100).getKeys(), sortedMap.at(10).at(100).getValues());
+    scheduler.findCollisions({app_1_id, chunk1_local_id}, sortedMap.at(app_1_id).at(chunk1_local_id).getKeys(),
+                             sortedMap.at(app_1_id).at(chunk1_local_id).getValues());
 }
 
 TEST_F(RequestSchedulerTest, SimpleDagFull) {
@@ -134,12 +142,12 @@ TEST_F(RequestSchedulerTest, SimpleDagFull) {
             {
                     .id = 0,
                     .memoryAccessMap = {
-                            {10},
-                            {{{100}, {
-                                             {{-2, 3},
-                                                     {{1, Access::read_only, 0},
-                                                             {2, Access::writable, 0}}},
-                                     }}}},
+                            {app_1_id},
+                            {{{chunk1_local_id}, {
+                                                         {{-2, 3},
+                                                                 {{1, Access::read_only, 0},
+                                                                         {2, Access::writable, 0}}},
+                                                 }}}},
                     .adjList = {2}
             });
 
@@ -147,12 +155,12 @@ TEST_F(RequestSchedulerTest, SimpleDagFull) {
             {
                     .id = 1,
                     .memoryAccessMap = {
-                            {10},
-                            {{{100}, {
-                                             {{-2, 0},
-                                                     {{1, Access::read_only, 1},
-                                                             {1, Access::read_only, 1}}},
-                                     }}}},
+                            {app_1_id},
+                            {{{chunk1_local_id}, {
+                                                         {{-2, 0},
+                                                                 {{1, Access::read_only, 1},
+                                                                         {1, Access::read_only, 1}}},
+                                                 }}}},
                     .adjList = {}
             });
 
@@ -160,19 +168,20 @@ TEST_F(RequestSchedulerTest, SimpleDagFull) {
             {
                     .id = 2,
                     .memoryAccessMap = {
-                            {10},
-                            {{{100}, {
-                                             {{-2, 0, 3},
-                                                     {{1, Access::read_only, 2},
-                                                             {1, Access::int_additive, 2},
-                                                             {2, Access::read_only, 2}}},
-                                     }}}},
+                            {app_1_id},
+                            {{{chunk1_local_id}, {
+                                                         {{-2, 0, 3},
+                                                                 {{1, Access::read_only, 2},
+                                                                         {1, Access::int_additive, 2},
+                                                                         {2, Access::read_only, 2}}},
+                                                 }}}},
                     .adjList = {1}
             });
 
     auto sortedMap = scheduler.sortAccessBlocks(8);
 
-    scheduler.findCollisions({10, 100}, sortedMap.at(10).at(100).getKeys(), sortedMap.at(10).at(100).getValues());
+    scheduler.findCollisions({app_1_id, chunk1_local_id}, sortedMap.at(app_1_id).at(chunk1_local_id).getKeys(),
+                             sortedMap.at(app_1_id).at(chunk1_local_id).getValues());
 
     for (int i = 0; i < numOfRequests; ++i) {
         scheduler.finalizeRequest(i);
@@ -299,7 +308,7 @@ TEST_F(RequestSchedulerTest, ExecutionDag) {
 TEST(RequestSchedulerTest, SimpleCollisionDetection) {
     PageLoader pl{};
     heap::PageCache pc(pl);
-    heap::PageCache::ChunkIndex index(pc, {10}, {{100, true}},
+    heap::PageCache::ChunkIndex index(pc, {app_1_id}, {{100, true}},
                                       {{100},
                                        {{8, 3}}});
 
