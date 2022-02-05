@@ -29,6 +29,7 @@ namespace argennon {
 /// int represents a signed integer with the most efficient size for the platform which MUST NOT be smaller than 32 bits.
 typedef uint8_t byte;
 typedef uint16_t uint16;
+typedef int16_t int16;
 typedef int32_t int32;
 typedef uint32_t uint32;
 typedef int_fast32_t int32_fast;
@@ -145,14 +146,16 @@ class VarLenID {
 public:
     explicit VarLenID(std::unique_ptr<byte[]>&& binary) : binary(std::move(binary)) {}
 
-/*
-    VarLenID(std::unique_ptr<byte[]>&& binary, int maxLen, int* actualLen) : binary(std::move(binary)) {
-        const byte* ptr = binary.get();
-        app_trie_g.readPrefixCode(&ptr, maxLen);
-        account_trie_g.readPrefixCode(&ptr, maxLen);
-        local_trie_g.readPrefixCode(&ptr, maxLen);
+    VarLenID(const byte** binary, const byte* end) {
+        auto start = *binary;
+        app_trie_g.readPrefixCode(binary, end);
+        account_trie_g.readPrefixCode(binary, end);
+        local_trie_g.readPrefixCode(binary, end);
+        auto len = *binary - start;
+        this->binary = std::make_unique<byte[]>(len);
+        memcpy(this->binary.get(), binary, len);
     }
-*/
+
     VarLenID(const VarLenID& other) {
         auto len = other.getLen();
         binary = std::make_unique<byte[]>(len);
@@ -170,6 +173,7 @@ public:
     }
 
     bool operator==(const VarLenID& rhs) const {
+        //todo can be optimized
         auto len = getLen();
         for (int i = 0; i < len; ++i) {
             if (binary[i] != rhs.binary[i]) return false;

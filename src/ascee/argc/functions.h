@@ -98,10 +98,6 @@ string_view_c scan_int64(string_view_c input, string_view_c pattern, int64& outp
 
 string_view_c scan_float64(string_view_c input, string_view_c pattern, float64& output);
 
-void store_byte(int32 offset, byte value);
-
-void store_pk(int32 offset, publickey_c& value);
-
 bool validate_pk(publickey_c& pk, signature_c& proof);
 
 publickey_c p_scan_pk(string_view_c str, string_view_c start, string_view_c end, int32& pos);
@@ -111,6 +107,10 @@ void load_account_chunk(long_id acc_id, long_id local_id);
 void load_local_chunk(long_id id);
 
 bool verify_by_acc_once(long_id account_id, message_c& msg, signature_c& sig, int32& balance_offset);
+
+void store_int16(int32 offset, int16 value);
+
+void store_pk(int32 offset, int32 index, publickey_c& value);
 } // namespace argc
 
 #endif // ARGENNON_ARGC_FUNCTIONS_H

@@ -19,13 +19,13 @@ bool create_app_account(long_id address, long_id owner_id) {
     return true;
 }
 */
-bool update_normal_account(long_id address, publickey_c& pk, signature_c& proof) {
+bool create_normal_account(long_id address, publickey_c& pk, signature_c& proof) {
     if (!validate_pk(pk, proof)) return false;
     load_account_chunk(address, 0);
     if (!invalid(0, 2)) return false;
     resize_chunk(2 + sizeof(pk));
-    store_byte(0, 8);
-    store_pk(2, pk);
+    store_int16(0, 8);
+    store_pk(0, 2, pk);
     return true;
 }
 
@@ -78,7 +78,7 @@ DEF_ARGC_DISPATCHER {
         long_id address = p_scan_long_id(request, "/balances/", "/", position);
         publickey_c pk = p_scan_pk(request, R"({"pk":")", "\"", position);
         signature_c proof = p_scan_sig(request, R"("sig":")", "\"", position);
-        if (update_normal_account(address, pk, proof)) {
+        if (create_normal_account(address, pk, proof)) {
             return HTTP_OK;
         } else {
             return 300;

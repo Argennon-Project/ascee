@@ -42,6 +42,9 @@ public:
         std::unique_ptr<Chunk> chunk;
 
         Migrant(VarLenID id, Chunk* chunk) : id(std::move(id)), chunk(chunk) {}
+
+        explicit Migrant(VarLenID id) : id(std::move(id)), chunk(std::make_unique<Chunk>()) {}
+
     };
 
     struct Delta {

@@ -56,16 +56,16 @@ void argc::store_int64(int32 offset, int64 value) {
 }
 
 
-void argc::store_byte(int32 offset, byte value) {
+void argc::store_int16(int32 offset, int16 value) {
     Executor::guardArea();
-    Executor::getSession()->heapModifier.store<byte>(offset, value);
+    Executor::getSession()->heapModifier.store<int16>(offset, value);
     Executor::unGuard();
 }
 
 
-void argc::store_pk(int32 offset, publickey_c& value) {
+void argc::store_pk(int32 offset, int32 index, publickey_c& value) {
     Executor::guardArea();
-    Executor::getSession()->heapModifier.store<publickey_c>(offset, value);
+    Executor::getSession()->heapModifier.store<publickey_c>(offset, value, index);
     Executor::unGuard();
 }
 

@@ -23,10 +23,21 @@ using namespace asa;
 using std::pair, std::unique_ptr;
 
 void Page::applyDelta(const VarLenID& pageID, const Page::Delta& delta, int64_fast blockNumber) {
-    auto keysDigest = util::DigestCalculator();
-    auto boundary = delta.content.data() + delta.content.size();
+    if (delta.content.empty()) return;
+    const byte* boundary = delta.content.data() + delta.content.size();
+    const byte* reader = delta.content.data();
+    int32_fast index = 0;
+    while (auto indexDiff = gVarSizeTrie.decodeVarUInt(&reader, boundary) != 0) {
+        index += indexDiff;
+        if (index == migrants.size()) {
+            migrants.emplace_back(VarLenID(&reader, boundary));
+        } else {
+            migrants.at(index).id = VarLenID(&reader, boundary);
+        }
+    }
 
-    auto reader = native->applyDelta(delta.content.data(), boundary);
+    auto keysDigest = util::DigestCalculator();
+    reader = native->applyDelta(reader, boundary);
     keysDigest << pageID << native->calculateDigest();
     for (const auto& m: migrants) {
         reader = m.chunk->applyDelta(reader, boundary);
@@ -38,7 +49,7 @@ void Page::applyDelta(const VarLenID& pageID, const Page::Delta& delta, int64_fa
         throw std::invalid_argument("final digest of page[" + (std::string) pageID + "] is not valid");
     }
 
-    // = is needed for creating new pages
+    // blockNumber == version is needed for creating new pages
     assert(blockNumber >= version);
     version = blockNumber;
 }

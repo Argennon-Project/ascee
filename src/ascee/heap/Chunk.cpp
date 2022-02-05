@@ -85,37 +85,29 @@ bool Chunk::shrinkSpace() {
     return true;
 }
 
-
-static
-auto readVarSize(const byte*& readPtr, const byte* boundary) {
-    auto len = 0;
-    auto size = gVarSizeTrie.decodeVarUInt(readPtr, &len, int(boundary - readPtr));
-    readPtr += len;
-    return size;
-}
-
 /**
- * @param expectedDigest
- * @param delta format: [ chunkSize (offsetDiff dataSize data)* ]
+ * @param delta format: [ chunkSize (offsetDiff dataSize data)* 0 ]
  * offsetDiff is the difference between the end of the last data block and the start of the current data block + 1.
- * type of all numbers are varSize encoded with gVarSizeTrie PrefixTrie.
+ * 0 indicated the end of the delta
+ * type of all numbers are varSize encoded with var_size_trie_g PrefixTrie.
  * chunkSize will be XORed with the current chunk size.
- * offsetDiff and dataSize are used as they are without XORing.
- * data is the data to be copied in chunk
- * @param maxLen
+ * offsetDiff and dataSize are used without XORing.
+ * data is the data to be copied in the chunk
+ *
+ * @return the updated delta pointer in such a way that it points to the unconsumed part of the delta array.
  */
 const byte* Chunk::applyDelta(const byte* delta, const byte* boundary) {
     if (delta >= boundary) return delta;
 
-    auto size = chunkSize ^ (int32) readVarSize(delta, boundary);
+    auto size = chunkSize ^ (int32) gVarSizeTrie.decodeVarUInt(&delta, boundary);
     reserveSpace(size);
 
     int32_fast offset = 0;
     while (delta < boundary) {
-        auto diff = readVarSize(delta, boundary);
+        auto diff = gVarSizeTrie.decodeVarUInt(&delta, boundary);
         if (diff == 0) break;
         offset += diff - 1;
-        auto blockSize = readVarSize(delta, boundary);
+        auto blockSize = gVarSizeTrie.decodeVarUInt(&delta, boundary);
         if (offset + blockSize > size) {
             // For being able to remove deltas we need this. Do not change it!
             if (offset < size) blockSize = size - offset;

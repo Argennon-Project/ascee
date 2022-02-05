@@ -69,9 +69,15 @@ public:
         throw std::out_of_range("readPrefixCode: invalid identifier");
     }
 
-    T readPrefixCode(const byte** const binary, int maxLength = height) const {
+    /**
+     *
+     * @param binary
+     * @param end indcates the end of the byte array. *end will never be accessed.
+     * @return
+     */
+    T readPrefixCode(const byte** binary, const byte* end = nullptr) const {
         int len = 0;
-        auto ret = readPrefixCode(*binary, &len, maxLength);
+        auto ret = end == nullptr ? readPrefixCode(*binary, &len) : readPrefixCode(*binary, &len, int(end - *binary));
         *binary += len;
         return ret;
     }
@@ -155,6 +161,13 @@ public:
         auto bound = trie[n - 1];
         if (len != nullptr) *len = n;
         return sum[n - 1] + code - bound;
+    }
+
+    T decodeVarUInt(const byte** binary, const byte* end = nullptr) const {
+        int len = 0;
+        auto ret = end == nullptr ? decodeVarUInt(*binary, &len) : decodeVarUInt(*binary, &len, int(end - *binary));
+        *binary += len;
+        return ret;
     }
 
     void writeBigEndian(byte* dest, T value, int n) const {

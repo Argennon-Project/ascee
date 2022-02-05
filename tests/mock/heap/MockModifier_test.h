@@ -43,7 +43,7 @@ public:
 
     template<typename T>
     inline
-    void store(uint32 offset, T value) {}
+    void store(uint32 offset, T value, uint32 index = 0) {}
 
     template<typename T>
     inline

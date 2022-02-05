@@ -64,7 +64,8 @@ TEST_F(ArgAppTest, SimpleTransfer) {
     Page page_1(777);
     VarLenID fromPageID(std::unique_ptr<byte[]>(new byte[4]{0x1, 0x95, 0xab, 0}));
     page_1.applyDelta(fromPageID,
-                      Page::Delta{.content = {67 + 8, 1, 69, 11, 0,
+                      Page::Delta{.content = {0,
+                                              67 + 8, 1, 69, 11, 0,
                               // pk:
                                               167, 63, 227, 175, 206, 43, 231, 39, 62, 86, 43, 145, 251, 240, 227, 178,
                                               221, 130, 234, 41, 17, 67, 121, 119, 77, 0, 95, 153, 38, 130, 216, 239,
@@ -79,6 +80,7 @@ TEST_F(ArgAppTest, SimpleTransfer) {
     VarLenID toPageID(std::unique_ptr<byte[]>(new byte[4]{0x1, 0xaa, 0xbc, 0}));
     page_2.applyDelta(toPageID,
                       {{
+                               0,
                                67 + 8, 1, 2, 45, 45,
                                66, 2, 1, 1
                        },
@@ -116,12 +118,12 @@ TEST_F(ArgAppTest, SimpleTransfer) {
     EXPECT_EQ((std::string) *page_2.getNative(),
               "size: 75, capacity: 75, content: 0x[ 2d 2d 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 78 6 0 0 0 0 0 0 ]");
 }
-/*
+
 TEST_F(ArgAppTest, SimpleCreateAcc) {
     AppRequestInfo createReq{
             .id = 0,
             .calledAppID = arg_app_id_g,
-            .httpRequest = "PUT /balances/0x777 HTTP/1.1\r\n"
+            .httpRequest = "PUT /balances/0x9777 HTTP/1.1\r\n"
                            "Content-Type: application/json; charset=utf-8\r\n"
                            "Content-Length: 57\r\n"
                            "\r\n"
@@ -130,14 +132,14 @@ TEST_F(ArgAppTest, SimpleCreateAcc) {
             .appAccessList = {arg_app_id_g},
             .memoryAccessMap = {
                     {arg_app_id_g},
-                    {{{0x777000000000000},
+                    {{{{0x9777000000000000, 0}},
                              {
-                                     {{-1, 0, 2}, {{67, Access::writable, 0}, {2, Access::writable, 0}, {65, Access::writable, 0}}},
+                                     {{-1, 0}, {{67, Access::writable, 0}, {67, Access::writable, 0}}},
                              }}}}
     };
 
     Page p(46);
-    auto newChunkID = full_id(arg_app_id_g, 0x777000000000000);
+    auto newChunkID = full_id(arg_app_id_g, {0x9777000000000000, 0});
     ChunkIndex index({{newChunkID, &p}}, {{newChunkID},
                                           {{67, 0}}}, 4);
 
@@ -155,4 +157,3 @@ TEST_F(ArgAppTest, SimpleCreateAcc) {
     EXPECT_EQ((std::string) *p.getNative(),
               "size: 67, capacity: 67, content: 0x[ 8 0 a7 3f e3 af ce 2b e7 27 3e 56 2b 91 fb f0 e3 b2 dd 82 ea 29 11 43 79 77 4d 0 5f 99 26 82 d8 ef 50 59 55 0 97 77 0 80 22 6d 23 61 d5 a4 5a 20 eb a6 de cd 17 d5 75 cb 28 e0 7 80 f3 6c 25 46 0 ]");
 }
-*/
