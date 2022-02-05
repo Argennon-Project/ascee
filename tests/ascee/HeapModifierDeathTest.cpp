@@ -130,6 +130,13 @@ TEST_F(HeapModifierDeathTest, SimpleReadWrite) {
     got = modifier->load<int64>(100);
     EXPECT_EQ(got, 123456789);
 
+    got = modifier->load<int16_t>(100, 2);
+    EXPECT_EQ(got, 0x75b);
+
+    modifier->store<byte>(100, 0x45, 7);
+    got = modifier->load<int64>(100);
+    EXPECT_EQ(got, 0x45000000075BCD15);
+
     modifier->loadChunk(short_id(10));
     EXPECT_THROW(modifier->store(100, 444444), std::out_of_range);
 
@@ -141,7 +148,7 @@ TEST_F(HeapModifierDeathTest, SimpleReadWrite) {
 
     modifier->loadContext(2);
 
-    EXPECT_EXIT(modifier->store(0, 0), testing::KilledBySignal(SIGSEGV), "");
+    EXPECT_THROW(modifier->store(0, 0), std::out_of_range);
 
     modifier->loadChunk(short_id(10));
     EXPECT_THROW(modifier->store(100, big), std::out_of_range);
@@ -155,7 +162,7 @@ TEST_F(HeapModifierDeathTest, SimpleReadWrite) {
     modifier->loadContext(1);
     modifier->loadChunk(long_id(100));
     got = modifier->load<int64>(100);
-    EXPECT_EQ(got, 123456789);
+    EXPECT_EQ(got, 0x45000000075BCD15);
 
     modifier->writeToHeap();
 
@@ -186,7 +193,8 @@ TEST_F(HeapModifierDeathTest, SimpleVersioning) {
     modifier->store<int64>(100, 2);
 
     auto v2 = modifier->saveVersion();
-    modifier->store<int64>(120, 22);
+    modifier->store<uint16>(120, 0x2233, 5);
+
 
     auto v3 = modifier->saveVersion();
     modifier->store<int64>(100, 3);
@@ -197,11 +205,11 @@ TEST_F(HeapModifierDeathTest, SimpleVersioning) {
 
     modifier->restoreVersion(v3);
     EXPECT_EQ(modifier->load<int64>(100), 2);
-    EXPECT_EQ(modifier->load<int64>(120), 22);
+    EXPECT_EQ(modifier->load<int64>(120), 0x2233000000000b);
 
     modifier->restoreVersion(v2);
     EXPECT_EQ(modifier->load<int64>(100), 2);
-    EXPECT_EQ(modifier->load<int64>(120), 11);
+    EXPECT_EQ(modifier->load<int64>(120), 0xb);
 
     EXPECT_THROW(modifier->restoreVersion(v3), std::runtime_error);
 

@@ -66,7 +66,7 @@ void RestrictedModifier::writeToHeap() {
 
     for (auto& appMap: appsAccessMaps.getValues()) {
         for (auto& chunk: appMap.getValues()) {
-            auto chunkSize = chunk.size.read<int32>(currentVersion);
+            auto chunkSize = chunk.size.read<int32>(currentVersion, 0);
             if (chunk.resizing == ChunkInfo::ResizingType::expandable ||
                 chunk.resizing == ChunkInfo::ResizingType::shrinkable) {
                 chunk.ptr->setSize(chunkSize);
@@ -84,8 +84,8 @@ void RestrictedModifier::writeToHeap() {
     }
 }
 
-void RestrictedModifier::updateChunkSize(int32 newSize) {
-    if (newSize == currentChunk->size.read<int32>(currentVersion)) return;
+void RestrictedModifier::updateChunkSize(uint32 newSize) {
+    if (newSize == currentChunk->size.read<int32>(currentVersion, 0)) return;
 
     if (currentChunk->resizing == ChunkInfo::ResizingType::expandable) {
         if (newSize < currentChunk->getInitialSize() || newSize > currentChunk->sizeBound) {
@@ -98,14 +98,14 @@ void RestrictedModifier::updateChunkSize(int32 newSize) {
     } else {
         throw std::out_of_range("chunk is not resizable");
     }
-    currentChunk->size.write(currentVersion, newSize);
+    currentChunk->size.write(currentVersion, 0, newSize);
 }
 
 int32 RestrictedModifier::getChunkSize() {
     if (currentChunk->resizing == ChunkInfo::ResizingType::non_accessible) {
         throw std::out_of_range("chunkSize is not accessible");
     }
-    return currentChunk->size.read<int32>(currentVersion);
+    return currentChunk->size.read<int32>(currentVersion, 0);
 }
 
 void RestrictedModifier::AccessBlock::syncTo(int16_t version) {
@@ -114,7 +114,7 @@ void RestrictedModifier::AccessBlock::syncTo(int16_t version) {
     }
 }
 
-bool RestrictedModifier::AccessBlock::addVersion(int16_t version) {
+bool RestrictedModifier::AccessBlock::ensureExists(int16_t version) {
     assert(version >= 1);
     // checks are ordered for having the best performance on average
     if (!versionList.empty()) {
@@ -127,28 +127,30 @@ bool RestrictedModifier::AccessBlock::addVersion(int16_t version) {
     return true;
 }
 
-byte* RestrictedModifier::AccessBlock::prepareToRead(int16_t version, int32 readSize) {
-    if (readSize > size) throw std::out_of_range("read size");
+byte* RestrictedModifier::AccessBlock::prepareToRead(int16_t version, uint32 offset, uint32 readSize) {
+    if (offset + readSize > size) throw std::out_of_range("out of block read");
     if (accessType.denies(BlockAccessInfo::Access::Operation::read)) {
         throw std::out_of_range("access block is not readable");
     }
     syncTo(version);
-    return versionList.empty() ? heapLocation.get(readSize) : versionList.back().getContent();
+    return versionList.empty() ? heapLocation.get(readSize) + offset : versionList.back().getContent() + offset;
 }
 
-byte* RestrictedModifier::AccessBlock::prepareToWrite(int16_t version, int32 writeSize) {
-    if (writeSize > size) throw std::out_of_range("write size");
+byte* RestrictedModifier::AccessBlock::prepareToWrite(int16_t version, uint32 offset, uint32 writeSize) {
+    if (offset + writeSize > size) throw std::out_of_range("out of bock write");
     if (accessType.denies(BlockAccessInfo::Access::Operation::write)) {
         throw std::out_of_range("block is not writable");
     }
     syncTo(version);
     auto oldContent = versionList.empty() ? heapLocation.get(size) : versionList.back().getContent();
-    addVersion(version);
-    if (size != writeSize) {
-        memcpy(versionList.back().getContent() + writeSize, oldContent + writeSize, size - writeSize);
+    bool added = ensureExists(version);
+    if (added && size != writeSize) {
+        memcpy(versionList.back().getContent(), oldContent, offset);
+        memcpy(versionList.back().getContent() + offset + writeSize, oldContent + offset + writeSize,
+               size - writeSize - offset);
     }
 
-    return versionList.back().getContent();
+    return versionList.back().getContent() + offset;
 }
 
 void RestrictedModifier::AccessBlock::wrToHeap(Chunk* chunk, int16_t version, int32 maxWriteSize) {

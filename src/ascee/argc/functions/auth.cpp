@@ -103,7 +103,7 @@ bool verifyByAccount(long_id accountID, message_c& msg, signature_c& sig, int32&
 
     // decisionNonce == 0 means that the owner of the account is an app
     if (decisionNonce == 0) {
-        auto app = heap.loadIdentifier(app_trie_g, nonce16_size, &balanceIndex);
+        auto app = heap.loadIdentifier(app_trie_g, nonce16_size, 0, &balanceIndex);
         balanceIndex += decision_nonce_size;
         return verifyByApp(app, msg, invalidateMsg);
     }

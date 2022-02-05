@@ -34,31 +34,33 @@ class RestrictedModifier {
 public:
     template<typename T>
     inline
-    T load(int32 offset) { return getAccessBlock(offset).read<T>(currentVersion); }
+    T load(uint32 offset, uint32 index = 0) { return getAccessBlock(offset).read<T>(currentVersion, index); }
 
     template<typename T, int h>
     inline
-    T loadVarUInt(const util::PrefixTrie<T, h>& trie, int32 offset, int32* n = nullptr) {
-        return getAccessBlock(offset).readVarUInt(trie, currentVersion, n);
+    T loadVarUInt(const util::PrefixTrie<T, h>& trie, uint32 offset, uint32 index = 0, int32* n = nullptr) {
+        return getAccessBlock(offset).readVarUInt(trie, currentVersion, index, n);
     }
 
     template<typename T, int h>
     inline
-    T loadIdentifier(const util::PrefixTrie<T, h>& trie, int32 offset, int32* n = nullptr) {
-        return getAccessBlock(offset).readIdentifier(trie, currentVersion, n);
+    T loadIdentifier(const util::PrefixTrie<T, h>& trie, uint32 offset, uint32 index = 0, int32* n = nullptr) {
+        return getAccessBlock(offset).readIdentifier(trie, currentVersion, index, n);
     }
 
     template<typename T>
     inline
-    void store(int32 offset, const T& value) { getAccessBlock(offset).write<T>(currentVersion, value); }
+    void store(uint32 offset, const T& value, uint32 index = 0) {
+        getAccessBlock(offset).write<T>(currentVersion, index, value);
+    }
 
     template<typename T>
     inline
-    void addInt(int32 offset, T value) { getAccessBlock(offset).addInt<T>(currentVersion, value); }
+    void addInt(uint32 offset, T value) { getAccessBlock(offset).addInt<T>(currentVersion, value); }
 
     template<typename T, int h>
     inline
-    int storeVarUInt(const util::PrefixTrie<T, h>& trie, int32 offset, T value) {
+    int storeVarUInt(const util::PrefixTrie<T, h>& trie, uint32 offset, T value) {
         return getAccessBlock(offset).writeVarUInt(trie, currentVersion, value);
     }
 
@@ -74,7 +76,7 @@ public:
 
     void writeToHeap();
 
-    bool isValid(int32 offset, int32 size) {
+    bool isValid(uint32 offset, uint32 size) {
         // we need to make sure that the access block is defined. Otherwise, scheduler can not guarantee that
         // isValid is properly parallelized with chunk resizing requests. Also, we need to make sure that an access
         // block with the proper size is defined at the offset. We should throw an exception if the block is not
@@ -83,12 +85,12 @@ public:
             throw std::out_of_range("isValid: access block not defined");
         }
         // we can't use getChunkSize() here
-        return offset + size <= currentChunk->size.read<int32>(currentVersion);
+        return offset + size <= currentChunk->size.read<int32>(currentVersion, 0);
     }
 
     int32 getChunkSize();
 
-    void updateChunkSize(int32 newSize);
+    void updateChunkSize(uint32 newSize);
 
 private:
     class AccessBlock {
@@ -102,7 +104,7 @@ private:
         AccessBlock(const Chunk::Pointer& heapLocation, int32 size, BlockAccessInfo::Access accessType);
 
         [[nodiscard]]
-        bool defined(int32 requiredSize) const {
+        bool defined(uint32 requiredSize) const {
             return size >= requiredSize && !accessType.denies(BlockAccessInfo::Access::Operation::check);
         }
 
@@ -111,20 +113,20 @@ private:
 
         template<typename T, int h>
         inline
-        T readIdentifier(const util::PrefixTrie<T, h>& trie, int16_t version, int32* n = nullptr) {
-            return trie.readPrefixCode(prepareToRead(version, size), n, size);
+        T readIdentifier(const util::PrefixTrie<T, h>& trie, int16_t version, uint32 index, int32* n = nullptr) {
+            return trie.readPrefixCode(prepareToRead(version, index, size), n, size);
         }
 
         template<typename T, int h>
         inline
-        T readVarUInt(const util::PrefixTrie<T, h>& trie, int16_t version, int32* n = nullptr) {
-            return trie.decodeVarUInt(prepareToRead(version, size), n, size);
+        T readVarUInt(const util::PrefixTrie<T, h>& trie, int16_t version, uint32 index, int32* n = nullptr) {
+            return trie.decodeVarUInt(prepareToRead(version, index, size), n, size);
         }
 
         template<typename T>
         inline
-        T read(int16_t version) {
-            auto content = prepareToRead(version, sizeof(T));
+        T read(int16_t version, uint32 index) {
+            auto content = prepareToRead(version, index, sizeof(T));
 
             T ret{};
             memcpy((byte*) &ret, content, sizeof(T));
@@ -135,18 +137,18 @@ private:
 
         template<typename T, int h>
         inline
-        int writeVarUInt(const util::PrefixTrie<T, h>& trie, int16_t version, T value) {
+        int writeVarUInt(const util::PrefixTrie<T, h>& trie, int16_t version, uint32 index, T value) {
             int len;
             auto code = trie.encodeVarUInt(value, &len);
-            trie.writeBigEndian(prepareToWrite(version, len), code, len);
+            trie.writeBigEndian(prepareToWrite(version, index, len), code, len);
             return len;
         }
 
 
         template<typename T>
         inline
-        void write(int16_t version, const T& value) {
-            memcpy(prepareToWrite(version, sizeof(value)), (byte*) &value, sizeof(value));
+        void write(int16_t version, uint32 index, const T& value) {
+            memcpy(prepareToWrite(version, index, sizeof(value)), (byte*) &value, sizeof(value));
         }
 
         template<typename T>
@@ -162,7 +164,7 @@ private:
             if (versionList.empty()) current = 0;
             else memcpy((byte*) &current, versionList.back().getContent(), sizeof(T));
             current += value;
-            addVersion(version);
+            ensureExists(version);
             memcpy(versionList.back().getContent(), (byte*) &current, sizeof(T));
         }
 
@@ -185,11 +187,11 @@ private:
 
         void syncTo(int16_t version);
 
-        bool addVersion(int16_t version);
+        bool ensureExists(int16_t version);
 
-        byte* prepareToRead(int16_t version, int32 readSize);
+        byte* prepareToRead(int16_t version, uint32 offset, uint32 readSize);
 
-        byte* prepareToWrite(int16_t version, int32 writeSize);
+        byte* prepareToWrite(int16_t version, uint32 offset, uint32 writeSize);
     };
 
     typedef util::FixedOrderedMap<int32, AccessBlock> AccessTableMap;
@@ -258,9 +260,10 @@ public:
     RestrictedModifier(RestrictedModifier&&) = delete;
 
     inline
-    AccessBlock& getAccessBlock(int32 offset) {
+    AccessBlock& getAccessBlock(uint32 offset) {
+        if (currentChunk == nullptr) throw std::out_of_range("chunk is not loaded");
         try {
-            return currentChunk->accessTable.at(offset);
+            return currentChunk->accessTable.at(int32(offset));
         } catch (const std::out_of_range&) {
             throw std::out_of_range("no access block is defined at offset: " + std::to_string(offset));
         }

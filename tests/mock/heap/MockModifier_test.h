@@ -31,27 +31,27 @@ public:
 
     template<typename T, int h>
     inline
-    T loadVarUInt(const util::PrefixTrie <T, h>& trie, int32 offset, int* n = nullptr) {
+    T loadVarUInt(const util::PrefixTrie <T, h>& trie, uint32 offset, int* n = nullptr) {
         return {};
     }
 
     template<typename T, int h>
     inline
-    T loadIdentifier(const util::PrefixTrie <T, h>& trie, int32 offset, int* n = nullptr) {
+    T loadIdentifier(const util::PrefixTrie <T, h>& trie, uint32 offset, uint32 index, int* n = nullptr) {
         return {};
     }
 
     template<typename T>
     inline
-    void store(int32 offset, T value) {}
+    void store(uint32 offset, T value) {}
 
     template<typename T>
     inline
-    void addInt(int32 offset, T value) {}
+    void addInt(uint32 offset, T value) {}
 
     template<typename T, int h>
     inline
-    int storeVarUInt(const util::PrefixTrie <T, h>& trie, int32 offset, T value) {
+    int storeVarUInt(const util::PrefixTrie <T, h>& trie, uint32 offset, T value) {
         return 0;
     }
 
@@ -67,7 +67,7 @@ public:
     MOCK_METHOD(void, writeToHeap, ());
     MOCK_METHOD(void, restoreVersion, (int16_t version));
     MOCK_METHOD(int16_t, saveVersion, ());
-    MOCK_METHOD(void, updateChunkSize, (int32 newSize));
+    MOCK_METHOD(void, updateChunkSize, (uint32 newSize));
 };
 
 } // namespace test::mocking::ascee
