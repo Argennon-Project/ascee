@@ -40,7 +40,7 @@ public:
     DigestCalculator& append(const uint8_t* binary, size_t len) {
         printf("len=%ld ", len);
         for (int i = 0; i < len; ++i) {
-            printf("%x ", binary[i]);
+            printf("0x%x ", binary[i]);
         }
         printf("\n");
         return *this;

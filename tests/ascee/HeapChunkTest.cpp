@@ -29,24 +29,25 @@ TEST(HeapChunkTest, ApplyDelta) {
     byte d1[] = {10, 1, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 
     EXPECT_EQ("size: 0, capacity: 0, content: 0x[ ]", (string) c);
-    c.applyDelta(d1, d1 + sizeof(d1));
+    const byte* b = d1;
+    c.applyDelta(b, d1 + sizeof(d1));
     EXPECT_EQ("size: 10, capacity: 10, content: 0x[ 1 2 3 4 5 6 7 8 9 a ]", (string) c);
 
 
     byte d2[] = {0, 1, 2, 1, 4, 8, 1, 5};
-
-    c.applyDelta(d2, d2 + sizeof(d2));
+    b = d2;
+    c.applyDelta(b, d2 + sizeof(d2));
     EXPECT_EQ("size: 10, capacity: 10, content: 0x[ 1 4 3 4 5 6 7 8 9 5 ]", (string) c);
 
 
     byte d3[] = {15, 4, 2, 1, 2};
-
-    c.applyDelta(d3, d3 + sizeof(d3));
+    b = d3;
+    c.applyDelta(b, d3 + sizeof(d3));
     EXPECT_EQ("size: 5, capacity: 5, content: 0x[ 1 4 3 1 2 ]", (string) c);
 
 
     byte d4[] = {10, 14, 1, 2, 1, 1, 7};
-
-    c.applyDelta(d4, d4 + sizeof(d4));
+    b = d4;
+    c.applyDelta(b, d4 + sizeof(d4));
     EXPECT_EQ("size: 15, capacity: 15, content: 0x[ 1 4 3 1 2 0 0 0 0 0 0 0 0 2 7 ]", (string) c);
 }

@@ -79,7 +79,7 @@ int main(int argc, char const* argv[]) {
     PageCache pc(pl);
     BlockLoader bl;
     long_id app = 0x1000000000000000, acc = 0x2200000000000000, loc = 0x3300000000000000;
-    VarLenID chunkID(std::unique_ptr<byte[]>(new byte[3]{0x10, 0x22, 0x33}));
+    VarLenFullID chunkID(std::unique_ptr<byte[]>(new byte[3]{0x10, 0x22, 0x33}));
     ChunkIndex ind(pc.prepareBlockPages({7878}, {{chunkID, true}}, {}),
                    {
                            {full_id(chunkID)},

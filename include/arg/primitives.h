@@ -43,11 +43,10 @@ typedef struct LongID long_id;
 typedef struct LongLongID long_long_id;
 typedef struct FullID full_id;
 
-inline const util::PrefixTrie<uint16_t, 2> gNonceTrie({0xe0, 0xff00});
-inline const util::PrefixTrie<uint32_t, 4> gVarSizeTrie({0xd0, 0xf000, 0xfc0000, 0xffffff00});
-inline const util::PrefixTrie<uint64_t, 2> app_trie_g({0x90, 0xb000});
-inline const util::PrefixTrie<uint64_t, 2> account_trie_g({0x80, 0xc000});
-inline const util::PrefixTrie<uint64_t, 2> local_trie_g({0xb0, 0xc800});
+inline const util::PrefixTrie<uint32_t, 4> var_size_trie_g({0xd0, 0xf000, 0xfc0000, 0xffffff00});
+inline const util::PrefixTrie<uint64_t, 3> app_trie_g({0xa0, 0xc000, 0xd00000});
+inline const util::PrefixTrie<uint64_t, 3> account_trie_g({0x60, 0xd000, 0xe00000});
+inline const util::PrefixTrie<uint64_t, 3> local_trie_g({0xc0, 0xe000, 0xf00000});
 
 class LongID {
 public:
@@ -142,43 +141,47 @@ private:
 /**
  * A memory efficient representation of an identifier. It does not store the length of the identifier.
  */
-class VarLenID {
+class VarLenFullID {
 public:
-    explicit VarLenID(std::unique_ptr<byte[]>&& binary) : binary(std::move(binary)) {}
+    /**
+     * this constructor does not check its input.
+     * @param binary MUST point to a valid identifier, otherwise the behaviour will be undefined.
+     */
+    explicit VarLenFullID(std::unique_ptr<byte[]>&& binary) : binary(std::move(binary)) {}
 
-    VarLenID(const byte** binary, const byte* end) {
+    VarLenFullID(const byte** binary, const byte* end) {
         auto start = *binary;
         app_trie_g.readPrefixCode(binary, end);
         account_trie_g.readPrefixCode(binary, end);
         local_trie_g.readPrefixCode(binary, end);
-        auto len = *binary - start;
+        auto len = int(*binary - start);
         this->binary = std::make_unique<byte[]>(len);
-        memcpy(this->binary.get(), binary, len);
+        memcpy(this->binary.get(), start, len);
     }
 
-    VarLenID(const VarLenID& other) {
+    VarLenFullID(const VarLenFullID& other) {
         auto len = other.getLen();
         binary = std::make_unique<byte[]>(len);
         memcpy(binary.get(), other.binary.get(), len);
     }
 
-    VarLenID(VarLenID&&) = default;
+    VarLenFullID(VarLenFullID&&) = default;
 
-    VarLenID& operator=(VarLenID&&) = default;
+    VarLenFullID& operator=(VarLenFullID&&) = default;
 
-    VarLenID& operator=(const VarLenID&) = delete;
+    VarLenFullID& operator=(const VarLenFullID&) = delete;
 
-    friend util::DigestCalculator& operator<<(util::DigestCalculator& lhs, VarLenID id) {
+    friend util::DigestCalculator& operator<<(util::DigestCalculator& lhs, const VarLenFullID& id) {
         return lhs.append(id.binary.get(), id.getLen());
     }
 
-    bool operator==(const VarLenID& rhs) const {
-        //todo can be optimized
-        auto len = getLen();
-        for (int i = 0; i < len; ++i) {
-            if (binary[i] != rhs.binary[i]) return false;
-        }
-        return true;
+    bool operator==(const VarLenFullID& rhs) const {
+        const byte* a = this->binary.get();
+        const byte* b = rhs.binary.get();
+        return app_trie_g.equals(a, b) &&
+               account_trie_g.equals(a, b) &&
+               local_trie_g.equals(a, b);
+
     }
 
     explicit operator FullID() const {
@@ -203,15 +206,16 @@ public:
      * @return
      */
     struct Hash {
-        std::size_t operator()(const VarLenID& key) const noexcept {
+        std::size_t operator()(const VarLenFullID& key) const noexcept {
             return FullID::Hash{}(FullID(key));
         }
     };
 
     explicit operator std::string() const {
-        std::stringstream buf("0x");
+        std::stringstream buf;
+        buf << "0x";
         for (int i = 0; i < getLen(); ++i) {
-            buf << std::hex << binary[i];
+            buf << std::hex << (int) binary[i];
         }
         return buf.str();
     }

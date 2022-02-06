@@ -83,7 +83,7 @@ public:
 
     std::mutex& getContentMutex();
 
-    const byte* applyDelta(const byte* delta, const byte* boundary);
+    void applyDelta(const byte*& delta, const byte* boundary);
 
     /// This is used to indicate that a chunk will not be modified in a block. Knowing that a chunk is not modified
     /// in the block helps in efficient calculation of commitments.

@@ -38,13 +38,12 @@ class Page {
     using Chunk = ascee::runtime::Chunk;
 public:
     struct Migrant {
-        VarLenID id;
+        VarLenFullID id;
         std::unique_ptr<Chunk> chunk;
 
-        Migrant(VarLenID id, Chunk* chunk) : id(std::move(id)), chunk(chunk) {}
+        Migrant(VarLenFullID id, Chunk* chunk) : id(std::move(id)), chunk(chunk) {}
 
-        explicit Migrant(VarLenID id) : id(std::move(id)), chunk(std::make_unique<Chunk>()) {}
-
+        explicit Migrant(VarLenFullID id) : id(std::move(id)), chunk(std::make_unique<Chunk>()) {}
     };
 
     struct Delta {
@@ -70,7 +69,7 @@ public:
         return version;
     }
 
-    void applyDelta(const VarLenID& pageID, const Delta& delta, int64_fast blockNumber);
+    void applyDelta(const VarLenFullID& pageID, const Delta& delta, int64_fast blockNumber);
 
     void setWritableFlag(bool writable);
 

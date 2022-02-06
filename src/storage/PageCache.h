@@ -51,7 +51,7 @@ public:
     void rollback(const std::vector<PageAccessInfo>& modifiedPages) {}
 
 private:
-    std::unordered_map<VarLenID, Page, VarLenID::Hash> cache;
+    std::unordered_map<VarLenFullID, Page, VarLenFullID::Hash> cache;
     PageLoader& loader;
 };
 

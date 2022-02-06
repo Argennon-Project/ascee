@@ -28,7 +28,7 @@ using namespace asa;
 
 using Access = BlockAccessInfo::Access::Type;
 
-constexpr long_long_id chunk1_local_id(0x6400000000000000, 0x0500000000000000);
+constexpr long_long_id chunk1_local_id(0x4400000000000000, 0x0500000000000000);
 constexpr long_id app_1_id(0x1000000000000000);
 
 class RequestSchedulerTest : public ::testing::Test {
@@ -42,7 +42,8 @@ public:
             : pc(pl),
               singleChunk(
                       pc.prepareBlockPages({10},
-                                           {{VarLenID(std::unique_ptr<byte[]>(new byte[4]{0x10, 0x64, 0x5, 0})), true}},
+                                           {{VarLenFullID(std::unique_ptr<byte[]>(new byte[4]{0x10, 0x44, 0x5, 0})),
+                                             true}},
                                            {}),
                       {{{app_1_id, chunk1_local_id}},
                        {{8,        3}}},

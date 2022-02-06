@@ -22,25 +22,26 @@ using namespace argennon;
 using namespace asa;
 using std::pair, std::unique_ptr;
 
-void Page::applyDelta(const VarLenID& pageID, const Page::Delta& delta, int64_fast blockNumber) {
+void Page::applyDelta(const VarLenFullID& pageID, const Page::Delta& delta, int64_fast blockNumber) {
     if (delta.content.empty()) return;
     const byte* boundary = delta.content.data() + delta.content.size();
     const byte* reader = delta.content.data();
-    int32_fast index = 0;
-    while (auto indexDiff = gVarSizeTrie.decodeVarUInt(&reader, boundary) != 0) {
+    // we need this to make sure first migrant has zero index
+    int32_fast index = -1;
+    while (auto indexDiff = var_size_trie_g.decodeVarUInt(&reader, boundary)) {
         index += indexDiff;
         if (index == migrants.size()) {
-            migrants.emplace_back(VarLenID(&reader, boundary));
+            migrants.emplace_back(VarLenFullID(&reader, boundary));
         } else {
-            migrants.at(index).id = VarLenID(&reader, boundary);
+            migrants.at(index).id = VarLenFullID(&reader, boundary);
         }
     }
 
     auto keysDigest = util::DigestCalculator();
-    reader = native->applyDelta(reader, boundary);
+    native->applyDelta(reader, boundary);
     keysDigest << pageID << native->calculateDigest();
     for (const auto& m: migrants) {
-        reader = m.chunk->applyDelta(reader, boundary);
+        m.chunk->applyDelta(reader, boundary);
         keysDigest << m.id << m.chunk->calculateDigest();
     }
 

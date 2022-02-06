@@ -147,7 +147,7 @@ struct AppRequestInfo {
 };
 
 struct PageAccessInfo {
-    VarLenID pageID;
+    VarLenFullID pageID;
     bool isWritable;
 };
 

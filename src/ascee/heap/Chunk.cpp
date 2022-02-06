@@ -96,18 +96,18 @@ bool Chunk::shrinkSpace() {
  *
  * @return the updated delta pointer in such a way that it points to the unconsumed part of the delta array.
  */
-const byte* Chunk::applyDelta(const byte* delta, const byte* boundary) {
-    if (delta >= boundary) return delta;
+void Chunk::applyDelta(const byte*& delta, const byte* boundary) {
+    if (delta >= boundary) return;
 
-    auto size = chunkSize ^ (int32) gVarSizeTrie.decodeVarUInt(&delta, boundary);
+    auto size = chunkSize ^ (int32) var_size_trie_g.decodeVarUInt(&delta, boundary);
     reserveSpace(size);
 
     int32_fast offset = 0;
     while (delta < boundary) {
-        auto diff = gVarSizeTrie.decodeVarUInt(&delta, boundary);
+        auto diff = var_size_trie_g.decodeVarUInt(&delta, boundary);
         if (diff == 0) break;
         offset += diff - 1;
-        auto blockSize = gVarSizeTrie.decodeVarUInt(&delta, boundary);
+        auto blockSize = var_size_trie_g.decodeVarUInt(&delta, boundary);
         if (offset + blockSize > size) {
             // For being able to remove deltas we need this. Do not change it!
             if (offset < size) blockSize = size - offset;
@@ -121,7 +121,6 @@ const byte* Chunk::applyDelta(const byte* delta, const byte* boundary) {
     chunkSize = size;
     // important!
     shrinkSpace();
-    return delta;
 }
 
 bool Chunk::isWritable() const {

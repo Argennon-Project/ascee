@@ -62,7 +62,10 @@ TEST_F(ArgAppTest, SimpleTransfer) {
     };
 
     Page page_1(777);
-    VarLenID fromPageID(std::unique_ptr<byte[]>(new byte[4]{0x1, 0x95, 0xab, 0}));
+    VarLenFullID fromPageID(std::unique_ptr<byte[]>(new byte[4]{0x1, 0x95, 0xab, 0x0}));
+
+    printf("%d\n", fromPageID.getLen());
+
     page_1.applyDelta(fromPageID,
                       Page::Delta{.content = {0,
                                               67 + 8, 1, 69, 11, 0,
@@ -77,7 +80,7 @@ TEST_F(ArgAppTest, SimpleTransfer) {
                       780);
 
     Page page_2(777);
-    VarLenID toPageID(std::unique_ptr<byte[]>(new byte[4]{0x1, 0xaa, 0xbc, 0}));
+    VarLenFullID toPageID(std::unique_ptr<byte[]>(new byte[4]{0x1, 0xaa, 0xbc, 0x0}));
     page_2.applyDelta(toPageID,
                       {{
                                0,
