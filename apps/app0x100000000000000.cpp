@@ -41,7 +41,7 @@ void transfer(long_id from, long_id to, int64 amount, signature_c& sig) {
     append_str(msg, ",\"amount\":");
     append_int64(msg, amount);
     // "," should not be appended to the end.
-    if (!verify_by_acc_once(from, msg, sig, sender_balance_offset)) revert("invalid signature or sender address");
+    if (!verify_by_acc_once(from, msg, sig, sender_balance_offset)) revert("invalid sender address or signature");
 
     // loading balance chunk
     load_account_chunk(from, 0);

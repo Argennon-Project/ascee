@@ -309,3 +309,18 @@ TEST(PrefixTrieTest, ParseSymbolic) {
 
     EXPECT_THROW(t2.parsePrefixCode("g2", id2), std::invalid_argument);
 }
+
+
+TEST(PrefixTrieTest, ToDecimal) {
+    PrefixTrie<uint64_t, 4> t({0x40, 0x7050, 0x800010, 0xbb001122});
+
+    EXPECT_EQ(t.toDecimalStr(0x212350000000000), "2");
+
+    EXPECT_EQ(t.toDecimalStr(0x4511125450000000), "69.17");
+
+    EXPECT_EQ(t.toDecimalStr(0x7766201000000000), "119.102.32");
+
+    EXPECT_EQ(t.toDecimalStr(0xbb00000000000000), "187.0.0.0");
+
+    EXPECT_THROW(t.toDecimalStr(0xf000000000000000), std::out_of_range);
+}

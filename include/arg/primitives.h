@@ -58,7 +58,6 @@ public:
 
     operator uint64_t() const { return id; } // NOLINT(google-explicit-constructor)
 
-
     explicit operator std::string() const {
         std::stringstream buf;
         buf << "0x" << std::hex << id;

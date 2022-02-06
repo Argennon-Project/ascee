@@ -224,6 +224,16 @@ public:
         if (n != i) throw std::invalid_argument("parsePrefixCode: input too long");
     }
 
+    std::string toDecimalStr(const T code) const {
+        std::string ret;
+        for (int i = 0; i < height; ++i) {
+            ret += std::to_string(byte(code >> ((sizeof(T) - i - 1) * 8)));
+            if (code < boundary[i]) return ret;
+            ret += ".";
+        }
+        throw std::out_of_range("toDecimalStr: invalid identifier");
+    }
+
     void writeBigEndian(byte* dest, T value, int n) const {
         for (int i = 0; i < n; ++i) {
             dest[i] = byte(value >> ((sizeof(T) - i - 1) * 8));
