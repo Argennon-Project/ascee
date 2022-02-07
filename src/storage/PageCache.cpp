@@ -59,6 +59,7 @@ PageCache::prepareBlockPages(const BlockInfo& block, vector<PageAccessInfo>&& pa
         loader.updatePage(pageAccessList[i].pageID, *result[i].second);
     }
 
+    // Applying proposed chunk migrations
     for (const auto& migration: chunkMigrations) {
         Page* from = result.at(migration.fromIndex).second;
         Page* to = result.at(migration.toIndex).second;

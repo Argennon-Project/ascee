@@ -24,24 +24,25 @@ using std::pair, std::unique_ptr;
 
 void Page::applyDelta(const VarLenFullID& pageID, const Page::Delta& delta, int64_fast blockNumber) {
     if (delta.content.empty()) return;
-    const byte* boundary = delta.content.data() + delta.content.size();
+    const byte* end = delta.content.data() + delta.content.size();
     const byte* reader = delta.content.data();
     // we need this to make sure first migrant has zero index
     int32_fast index = -1;
-    while (auto indexDiff = var_size_trie_g.decodeVarUInt(&reader, boundary)) {
+    while (auto indexDiff = var_size_trie_g.decodeVarUInt(&reader, end)) {
         index += indexDiff;
         if (index == migrants.size()) {
-            migrants.emplace_back(VarLenFullID(&reader, boundary));
+            migrants.emplace_back(VarLenFullID(&reader, end));
         } else {
-            migrants.at(index).id = VarLenFullID(&reader, boundary);
+            if (*reader == 0) throw std::runtime_error("chunk removal not implemented");
+            migrants.at(index).id = VarLenFullID(&reader, end);
         }
     }
 
     auto keysDigest = util::DigestCalculator();
-    native->applyDelta(reader, boundary);
+    native->applyDelta(reader, end);
     keysDigest << pageID << native->calculateDigest();
     for (const auto& m: migrants) {
-        m.chunk->applyDelta(reader, boundary);
+        m.chunk->applyDelta(reader, end);
         keysDigest << m.id << m.chunk->calculateDigest();
     }
 

@@ -19,11 +19,10 @@
 #define ARGENNON_EXECUTOR_H
 
 #include <csignal>
+#include <csetjmp>
 
 #include <string>
 #include <unordered_map>
-#include <memory>
-#include <csetjmp>
 #include <vector>
 
 #include "executor/FailureManager.h"

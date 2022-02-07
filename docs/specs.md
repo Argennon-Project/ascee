@@ -128,6 +128,8 @@ other chunks the native chunk will be replaced with a zero size chunk.
 - A page containing a zero size native chunk can be safely converted into
   a `<<nil>>` page if it doesn't have migrants.
 
+#### Identifiers
+
 #### ArgC Types
 
 ArgC has two kinds of types: primitive types and class types. Class types are
@@ -156,4 +158,6 @@ string_c str = to_string(msg_buffer);  // initialization using a factory method
 ```
 
 All ArgC types (primitive or class) are allocated on stack and their lifetime
-ends at the end of the scope in which they are defined. 
+ends at the end of the scope in which they are defined.
+
+ArgC has no unsigned type.

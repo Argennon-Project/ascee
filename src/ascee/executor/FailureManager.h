@@ -19,7 +19,7 @@
 #define ARGENNON_FAILURE_MANAGER_H
 
 #include <unordered_set>
-#include "argc/types.h"
+#include "arg/primitives.h"
 
 namespace argennon::ascee::runtime {
 

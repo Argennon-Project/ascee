@@ -16,6 +16,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include "FailureManager.h"
+#include "argc/types.h"
 
 #define MAX_CALL_DEPTH 16
 #define DEFAULT_STACK_SIZE (2*1024*1024)

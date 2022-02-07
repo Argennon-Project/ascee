@@ -177,7 +177,7 @@ TEST_F(HeapModifierDeathTest, VersionZero) {
 
     EXPECT_THROW(modifier->load<int64>(0), std::out_of_range);
 
-    EXPECT_THROW(modifier->restoreVersion(1), std::runtime_error);
+    EXPECT_EXIT(modifier->restoreVersion(1), testing::KilledBySignal(SIGABRT), "");
 }
 
 
@@ -211,7 +211,7 @@ TEST_F(HeapModifierDeathTest, SimpleVersioning) {
     EXPECT_EQ(modifier->load<int64>(100), 2);
     EXPECT_EQ(modifier->load<int64>(120), 0xb);
 
-    EXPECT_THROW(modifier->restoreVersion(v3), std::runtime_error);
+    EXPECT_EXIT(modifier->restoreVersion(v3), testing::KilledBySignal(SIGABRT), "");
 
     modifier->restoreVersion(v1);
     EXPECT_EQ(modifier->load<int64>(100), 1);

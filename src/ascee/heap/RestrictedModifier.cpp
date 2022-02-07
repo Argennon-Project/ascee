@@ -23,9 +23,14 @@
 
 #define MAX_VERSION 30000
 
+
 using namespace argennon;
 using namespace argennon::ascee::runtime;
-using std::vector;
+using std::vector, std::move;
+
+
+constexpr uint32 max_chunk_size = 64 * 1024;
+
 
 int16_t RestrictedModifier::saveVersion() {
     if (currentVersion == MAX_VERSION) throw AsceeError("version limit reached", StatusCode::limit_exceeded);
@@ -33,8 +38,7 @@ int16_t RestrictedModifier::saveVersion() {
 }
 
 void RestrictedModifier::restoreVersion(int16_t version) {
-    // todo: assert?
-    if (version >= currentVersion || version < 0) throw std::runtime_error("restoring an invalid version");
+    assert(version < currentVersion && version >= 0);
     currentVersion = version;
 }
 
@@ -66,14 +70,13 @@ void RestrictedModifier::writeToHeap() {
 
     for (auto& appMap: appsAccessMaps.getValues()) {
         for (auto& chunk: appMap.getValues()) {
-            auto chunkSize = chunk.size.read<int32>(currentVersion, 0);
+            auto chunkSize = chunk.size.read<uint32>(currentVersion, 0);
             if (chunk.resizing == ChunkInfo::ResizingType::expandable ||
                 chunk.resizing == ChunkInfo::ResizingType::shrinkable) {
-                chunk.ptr->setSize(chunkSize);
+                chunk.ptr->setSize(int(chunkSize));
             }
             if (chunkSize > 0 && chunk.ptr->isWritable()) {
-                // we should skip offset[0] == -1.
-                for (long i = 1; i < chunk.accessTable.size(); ++i) {
+                for (long i = 0; i < chunk.accessTable.size(); ++i) {
                     auto offset = chunk.accessTable.getKeys()[i];
                     if (offset >= chunkSize) break;     // since offsets are sorted.
                     // We should make sure that we never write outside the chunk.
@@ -85,7 +88,7 @@ void RestrictedModifier::writeToHeap() {
 }
 
 void RestrictedModifier::updateChunkSize(uint32 newSize) {
-    if (newSize == currentChunk->size.read<int32>(currentVersion, 0)) return;
+    if (newSize == currentChunk->size.read<uint32>(currentVersion, 0)) return;
 
     if (currentChunk->resizing == ChunkInfo::ResizingType::expandable) {
         if (newSize < currentChunk->getInitialSize() || newSize > currentChunk->sizeBound) {
@@ -101,11 +104,11 @@ void RestrictedModifier::updateChunkSize(uint32 newSize) {
     currentChunk->size.write(currentVersion, 0, newSize);
 }
 
-int32 RestrictedModifier::getChunkSize() {
+uint32 RestrictedModifier::getChunkSize() {
     if (currentChunk->resizing == ChunkInfo::ResizingType::non_accessible) {
         throw std::out_of_range("chunkSize is not accessible");
     }
-    return currentChunk->size.read<int32>(currentVersion, 0);
+    return currentChunk->size.read<uint32>(currentVersion, 0);
 }
 
 void RestrictedModifier::AccessBlock::syncTo(int16_t version) {
@@ -137,7 +140,7 @@ byte* RestrictedModifier::AccessBlock::prepareToRead(int16_t version, uint32 off
 }
 
 byte* RestrictedModifier::AccessBlock::prepareToWrite(int16_t version, uint32 offset, uint32 writeSize) {
-    if (offset + writeSize > size) throw std::out_of_range("out of bock write");
+    if (offset + writeSize > size) throw std::out_of_range("out of block write");
     if (accessType.denies(BlockAccessInfo::Access::Operation::write)) {
         throw std::out_of_range("block is not writable");
     }
@@ -153,21 +156,22 @@ byte* RestrictedModifier::AccessBlock::prepareToWrite(int16_t version, uint32 of
     return versionList.back().getContent() + offset;
 }
 
-void RestrictedModifier::AccessBlock::wrToHeap(Chunk* chunk, int16_t version, int32 maxWriteSize) {
+void RestrictedModifier::AccessBlock::wrToHeap(Chunk* chunk, int16_t version, uint32 maxWriteSize) {
     syncTo(version);
     if (versionList.empty()) return;
 
+    auto writeSize = std::min(size, maxWriteSize);
+
     if (accessType.isAdditive()) {
         int64_fast s = 0, a = 0;
-        auto readSize = std::min(size, int32(sizeof(int_fast64_t)));
+        assert(size <= sizeof(int64_t));
         std::lock_guard<std::mutex> lock(chunk->getContentMutex());
-        memcpy(&s, heapLocation.get(readSize), readSize);
-        memcpy(&a, versionList.back().getContent(), readSize);
+        memcpy(&s, heapLocation.get(size), size);
+        memcpy(&a, versionList.back().getContent(), size);
         s += a;
-        auto writeSize = std::min(readSize, maxWriteSize);
+        // mem copy should be inside this if block to make sure that lock_guard is protecting it.
         memcpy(heapLocation.get(writeSize), &s, writeSize);
     } else {
-        auto writeSize = std::min(size, maxWriteSize);
         memcpy(heapLocation.get(writeSize), versionList.back().getContent(), writeSize);
     }
 }
@@ -178,16 +182,10 @@ RestrictedModifier::AccessBlock::AccessBlock(const Chunk::Pointer& heapLocation,
                                                                                    size(size),
                                                                                    accessType(accessType) {}
 
-/// When resizeable is true and newSize > 0 the chunk can only be expanded and the value of
-/// newSize indicates the upper-bound of the settable size. If resizable == true and newSize <= 0 the chunk is
-/// only shrinkable and the magnitude of newSize indicates the lower-bound of the chunk's new size.
-///
-/// When resizeable is false and newSize != 0 the size of the chunk can only be read but if newSize == 0
-/// the size of the chunk is not accessible. (not readable nor writable)
-RestrictedModifier::ChunkInfo::ChunkInfo(Chunk* chunk, ResizingType resizingType, int32 sizeBound,
-                                         std::vector<int32> sortedAccessedOffsets,
+RestrictedModifier::ChunkInfo::ChunkInfo(Chunk* chunk, ResizingType resizingType, uint32 sizeBound,
+                                         const std::vector<int32>& sortedAccessedOffsets,
                                          const std::vector<BlockAccessInfo>& accessInfoList) :
-// todo: explain why we use initialSize member
+// We do not check inputs. We assume that all inputs are checked by upper layers.
         size(
                 Chunk::Pointer((byte*) (&initialSize), sizeof(initialSize)),
                 sizeof(initialSize),
@@ -198,25 +196,28 @@ RestrictedModifier::ChunkInfo::ChunkInfo(Chunk* chunk, ResizingType resizingType
         sizeBound(sizeBound),
         ptr(chunk),
         resizing(resizingType),
-        accessTable(std::move(sortedAccessedOffsets), toBlocks(chunk, sortedAccessedOffsets, accessInfoList)) {
+        accessTable(toAccessBlocks(chunk, sortedAccessedOffsets, accessInfoList)) {
+    assert(sizeBound <= max_chunk_size);
     initialSize = chunk->getsize();
 }
 
-vector<RestrictedModifier::AccessBlock> RestrictedModifier::ChunkInfo::toBlocks(
+RestrictedModifier::AccessTableMap RestrictedModifier::ChunkInfo::toAccessBlocks(
         Chunk* chunk,
         const vector<int32>& offsets,
         const vector<BlockAccessInfo>& accessInfoList
 ) {
     vector<AccessBlock> blocks;
     blocks.reserve(offsets.size());
+    vector<uint32> resultOffsets;
+    resultOffsets.reserve(offsets.size());
+
     for (int i = 0; i < offsets.size(); ++i) {
         if (accessInfoList[i].accessType.mayWrite() && !chunk->isWritable()) {
             throw BlockError("trying to modify a readonly chunk");
         }
 
-        if (offsets[i] < 0) {
-            blocks.emplace_back();
-        } else {
+        if (offsets[i] >= 0) {
+            resultOffsets.emplace_back(offsets[i]);
             blocks.emplace_back(
                     chunk->getContentPointer(offsets[i], accessInfoList[i].size),
                     accessInfoList[i].size,
@@ -224,5 +225,5 @@ vector<RestrictedModifier::AccessBlock> RestrictedModifier::ChunkInfo::toBlocks(
             );
         }
     }
-    return blocks;
+    return {std::move(resultOffsets), std::move(blocks)};
 }

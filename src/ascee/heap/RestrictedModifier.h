@@ -20,7 +20,6 @@
 
 #include <exception>
 #include <cstring>
-#include <utility>
 #include <vector>
 #include <arg/primitives.h>
 #include <arg/info.h>
@@ -88,7 +87,7 @@ public:
         return offset + size <= currentChunk->size.read<int32>(currentVersion, 0);
     }
 
-    int32 getChunkSize();
+    uint32 getChunkSize();
 
     void updateChunkSize(uint32 newSize);
 
@@ -109,7 +108,7 @@ private:
         }
 
         [[nodiscard]] inline
-        int32 getSize() const { return size; }
+        uint32 getSize() const { return size; }
 
         template<typename T, int h>
         inline
@@ -168,7 +167,7 @@ private:
             memcpy(versionList.back().getContent(), (byte*) &current, sizeof(T));
         }
 
-        void wrToHeap(Chunk* chunk, int16_t version, int32 maxWriteSize);
+        void wrToHeap(Chunk* chunk, int16_t version, uint32 maxWriteSize);
 
     private:
         struct Version {
@@ -177,11 +176,11 @@ private:
 
             inline byte* getContent() { return content.get(); } // NOLINT(readability-make-member-function-const)
 
-            Version(int16_t version, int32 size) : number(version), content(std::make_unique<byte[]>(size)) {}
+            Version(int16_t version, uint32 size) : number(version), content(std::make_unique<byte[]>(size)) {}
         };
 
         Chunk::Pointer heapLocation;
-        int32 size = 0;
+        uint32 size = 0;
         BlockAccessInfo::Access accessType{BlockAccessInfo::Access::Type::read_only};;
         std::vector<Version> versionList;
 
@@ -194,7 +193,7 @@ private:
         byte* prepareToWrite(int16_t version, uint32 offset, uint32 writeSize);
     };
 
-    typedef util::FixedOrderedMap<int32, AccessBlock> AccessTableMap;
+    typedef util::FixedOrderedMap <uint32, AccessBlock> AccessTableMap;
 public:
     class ChunkInfo {
         friend class RestrictedModifier;
@@ -204,25 +203,30 @@ public:
             expandable, shrinkable, read_only, non_accessible
         };
 
+
         /**
          *
          * @param chunk
-         * @param resizingType
-         * @param sizeBound If resizingType is expandable this value determines the upper bound of the size. When
-         * it is shrinkable, it determines the lower bound of the chunk size. When @p resizingType is not @p shrinkable
-         * or @p expandable this value does not matter and will be ignored.
-         * @param sortedAccessedOffsets
-         * @param accessInfoList
+         * @param resizingType When @p resizingType is @p expandable or @p shrinkable the chunk can be resized and the chunk
+         * size can be read. When it is @p non_accessible the chunk can not be resized and the size can not be read either.
+         * When a chunk is expandable (shrinkable) its size can never set lower (higher) than its initial size.
+         * @param sizeBound When @p resizingType is @p expandable it indicates the maximum allowed chunk size. When
+         * @p resizingType is @p shrinkable @p it indicates the minimum allowed chunk size. The bound is inclusive. When
+         * @p resizingType is not @p shrinkable or @p expandable this value does not matter and will be ignored.
+         * @param sortedAccessedOffsets is the sorted list of offsets of defined accessed blocks. It can contain negative
+         * offsets in any order, these offsets will be simply ignored.
+         * @param accessInfoList a list of access block information corresponding with @p sortedAccessedOffsets. Negative
+         * offsets must have a corresponding @p BlockAccessInfo.
          */
-        ChunkInfo(Chunk* chunk, ResizingType resizingType, int32 sizeBound,
-                  std::vector<int32> sortedAccessedOffsets,
+        ChunkInfo(Chunk* chunk, ResizingType resizingType, uint32 sizeBound,
+                  const std::vector<int32>& sortedAccessedOffsets,
                   const std::vector<BlockAccessInfo>& accessInfoList);
 
         ChunkInfo(ChunkInfo&&) = default;
 
         ChunkInfo(const ChunkInfo&) = delete;
 
-        [[nodiscard]] int32 getInitialSize() const {
+        [[nodiscard]] uint32 getInitialSize() const {
             // initial sizeChunk will not be modified as long as wrToHeap function is not called, all changes are only
             // made to the version array. Therefor we can obtain the initial size this way.
             return initialSize;
@@ -231,17 +235,12 @@ public:
     private:
         AccessTableMap accessTable;
         AccessBlock size;
-        /// When the size AccessBlock is writable and newSize > 0 the chunk can only be expanded and the value of
-        /// newSize indicates the upper bound of the settable size. If newSize <= 0 the chunk is only shrinkable and
-        /// the magnitude of newSize indicates the lower bound of the chunk's new size.
-        /// When the size AccessBlock is not writable, newSize != 0 indicates that the size block is readable and
-        /// newSize == 0 indicates that the size block is not accessible.
-        const int32 sizeBound = 0;
+        const uint32 sizeBound = 0;
         Chunk* ptr{};
-        int32 initialSize;
+        uint32 initialSize;
         ResizingType resizing;
 
-        static std::vector<AccessBlock> toBlocks(
+        static RestrictedModifier::AccessTableMap toAccessBlocks(
                 Chunk* chunk,
                 const std::vector<int32>& offsets,
                 const std::vector<BlockAccessInfo>& accessInfoList
@@ -263,7 +262,7 @@ public:
     AccessBlock& getAccessBlock(uint32 offset) {
         if (currentChunk == nullptr) throw std::out_of_range("chunk is not loaded");
         try {
-            return currentChunk->accessTable.at(int32(offset));
+            return currentChunk->accessTable.at(offset);
         } catch (const std::out_of_range&) {
             throw std::out_of_range("no access block is defined at offset: " + std::to_string(offset));
         }
