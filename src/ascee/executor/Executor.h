@@ -45,13 +45,17 @@
 #include "mock/heap/MockModifier_test.h"
 
 namespace argennon::ascee::runtime { using HeapModifier = argennon::mocking::ascee::MockModifier; }
+
 #elif defined(ASCEE_ORACLE_BUILD)
+
 namespace argennon::ascee::runtime { using HeapModifier = OracleModifier; }
+
 #else
 
 #include "heap/RestrictedModifier.h"
 
 namespace argennon::ascee::runtime { using HeapModifier = RestrictedModifier; }
+
 #endif
 
 

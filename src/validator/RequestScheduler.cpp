@@ -67,23 +67,25 @@ void RequestScheduler::findCollisions(
         const vector<int32>& sortedOffsets,
         const vector<BlockAccessInfo>& accessBlocks
 ) {
-    bool inSizeWriterList = false;
     int32_fast sizeWritersBegin = 0, sizeWritersEnd = 0;
+    bool inSizeWriterList = false;
     int32_fast lowerBound = 0;
     for (int32_fast i = 0; i < accessBlocks.size(); ++i) {
         auto accessType = accessBlocks[i].accessType;
         auto offset = sortedOffsets[i];
 
-        // we can skip non-accessible size blocks because based on their offset they will always be at the start
-        // of the list.
+        // with this simple if we can skip non-accessible size blocks because based on their offset they will always
+        // be at the start of the list.
         if (offset == -3) continue;
 
-        auto& request = nodeIndex[accessBlocks[i].requestID]->getAppRequest();
+        //auto& request = nodeIndex[accessBlocks[i].requestID]->getAppRequest();
         auto end = (offset == -1 || offset == -2) ? 0 : offset + accessBlocks[i].size;
 
         for (int32_fast j = i + 1; j < accessBlocks.size(); ++j) {
             if (sortedOffsets[j] < end && accessType.collides(accessBlocks[j].accessType)) {
-                registerDependency(accessBlocks[i].requestID, accessBlocks[j].requestID);
+                bool additiveSameBlock = accessType.isAdditive() && accessType == accessBlocks[j].accessType &&
+                                         offset == sortedOffsets[j] && accessBlocks[i].size == accessBlocks[j].size;
+                if (!additiveSameBlock) registerDependency(accessBlocks[i].requestID, accessBlocks[j].requestID);
             }
         }
 
@@ -98,7 +100,7 @@ void RequestScheduler::findCollisions(
             lowerBound = heapIndex.getSizeLowerBound(chunkID);
         }
 
-        // offset > upperBound will never occur, since those transactions must not be included in a block.
+        // end > upperBound will never occur, since those transactions must not be included in a block.
         if (end > lowerBound) {
             for (int32_fast j = sizeWritersBegin; j < sizeWritersEnd; ++j) {
                 auto newSize = accessBlocks[j].size;

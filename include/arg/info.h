@@ -45,6 +45,10 @@ struct BlockAccessInfo {
             return type == Type::int_additive;
         }
 
+        bool operator==(Access other) {
+            return type == other.type;
+        }
+
         [[nodiscard]]
         bool mayWrite() const {
             return type != Type::read_only && type != Type::check_only;
@@ -60,7 +64,8 @@ struct BlockAccessInfo {
                 case Type::read_only:
                     return !(op == Operation::check || op == Operation::read);
                 case Type::writable:
-                    return false;
+                    // int_add should not be allowed because of how it is implemented.
+                    return !(op == Operation::write || op == Operation::check || op == Operation::read);
             }
             return true;
         }
@@ -71,11 +76,11 @@ struct BlockAccessInfo {
                 case Type::check_only:
                     return false;
                 case Type::int_additive:
-                    return !(other.type == Type::check_only || other.type == Type::int_additive);
+                    return !(other.type == Type::check_only);
                 case Type::read_only:
                     return !(other.type == Type::check_only || other.type == Type::read_only);
                 case Type::writable:
-                    return true;
+                    return !(other.type == Type::check_only);
             }
             return true;
         }

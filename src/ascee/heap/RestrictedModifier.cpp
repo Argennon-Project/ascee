@@ -140,6 +140,7 @@ byte* RestrictedModifier::AccessBlock::prepareToRead(int16_t version, uint32 off
 }
 
 byte* RestrictedModifier::AccessBlock::prepareToWrite(int16_t version, uint32 offset, uint32 writeSize) {
+    // todo IMPORTANT OVERFLOW PROBLEM! we have this issue in many places
     if (offset + writeSize > size) throw std::out_of_range("out of block write");
     if (accessType.denies(BlockAccessInfo::Access::Operation::write)) {
         throw std::out_of_range("block is not writable");

@@ -53,6 +53,7 @@ public:
 };
 
 TEST_F(RequestSchedulerTest, CollisionsFromRequests) {
+    // [13--10] [13--11] [10--11] [4--1] [1--2] [1--5] [2--5] [2--10] [2--11] [5--3] [5--10] [5--11] [3--6] [3--10] [3--11] [6--10] [6--11] [7--11] [8--11]
     RequestScheduler scheduler(14, singleChunk);
 
     scheduler.addRequest({.id = 12, .memoryAccessMap = {
@@ -130,6 +131,47 @@ TEST_F(RequestSchedulerTest, CollisionsFromRequests) {
 
 
     auto sortedMap = scheduler.sortAccessBlocks(8);
+
+    scheduler.findCollisions({app_1_id, chunk1_local_id}, sortedMap.at(app_1_id).at(chunk1_local_id).getKeys(),
+                             sortedMap.at(app_1_id).at(chunk1_local_id).getValues());
+}
+
+TEST_F(RequestSchedulerTest, AdditiveCollisions) {
+    // [0--1] [0--2] [1--3] [2--3] [3--4]
+    RequestScheduler scheduler(5, singleChunk);
+
+    scheduler.addRequest({.id = 0, .memoryAccessMap = {
+            {app_1_id},
+            {{{chunk1_local_id}, {
+                                         {{-3, 0}, {{0, Access::read_only, 0}, {3, Access::writable, 0}}},
+                                 }}}},
+                                 .adjList = {1, 2}});
+    scheduler.addRequest({.id = 1, .memoryAccessMap = {
+            {app_1_id},
+            {{{chunk1_local_id}, {
+                                         {{-3, 2}, {{0, Access::read_only, 1}, {4, Access::int_additive, 1}}},
+                                 }}}},
+                                 .adjList = {3}});
+    scheduler.addRequest({.id = 2, .memoryAccessMap = {
+            {app_1_id},
+            {{{chunk1_local_id}, {
+                                         {{-3, 2}, {{0, Access::read_only, 2}, {4, Access::int_additive, 2}}},
+                                 }}}},
+                                 .adjList = {3}});
+    scheduler.addRequest({.id = 3, .memoryAccessMap = {
+            {app_1_id},
+            {{{chunk1_local_id}, {
+                                         {{-3, 4}, {{0, Access::read_only, 3}, {3, Access::int_additive, 3}}},
+                                 }}}},
+                                 .adjList = {4}});
+    scheduler.addRequest({.id = 4, .memoryAccessMap = {
+            {app_1_id},
+            {{{chunk1_local_id}, {
+                                         {{-3, 6}, {{0, Access::read_only, 4}, {2, Access::read_only, 4}}},
+                                 }}}},
+                                 .adjList = {}});
+
+    auto sortedMap = scheduler.sortAccessBlocks(4);
 
     scheduler.findCollisions({app_1_id, chunk1_local_id}, sortedMap.at(app_1_id).at(chunk1_local_id).getKeys(),
                              sortedMap.at(app_1_id).at(chunk1_local_id).getValues());
