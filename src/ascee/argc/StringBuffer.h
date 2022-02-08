@@ -122,7 +122,7 @@ public:
         return append(str);
     }
 
-    StringBuffer& operator<<(long_id v) {
+    StringBuffer& operator<<(const long_id& v) {
         return append(std::string(v));
     }
 

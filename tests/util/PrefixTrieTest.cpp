@@ -172,12 +172,8 @@ TEST(PrefixTrieTest, SimpleTrie) {
 TEST(PrefixTrieTest, VarUIntTest) {
     PrefixTrie<uint32_t, 4> varSize({0xd0, 0xf000, 0xfc0000, 0xffffff00});
 
-
-    auto x = varSize.uncheckedParse("0x0ab00");
-
-    x = varSize.encodeVarUInt(8 * 1024);
+    auto x = varSize.encodeVarUInt(8 * 1024);
     printf("x=%x\n", x);
-
 
     PrefixTrie<uint64_t, 4> tr({0x45684515, 0x2012, 0x220000, 0x31015499});
     StaticArray<byte, 16> buf = {};

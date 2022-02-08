@@ -29,6 +29,7 @@ file(REMOVE_RECURSE ${CMAKE_BINARY_DIR}/tests/testdata)
 file(COPY tests/testdata DESTINATION tests)
 
 configure_file(include/arg/primitives.h include/arg/primitives.h COPYONLY)
+configure_file(include/arg/id.h include/arg/id.h COPYONLY)
 configure_file(include/arg/info.h include/arg COPYONLY)
 configure_file(src/ascee/argc/types.h include/argc/types.h COPYONLY)
 configure_file(src/ascee/argc/functions.h include/argc COPYONLY)

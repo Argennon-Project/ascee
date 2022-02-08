@@ -20,8 +20,8 @@
 
 #include <unordered_map>
 #include <unordered_set>
-#include <argc/types.h>
-#include "arg/primitives.h"
+#include "argc/types.h"
+#include "arg/id.h"
 #include "argc/StringBuffer.h"
 
 namespace argennon::ascee::runtime {

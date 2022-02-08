@@ -32,7 +32,7 @@ class PrefixTrie {
 
     using byte = uint8_t;
 public:
-    explicit PrefixTrie(const std::array<T, height>& trie) {
+    explicit constexpr PrefixTrie(const std::array<T, height>& trie) {
         for (int i = 0; i < height; ++i) {
             auto shift = (sizeof(T) - i - 1) * 8;
             this->trie[i] = trie[i] & (~T(0) >> shift);

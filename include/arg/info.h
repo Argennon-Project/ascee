@@ -22,6 +22,7 @@
 #include <vector>
 #include <unordered_set>
 #include "primitives.h"
+#include "id.h"
 #include "util/FixedOrderedMap.hpp"
 
 namespace argennon {
