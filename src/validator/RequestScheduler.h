@@ -76,7 +76,7 @@ public:
 
     void findCollisions(full_id chunkID,
                         const std::vector<int32>& sortedOffsets,
-                        const std::vector<BlockAccessInfo>& accessBlocks);
+                        const std::vector<AccessBlockInfo>& accessBlocks);
 
     /// this function is thread-safe as long as all used `id`s are distinct
     auto& requestAt(AppRequestIdType id);

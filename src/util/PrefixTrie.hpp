@@ -197,11 +197,11 @@ public:
      * @return
      */
     static T uncheckedParse(const std::string& str) {
-        auto start = str.find("0x") + 2;
-        if (start == std::string::npos) throw std::runtime_error("not implemented");
+        auto start = str.find("0x");
+        if (start == std::string::npos || str.at(start + 2) == '0') throw std::runtime_error("not implemented");
         std::size_t end;
         auto num = std::stoull(str, &end, 0);
-        auto len = end - start;
+        auto len = end - start - 2;
         return num << ((sizeof(T) - len / 2 - len % 2) * 8);
     }
 

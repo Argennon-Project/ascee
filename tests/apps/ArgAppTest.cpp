@@ -28,7 +28,7 @@ using namespace asa;
 using namespace ave;
 using namespace ascee::runtime;
 
-using Access = BlockAccessInfo::Access::Type;
+using Access = AccessBlockInfo::Access::Type;
 
 class ArgAppTest : public ::testing::Test {
 protected:

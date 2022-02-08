@@ -172,7 +172,10 @@ TEST(PrefixTrieTest, SimpleTrie) {
 TEST(PrefixTrieTest, VarUIntTest) {
     PrefixTrie<uint32_t, 4> varSize({0xd0, 0xf000, 0xfc0000, 0xffffff00});
 
-    auto x = varSize.encodeVarUInt(8 * 1024);
+
+    auto x = varSize.uncheckedParse("0x0ab00");
+
+    x = varSize.encodeVarUInt(8 * 1024);
     printf("x=%x\n", x);
 
 
@@ -262,9 +265,17 @@ TEST(PrefixTrieTest, DifferentTries) {
 }
 
 TEST(PrefixTrieTest, ParseSymbolic) {
+    uint8_t id;
+
+    PrefixTrie<uint32_t, 4> varSize({0xd0, 0xf000, 0xfc0000, 0xffffff00});
+
+    auto x = PrefixTrie<uint32_t, 4>::uncheckedParse("0xab00");
+    EXPECT_EQ(x, 0xab000000);
+
+    EXPECT_THROW(varSize.uncheckedParse("0x0ab00"), std::runtime_error);
+
     PrefixTrie<uint8_t, 1> t({0x10});
 
-    uint8_t id;
 
     t.parsePrefixCode("5", id);
     EXPECT_EQ(id, 5);

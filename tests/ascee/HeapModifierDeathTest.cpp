@@ -29,7 +29,7 @@ using namespace runtime;
 using std::vector;
 
 using HeapModifier = RestrictedModifier;
-using Access = BlockAccessInfo::Access::Type;
+using Access = AccessBlockInfo::Access::Type;
 using SizeType = HeapModifier::ChunkInfo::ResizingType;
 
 class HeapModifierDeathTest : public ::testing::Test {
@@ -56,7 +56,7 @@ public:
         vector<HeapModifier::ChunkInfo> chunksForApp1;
         chunksForApp1.emplace_back(&tempChunk1_10, SizeType::read_only, 0,
                                    vector<int32>{100, 108, 150, 252},
-                                   vector<BlockAccessInfo>{
+                                   vector<AccessBlockInfo>{
                                            {8,  Access::read_only,    0},
                                            {16, Access::writable,     0},
                                            {4,  Access::int_additive, 0},
@@ -64,25 +64,25 @@ public:
                                    });
         chunksForApp1.emplace_back(&tempChunk1_11, SizeType::read_only, 0,
                                    vector<int32>{100, 120},
-                                   vector<BlockAccessInfo>{
+                                   vector<AccessBlockInfo>{
                                            {8, Access::writable, 0},
                                            {8, Access::writable, 0},
                                    });
         chunksForApp1.emplace_back(&tempChunk1_100, SizeType::read_only, 0,
                                    vector<int32>{100},
-                                   vector<BlockAccessInfo>{
+                                   vector<AccessBlockInfo>{
                                            {8, Access::writable, 0},
                                    });
 
         vector<HeapModifier::ChunkInfo> chunksForApp2;
         chunksForApp2.emplace_back(&tempChunk2_1, SizeType::read_only, 0,
                                    vector<int32>{100},
-                                   vector<BlockAccessInfo>{
+                                   vector<AccessBlockInfo>{
                                            {8, Access::writable, 0},
                                    });
         chunksForApp2.emplace_back(&tempChunk2_2, SizeType::read_only, 0,
                                    vector<int32>{100},
-                                   vector<BlockAccessInfo>{
+                                   vector<AccessBlockInfo>{
                                            {8, Access::writable, 0},
                                    });
 

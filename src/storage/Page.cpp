@@ -28,7 +28,7 @@ void Page::applyDelta(const VarLenFullID& pageID, const Page::Delta& delta, int6
     const byte* reader = delta.content.data();
     // we need this to make sure first migrant has zero index
     int32_fast index = -1;
-    while (auto indexDiff = var_size_trie_g.decodeVarUInt(&reader, end)) {
+    while (auto indexDiff = var_uint_trie_g.decodeVarUInt(&reader, end)) {
         index += indexDiff;
         if (index == migrants.size()) {
             migrants.emplace_back(VarLenFullID(&reader, end));

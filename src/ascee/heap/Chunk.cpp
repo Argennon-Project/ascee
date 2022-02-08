@@ -99,15 +99,15 @@ bool Chunk::shrinkSpace() {
 void Chunk::applyDelta(const byte*& delta, const byte* boundary) {
     if (delta >= boundary) return;
 
-    auto size = chunkSize ^ (int32) var_size_trie_g.decodeVarUInt(&delta, boundary);
+    auto size = chunkSize ^ (int32) var_uint_trie_g.decodeVarUInt(&delta, boundary);
     reserveSpace(size);
 
     int32_fast offset = 0;
     while (delta < boundary) {
-        auto diff = var_size_trie_g.decodeVarUInt(&delta, boundary);
+        auto diff = var_uint_trie_g.decodeVarUInt(&delta, boundary);
         if (diff == 0) break;
         offset += diff - 1;
-        auto blockSize = var_size_trie_g.decodeVarUInt(&delta, boundary);
+        auto blockSize = var_uint_trie_g.decodeVarUInt(&delta, boundary);
         if (offset + blockSize > size) {
             // For being able to remove deltas we need this. Do not change it!
             if (offset < size) blockSize = size - offset;

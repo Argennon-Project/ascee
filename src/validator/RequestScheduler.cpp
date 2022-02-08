@@ -65,7 +65,7 @@ void RequestScheduler::submitResult(AppRequestIdType reqID, int statusCode) {
 void RequestScheduler::findCollisions(
         full_id chunkID,
         const vector<int32>& sortedOffsets,
-        const vector<BlockAccessInfo>& accessBlocks
+        const vector<AccessBlockInfo>& accessBlocks
 ) {
     int32_fast sizeWritersBegin = 0, sizeWritersEnd = 0;
     bool inSizeWriterList = false;

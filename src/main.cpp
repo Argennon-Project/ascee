@@ -74,7 +74,7 @@ int main(int argc, char const* argv[]) {
 
     element_printf("x.y->%B\n", z);
 
-    using Access = BlockAccessInfo::Access::Type;
+    using Access = AccessBlockInfo::Access::Type;
     PageLoader pl;
     PageCache pc(pl);
     BlockLoader bl;

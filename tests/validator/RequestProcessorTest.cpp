@@ -27,7 +27,7 @@ using namespace asa;
 using namespace ascee::runtime;
 using testing::Sequence;
 
-using Access = BlockAccessInfo::Access::Type;
+using Access = AccessBlockInfo::Access::Type;
 
 constexpr long_long_id chunk1_local_id(0x4400000000000000, 0x0500000000000000);
 constexpr long_id app_1_id(0x1000000000000000);

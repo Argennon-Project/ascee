@@ -43,7 +43,7 @@ typedef struct LongID long_id;
 typedef struct LongLongID long_long_id;
 typedef struct FullID full_id;
 
-inline const util::PrefixTrie<uint32_t, 4> var_size_trie_g({0xd0, 0xf000, 0xfc0000, 0xffffff00});
+inline const util::PrefixTrie<uint32_t, 4> var_uint_trie_g({0xd0, 0xf000, 0xfc0000, 0xffffff00});
 inline const util::PrefixTrie<uint64_t, 3> app_trie_g({0xa0, 0xc000, 0xd00000});
 inline const util::PrefixTrie<uint64_t, 3> account_trie_g({0x60, 0xd000, 0xe00000});
 inline const util::PrefixTrie<uint64_t, 3> local_trie_g({0xc0, 0xe000, 0xf00000});

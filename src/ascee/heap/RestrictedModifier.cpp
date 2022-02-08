@@ -29,6 +29,8 @@ using namespace argennon::ascee::runtime;
 using std::vector, std::move;
 
 
+using Access = AccessBlockInfo::Access;
+
 constexpr uint32 max_chunk_size = 64 * 1024;
 
 
@@ -132,7 +134,7 @@ bool RestrictedModifier::AccessBlock::ensureExists(int16_t version) {
 
 byte* RestrictedModifier::AccessBlock::prepareToRead(int16_t version, uint32 offset, uint32 readSize) {
     if (offset + readSize > size) throw std::out_of_range("out of block read");
-    if (accessType.denies(BlockAccessInfo::Access::Operation::read)) {
+    if (accessType.denies(Access::Operation::read)) {
         throw std::out_of_range("access block is not readable");
     }
     syncTo(version);
@@ -142,7 +144,7 @@ byte* RestrictedModifier::AccessBlock::prepareToRead(int16_t version, uint32 off
 byte* RestrictedModifier::AccessBlock::prepareToWrite(int16_t version, uint32 offset, uint32 writeSize) {
     // todo IMPORTANT OVERFLOW PROBLEM! we have this issue in many places
     if (offset + writeSize > size) throw std::out_of_range("out of block write");
-    if (accessType.denies(BlockAccessInfo::Access::Operation::write)) {
+    if (accessType.denies(Access::Operation::write)) {
         throw std::out_of_range("block is not writable");
     }
     syncTo(version);
@@ -179,20 +181,20 @@ void RestrictedModifier::AccessBlock::wrToHeap(Chunk* chunk, int16_t version, ui
 
 RestrictedModifier::AccessBlock::AccessBlock(const Chunk::Pointer& heapLocation,
                                              int32 size,
-                                             BlockAccessInfo::Access accessType) : heapLocation(heapLocation),
+                                             AccessBlockInfo::Access accessType) : heapLocation(heapLocation),
                                                                                    size(size),
                                                                                    accessType(accessType) {}
 
 RestrictedModifier::ChunkInfo::ChunkInfo(Chunk* chunk, ResizingType resizingType, uint32 sizeBound,
                                          const std::vector<int32>& sortedAccessedOffsets,
-                                         const std::vector<BlockAccessInfo>& accessInfoList) :
+                                         const std::vector<AccessBlockInfo>& accessInfoList) :
 // We do not check inputs. We assume that all inputs are checked by upper layers.
         size(
                 Chunk::Pointer((byte*) (&initialSize), sizeof(initialSize)),
                 sizeof(initialSize),
-                BlockAccessInfo::Access(
+                AccessBlockInfo::Access(
                         resizingType == ResizingType::expandable || resizingType == ResizingType::shrinkable ?
-                        BlockAccessInfo::Access::Type::writable : BlockAccessInfo::Access::Type::read_only)
+                        Access::Type::writable : Access::Type::read_only)
         ),
         sizeBound(sizeBound),
         ptr(chunk),
@@ -205,7 +207,7 @@ RestrictedModifier::ChunkInfo::ChunkInfo(Chunk* chunk, ResizingType resizingType
 RestrictedModifier::AccessTableMap RestrictedModifier::ChunkInfo::toAccessBlocks(
         Chunk* chunk,
         const vector<int32>& offsets,
-        const vector<BlockAccessInfo>& accessInfoList
+        const vector<AccessBlockInfo>& accessInfoList
 ) {
     vector<AccessBlock> blocks;
     blocks.reserve(offsets.size());

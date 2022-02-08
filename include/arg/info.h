@@ -28,7 +28,10 @@ namespace argennon {
 
 using AppRequestIdType = int32_fast;
 
-struct BlockAccessInfo {
+/**
+ *
+ */
+struct AccessBlockInfo {
     class Access {
     public:
         enum class Type : byte {
@@ -96,7 +99,7 @@ struct BlockAccessInfo {
 
 struct AppRequestInfo {
     using AccessMapType = util::FixedOrderedMap<long_id,
-            util::FixedOrderedMap<long_long_id, util::FixedOrderedMap<int32, BlockAccessInfo>>>;
+            util::FixedOrderedMap<long_long_id, util::FixedOrderedMap<int32, AccessBlockInfo>>>;
     /**
      *  The unique identifier of a request in a block. It must be a 32 bit integer in the interval [0,n), where n is
      *  the total number of requests of the block. Obviously any integer in the interval should be assigned to
@@ -117,9 +120,9 @@ struct AppRequestInfo {
     std::unordered_set<int_fast32_t> stackSizeFailures;
     std::unordered_set<int_fast32_t> cpuTimeFailures;
     /**
-     * memoryAccessMap is the sorted list of memory locations that the request will access. The list must be sorted based
-     * on appIDs, chunkIDs and offsets. The first defined access block for every chunk MUST be ONE of the following
-     * access blocks:
+     * memoryAccessMap is the sorted list of memory locations that the request will access. This list must be sorted
+     * based on appIDs, chunkIDs and offsets. The first defined access block for every chunk MUST be ONE of the
+     * following access blocks:
      *
      *
      * {offset = -3, size = *, access = *} which means the request does not access the size of the chunk.
@@ -127,7 +130,7 @@ struct AppRequestInfo {
      * {offset = -2, size = *, access = *} which means the request reads the chunkSize but will not modify it.
      *
      * {offset = -1, size, access = *}, which means the request may resize the chunk. If size > 0 the request wants to
-     * expands the chunk and sizeBound = size, which means newSize <= size. If size <= 0 the request can shrink the
+     * expand the chunk and sizeBound = size, which means newSize <= size. If size <= 0 the request can shrink the
      * chunk and sizeBound = -size, which means newSize >= -size.
      *
      * @note * indicates any value.

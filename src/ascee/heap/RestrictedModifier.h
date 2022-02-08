@@ -100,11 +100,11 @@ private:
 
         AccessBlock(const AccessBlock&) = delete;
 
-        AccessBlock(const Chunk::Pointer& heapLocation, int32 size, BlockAccessInfo::Access accessType);
+        AccessBlock(const Chunk::Pointer& heapLocation, int32 size, AccessBlockInfo::Access accessType);
 
         [[nodiscard]]
         bool defined(uint32 requiredSize) const {
-            return size >= requiredSize && !accessType.denies(BlockAccessInfo::Access::Operation::check);
+            return size >= requiredSize && !accessType.denies(AccessBlockInfo::Access::Operation::check);
         }
 
         [[nodiscard]] inline
@@ -155,7 +155,7 @@ private:
         void addInt(int16_t version, T value) {
             static_assert(std::is_integral<T>::value);
             if (sizeof(T) != size) throw std::out_of_range("addInt size");
-            if (accessType.denies(BlockAccessInfo::Access::Operation::int_add)) {
+            if (accessType.denies(AccessBlockInfo::Access::Operation::int_add)) {
                 throw std::out_of_range("block is not additive");
             }
             syncTo(version);
@@ -181,7 +181,7 @@ private:
 
         Chunk::Pointer heapLocation;
         uint32 size = 0;
-        BlockAccessInfo::Access accessType{BlockAccessInfo::Access::Type::read_only};;
+        AccessBlockInfo::Access accessType{AccessBlockInfo::Access::Type::read_only};;
         std::vector<Version> versionList;
 
         void syncTo(int16_t version);
@@ -220,7 +220,7 @@ public:
          */
         ChunkInfo(Chunk* chunk, ResizingType resizingType, uint32 sizeBound,
                   const std::vector<int32>& sortedAccessedOffsets,
-                  const std::vector<BlockAccessInfo>& accessInfoList);
+                  const std::vector<AccessBlockInfo>& accessInfoList);
 
         ChunkInfo(ChunkInfo&&) = default;
 
@@ -243,7 +243,7 @@ public:
         static RestrictedModifier::AccessTableMap toAccessBlocks(
                 Chunk* chunk,
                 const std::vector<int32>& offsets,
-                const std::vector<BlockAccessInfo>& accessInfoList
+                const std::vector<AccessBlockInfo>& accessInfoList
         );
     };
 
