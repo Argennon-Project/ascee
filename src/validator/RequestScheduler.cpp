@@ -26,11 +26,10 @@ using std::make_unique, std::vector, asa::ChunkIndex;
 
 AppRequest* RequestScheduler::nextRequest() {
     try {
-        auto* result = &zeroQueue.blockingDequeue()->getAppRequest();
-        zeroQueue.addProducer();
+        auto* result = &zeroQueue.blockingDequeue(true)->getAppRequest();
         return result;
-    } catch (const std::out_of_range&) {
-        if (count != 0) throw BlockError("execution graph is not a dag");
+    } catch (const std::underflow_error&) {
+        if (remaining != 0) throw BlockError("execution graph is not a dag");
         return nullptr;
     }
 }
@@ -51,7 +50,7 @@ void RequestScheduler::submitResult(AppRequestIdType reqID, int statusCode) {
         }
     }
     reqNode.reset();
-    --count;
+    --remaining;
     zeroQueue.removeProducer();
 }
 
@@ -125,12 +124,12 @@ RequestScheduler::RequestScheduler(
         ChunkIndex& heapIndex
 ) :
         heapIndex(heapIndex),
-        count(totalRequestCount),
+        remaining(totalRequestCount),
         nodeIndex(std::make_unique<std::unique_ptr<DagNode>[]>(totalRequestCount)),
         memoryAccessMaps(totalRequestCount) {}
 
 void RequestScheduler::buildExecDag() {
-    for (int i = 0; i < count; ++i) {
+    for (int i = 0; i < remaining; ++i) {
         if (nodeIndex[i]->getInDegree() == 0) {
             zeroQueue.enqueue(nodeIndex[i].get());
         } else {
@@ -145,6 +144,7 @@ AppRequestInfo::AccessMapType RequestScheduler::sortAccessBlocks(int workersCoun
 }
 
 void RequestScheduler::finalizeRequest(AppRequestIdType id) {
+    printf(" finalized: %ld ", id);
     auto& node = nodeIndex[id];
     for (const auto adjID: node->adjacentNodes()) {
         nodeIndex[adjID]->incrementInDegree();

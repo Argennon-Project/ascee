@@ -16,7 +16,9 @@ add_executable(Google_Tests_run
         util/UtilCryptoTest.cpp
         util/UtilBase64urlTest.cpp
         validator/RequestSchedulerTest.cpp
-        apps/ArgAppTest.cpp storage/AsaPageTest.cpp)
+        apps/ArgAppTest.cpp
+        storage/AsaPageTest.cpp
+        validator/RequestProcessorTest.cpp)
 
 
 # linking Google_Tests_run with libraries

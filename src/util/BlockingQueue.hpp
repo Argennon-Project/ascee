@@ -38,20 +38,25 @@ public:
         cv.notify_one();
     }
 
-    T blockingDequeue() {
+    T blockingDequeue(bool addProducer) {
         // Wait until queue has items
         std::unique_lock<std::mutex> lk(queueMutex);
         // predicate does not need to acquire any locks, lk does the required locking
         cv.wait(lk, [this] { return !(content.empty() && producerCount > 0); });
         // After the wait, we own the lock.
+        if (content.empty()) throw std::underflow_error("empty queue without any producers");
 
-        if (content.empty()) throw std::out_of_range("empty queue without any producers");
+        if (addProducer) ++producerCount;
 
         T result = content.front();
         content.pop();
         return result;
     }
 
+    /**
+     * Use with caution. In many situations instead of this function @p addProducer flag of @p blockingDequeue
+     * should be used.
+     */
     void addProducer() {
         std::lock_guard<std::mutex> lock(queueMutex);
         ++producerCount;

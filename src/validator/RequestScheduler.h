@@ -97,9 +97,17 @@ public:
     [[nodiscard]]
     ascee::runtime::HeapModifier getModifierFor(AppRequestIdType requestID) const;
 
+    explicit operator std::string() const {
+        std::string result = "";
+        for (int i = 0; i < remaining; ++i) {
+            result += std::to_string(nodeIndex[i]->adjacentNodes().size()) + "=";
+        }
+        return result;
+    }
+
 private:
     asa::ChunkIndex& heapIndex;
-    std::atomic<int_fast32_t> count;
+    std::atomic<int_fast32_t> remaining;
     util::BlockingQueue<DagNode*> zeroQueue;
     std::unique_ptr<std::unique_ptr<DagNode>[]> nodeIndex;
     std::vector<AppRequestInfo::AccessMapType> memoryAccessMaps;

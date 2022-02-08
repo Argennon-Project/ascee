@@ -17,36 +17,17 @@
 
 #include <future>
 #include "BlockValidator.h"
+#include "RequestProcessor.hpp"
 
 using namespace argennon;
 using namespace ave;
 using namespace util;
 using namespace asa;
-using namespace ascee::runtime;
-using std::vector, std::future;
+using std::vector, std::future, ascee::runtime::AppResponse;
 
 static
 Digest calculateDigest(vector<AppResponse> responses) {
     return {};
-}
-
-static
-void runAll(const std::function<void(int64_fast)>& task, int64_fast n, int workersCount) {
-    auto step = std::max<int64_fast>(n / workersCount, 1);
-
-    vector<future<void>> pendingTasks;
-    pendingTasks.reserve(workersCount);
-    for (int i = 0; i < workersCount; ++i) {
-        pendingTasks.emplace_back(std::async([&, i] {
-            for (int64_fast taskID = i * step; taskID < (i + 1) * step && taskID < n; ++taskID) {
-                task(taskID);
-            }
-        }));
-    }
-
-    for (const auto& pending: pendingTasks) {
-        pending.wait();
-    }
 }
 
 /// Conditionally validates a block: valid(current | previous). Returns true when the block is valid and false
@@ -62,13 +43,14 @@ bool BlockValidator::conditionalValidate(const BlockInfo& current, const BlockIn
                 blockLoader.getNumOfChunks()
         );
 
-        RequestScheduler scheduler(blockLoader.getNumOfRequests(), index);
+        RequestProcessor processor(index, blockLoader.getNumOfRequests(), workersCount);
 
-        loadRequests(scheduler);
+        processor.loadRequests(blockLoader.createRequestStreams(workersCount));
 
-        buildDependencyGraph(scheduler);
+        processor.buildDependencyGraph();
 
-        auto responses = executeRequests(scheduler);
+        ascee::runtime::Executor executor;
+        auto responses = processor.executeRequests(executor);
 
         cache.commit(blockLoader.getPageAccessList());
 
@@ -80,57 +62,9 @@ bool BlockValidator::conditionalValidate(const BlockInfo& current, const BlockIn
     }
 }
 
-void BlockValidator::loadRequests(RequestScheduler& scheduler) {
-    auto numOfRequests = blockLoader.getNumOfRequests();
-
-    runAll([&](AppRequestIdType requestID) {
-        scheduler.addRequest(blockLoader.loadRequest(requestID));
-    }, numOfRequests, workersCount);
-
-    runAll([&](AppRequestIdType requestID) {
-        scheduler.finalizeRequest(requestID);
-    }, numOfRequests, workersCount);
-}
-
-void BlockValidator::buildDependencyGraph(RequestScheduler& scheduler) {
-    auto sortedMap = scheduler.sortAccessBlocks(workersCount);
-
-    for (long i = 0; i < sortedMap.size(); ++i) {
-        runAll([&, i](long j) {
-            const auto& chunkList = sortedMap.getValues()[i];
-            auto chunkID = chunkList.getKeys()[j];
-            const auto& blocks = chunkList.getValues()[j];
-            scheduler.findCollisions(full_id(sortedMap.getKeys()[i], chunkID), blocks.getKeys(), blocks.getValues());
-        }, sortedMap.getValues()[i].size(), workersCount);
-    }
-}
-
-vector<AppResponse> BlockValidator::executeRequests(RequestScheduler& scheduler) {
-    scheduler.buildExecDag();
-
-    vector<AppResponse> responseList(blockLoader.getNumOfRequests());
-
-    std::thread pool[workersCount];
-    for (auto& worker: pool) {
-        worker = std::thread([&] {
-            while (auto* request = scheduler.nextRequest()) {
-                responseList[request->id] = Executor::executeOne(request);
-                scheduler.submitResult(request->id, responseList[request->id].statusCode);
-            }
-        });
-    }
-
-    for (auto& worker: pool) {
-        worker.join();
-    }
-
-    return responseList;
-}
-
 BlockValidator::BlockValidator(
         PageCache& cache,
         BlockLoader& blockLoader,
         int workersCount) : cache(cache), blockLoader(blockLoader) {
-    Executor::initialize();
     this->workersCount = workersCount < 1 ? (int) std::thread::hardware_concurrency() * 2 : workersCount;
 }

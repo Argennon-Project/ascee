@@ -303,6 +303,17 @@ TEST_F(RequestSchedulerTest, ExecutionDag) {
                  true
     );
     SUB_TEST("Wrong source nodes", t5);
+
+    DagTester t6(4, singleChunk,
+                 {
+                         {.id = 3, .adjList ={1, 2}},
+                         {.id = 0, .adjList ={3}},
+                         {.id = 2, .adjList ={}},
+                         {.id = 1, .adjList ={}},
+                 },
+                 {0, 3, 2, 1}
+    );
+    SUB_TEST("Wrong source nodes", t6);
 }
 
 /*

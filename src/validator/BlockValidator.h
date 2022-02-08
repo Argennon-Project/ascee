@@ -38,12 +38,6 @@ private:
     asa::PageCache& cache;
     BlockLoader& blockLoader;
     int workersCount = -1;
-
-    void loadRequests(RequestScheduler& scheduler);
-
-    void buildDependencyGraph(RequestScheduler& scheduler);
-
-    std::vector<ascee::runtime::AppResponse> executeRequests(RequestScheduler& scheduler);
 };
 
 } // namespace argennon::ave

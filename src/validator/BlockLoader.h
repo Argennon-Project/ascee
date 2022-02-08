@@ -30,6 +30,20 @@ namespace argennon::ave {
 
 class BlockLoader {
 public:
+    class RequestStream {
+    public:
+        class EndOfStream : std::exception {
+        };
+
+        AppRequestInfo next() {
+            return {};
+        }
+    };
+
+    std::vector<RequestStream> createRequestStreams(int count) {
+        return {};
+    }
+
     void setCurrentBlock(const BlockInfo& b) {};
 
     AppRequestInfo loadRequest(AppRequestIdType id) { return {}; };

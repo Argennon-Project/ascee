@@ -32,10 +32,10 @@ using Access = BlockAccessInfo::Access::Type;
 
 class ArgAppTest : public ::testing::Test {
 protected:
+    Executor executor;
 public:
     ArgAppTest() {
         AppLoader::global = std::make_unique<AppLoader>("../apps");
-        Executor::initialize();
     }
 };
 
@@ -111,7 +111,7 @@ TEST_F(ArgAppTest, SimpleTransfer) {
     scheduler.finalizeRequest(0);
     scheduler.buildExecDag();
 
-    auto response = Executor::executeOne(scheduler.nextRequest());
+    auto response = executor.executeOne(scheduler.nextRequest());
 
     printf("<<<******* Response *******>>> \n%s\n<<<************************>>>\n", response.httpResponse.c_str());
 
@@ -152,7 +152,7 @@ TEST_F(ArgAppTest, SimpleCreateAcc) {
     scheduler.finalizeRequest(0);
     scheduler.buildExecDag();
 
-    auto response = Executor::executeOne(scheduler.nextRequest());
+    auto response = executor.executeOne(scheduler.nextRequest());
 
     printf("<<<******* Response *******>>> \n%s\n<<<************************>>>\n", response.httpResponse.c_str());
 

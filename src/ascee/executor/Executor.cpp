@@ -118,9 +118,7 @@ void Executor::unGuard() {
 }
 
 // must be thread-safe
-AppResponse Executor::executeOne(AppRequest* req) {
-    // Do not call initialize() here. It can break thread-safety
-    if (!initialized) throw std::runtime_error("Executor not initialized");
+AppResponse Executor::executeOne(AppRequest* req) const {
     response_buffer_c response;
     int statusCode;
     session = nullptr;
@@ -208,7 +206,7 @@ int Executor::controlledExec(const function<int(long_id, response_buffer_c&, str
     return ret;
 }
 
-void Executor::initialize() {
+Executor::Executor() {
     if (!initialized) {
         initHandlers();
         initialized = true;

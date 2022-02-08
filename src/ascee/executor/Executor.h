@@ -166,7 +166,7 @@ public:
         //SessionInfo(const SessionInfo&) = delete;
     };
 
-    Executor() = delete;
+    Executor();
 
     inline static SessionInfo* getSession() { return session; }
 
@@ -174,15 +174,14 @@ public:
 
     static void unGuard();
 
-    static AppResponse executeOne(AppRequest* req);
+    AppResponse executeOne(AppRequest* req) const;
 
     static
     int controlledExec(const std::function<int(long_id, response_buffer_c&, string_view_c)>& invoker,
                        long_id app_id,
                        response_buffer_c& response, string_view_c request,
-                       int_fast64_t execTime, size_t stackSize);
 
-    static void initialize();
+                       int_fast64_t execTime, size_t stackSize);
 
 private:
     static thread_local SessionInfo* session;

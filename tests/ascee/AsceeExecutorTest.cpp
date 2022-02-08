@@ -35,12 +35,10 @@ protected:
 public:
     AsceeExecutorTest() {
         AppLoader::global = std::make_unique<AppLoader>("testdata/single-thread");
-        Executor::initialize();
     }
 };
 
 struct AppTestCase {
-    Executor* executor;
     long_id calledApp;
     string request;
     int_fast32_t gas;
@@ -58,7 +56,8 @@ struct AppTestCase {
                 .appTable = AppTable(appAccessList),
         };
         //EXPECT_CALL(req.modifier, saveVersion()).Times(1);
-        auto result = Executor::executeOne(&req);
+        Executor executor;
+        auto result = executor.executeOne(&req);
 
         EXPECT_EQ(result.httpResponse, wantResponse);
 
