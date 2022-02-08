@@ -109,7 +109,6 @@ TEST_F(RequestProcessorTest, ExecOrderTest_1) {
     }
 }
 
-
 TEST_F(RequestProcessorTest, ExecOrderTest_2) {
     for (int workers = 0; workers < max_workers_count; ++workers) {
         std::vector<AppRequestInfo> requests{
@@ -139,6 +138,36 @@ TEST_F(RequestProcessorTest, ExecOrderTest_2) {
         EXPECT_CALL(mock, executeOne(5)).InSequence(s1);
 
         rp.executeRequests(mock);
+        std::cout << std::endl;
     }
 }
 
+
+TEST_F(RequestProcessorTest, ExecOrderTest_loop) {
+    for (int workers = 0; workers < max_workers_count; ++workers) {
+        std::vector<AppRequestInfo> requests{
+                {.id = 5, .adjList ={2}},
+                {.id = 4, .adjList ={5}},
+                {.id = 3, .adjList ={4}},
+                {.id = 2, .adjList ={3}},
+                {.id = 1, .adjList ={2, 5}},
+                {.id = 0, .adjList ={1}},
+        };
+
+        RequestProcessor rp(singleChunk, int(requests.size()), 5);
+
+        rp.loadRequests<FakeStream>({
+                                            {0, 1, requests},
+                                            {1, 2, requests},
+                                            {2, 3, requests},
+                                            {3, 6, requests},
+                                    });
+        MockExecutor mock;
+        Sequence s1;
+        EXPECT_CALL(mock, executeOne(0)).InSequence(s1);
+        EXPECT_CALL(mock, executeOne(1)).InSequence(s1);
+
+        EXPECT_THROW(rp.executeRequests(mock), BlockError);
+        std::cout << std::endl;
+    }
+}

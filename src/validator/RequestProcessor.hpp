@@ -41,13 +41,11 @@ public:
             try {
                 while (true) scheduler.addRequest(streams.at(i).next());
             } catch (const typename RequestStream::EndOfStream&) {}
-        }, numOfRequests, workersCount);
+        }, streams.size(), workersCount);
 
         runAll([&](AppRequestIdType requestID) {
             scheduler.finalizeRequest(requestID);
         }, numOfRequests, workersCount);
-
-        std::cout << (std::string) scheduler << "\n";
     }
 
     void buildDependencyGraph() {
@@ -70,18 +68,19 @@ public:
 
         std::vector<ascee::runtime::AppResponse> responseList(numOfRequests);
 
-        std::thread pool[workersCount];
-        for (auto& worker: pool) {
-            worker = std::thread([&] {
+        std::vector<std::future<void>> pendingTasks;
+        pendingTasks.reserve(workersCount);
+        for (int i = 0; i < workersCount; ++i) {
+            pendingTasks.emplace_back(std::async([&] {
                 while (auto* request = scheduler.nextRequest()) {
                     responseList[request->id] = executor.executeOne(request);
                     scheduler.submitResult(request->id, responseList[request->id].statusCode);
                 }
-            });
+            }));
         }
 
-        for (auto& worker: pool) {
-            worker.join();
+        for (auto& pending: pendingTasks) {
+            pending.get();
         }
 
         return responseList;
@@ -91,23 +90,24 @@ public:
     void runAll(const std::function<void(int64_fast taskIndex)
 
     >& task,
-    int64_fast n,
+    int64_fast tasksCount,
     int workersCount
     ) {
-        const auto step = std::max<int64_fast>(n / workersCount, 1);
+        const auto step = std::max<int64_fast>(tasksCount / workersCount, 1);
 
         std::vector<std::future<void>> pendingTasks;
         pendingTasks.reserve(workersCount);
         for (int i = 0; i <= workersCount; ++i) {
             pendingTasks.emplace_back(std::async([&, i] {
-                for (int64_fast taskID = i * step; taskID < (i + 1) * step && taskID < n; ++taskID) {
+                for (int64_fast taskID = i * step; taskID < (i + 1) * step && taskID < tasksCount; ++taskID) {
                     task(taskID);
                 }
             }));
         }
 
-        for (const auto& pending: pendingTasks) {
-            pending.wait();
+        for (auto& pending: pendingTasks) {
+            // by using get() instead of wait() exceptions will be rethrown here.
+            pending.get();
         }
     }
 
