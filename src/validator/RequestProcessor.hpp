@@ -20,7 +20,6 @@
 
 #include <vector>
 #include "RequestScheduler.h"
-#include "BlockLoader.h"
 
 namespace argennon::ave {
 
@@ -31,9 +30,8 @@ public:
             asa::ChunkIndex& index,
             int32_fast numOfRequests,
             int workersCount = -1
-    ) : scheduler(numOfRequests, index), numOfRequests(numOfRequests), workersCount(workersCount) {
-        this->workersCount = workersCount < 1 ? (int) std::thread::hardware_concurrency() * 2 : workersCount;
-    }
+    ) : scheduler(numOfRequests, index), numOfRequests(numOfRequests),
+        workersCount(workersCount < 1 ? (int) std::thread::hardware_concurrency() * 2 : workersCount) {}
 
     template<class RequestStream>
     void loadRequests(std::vector<RequestStream> streams) {
@@ -87,12 +85,7 @@ public:
     }
 
     static
-    void runAll(const std::function<void(int64_fast taskIndex)
-
-    >& task,
-    int64_fast tasksCount,
-    int workersCount
-    ) {
+    void runAll(const std::function<void(int64_fast taskIndex)>& task, int64_fast tasksCount, int workersCount) {
         const auto step = std::max<int64_fast>(tasksCount / workersCount, 1);
 
         std::vector<std::future<void>> pendingTasks;
@@ -113,8 +106,8 @@ public:
 
 private:
     RequestScheduler scheduler;
-    int32_fast numOfRequests;
-    int workersCount = -1;
+    const int32_fast numOfRequests;
+    int workersCount;
 };
 
 } // namespace argennon::ave

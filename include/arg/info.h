@@ -122,8 +122,8 @@ struct AppRequestInfo {
     std::unordered_set<int_fast32_t> cpuTimeFailures;
     /**
      * memoryAccessMap is the sorted list of memory locations that the request will access. This list must be sorted
-     * based on appIDs, chunkIDs and offsets. The first defined access block for every chunk MUST be ONE of the
-     * following access blocks:
+     * based on appIDs, chunkIDs and offsets. Defined access blocks must be non-overlapping. The first defined
+     * access block for every chunk MUST be ONE of the following access blocks:
      *
      *
      * {offset = -3, size = *, access = *} which means the request does not access the size of the chunk.
@@ -136,6 +136,7 @@ struct AppRequestInfo {
      *
      * @note * indicates any value.
     */
+    // block loader needs to endure that this list is: 1) sorted. 2) all AccessBlocks are non-overlapping.
     AccessMapType memoryAccessMap;
     /// This list should be checked to make sure no id is out of range.
     std::unordered_set<AppRequestIdType> adjList;

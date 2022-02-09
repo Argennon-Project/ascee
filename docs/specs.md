@@ -130,11 +130,12 @@ other chunks the native chunk will be replaced with a zero size chunk.
 
 #### Access Blocks
 
-For accessing memory locations a request needs to define a `memoryAccessMap`.
-A `memoryAccessMap` is the sorted list of memory locations that the request will
-access. This list is a sorted list of access blocks. Each access block belongs
-to a chunk and has an `offset` and a `size` which determines the location of the
-block inside that chunk. Access blocks are byte addressable and can have
+For accessing memory locations, a request needs to define a `memoryAccessMap`.
+A `memoryAccessMap` is a sorted list of memory locations that the request will
+access. These memory locations are represented by access blocks. Each access
+block belongs to a chunk and has an `offset` and a `size` which determines the
+accessible memory locations inside that chunk. Defined access blocks of a chunk
+must be **non-overlapping**. Access blocks are byte addressable and can have
 different access types:
 
 - `read_only`:
@@ -186,6 +187,7 @@ tries.
 Currently, Argennon has 4 prefix tries:
 
 ```
+// these tries are only examples. (later will be replaces with real ones)
 var_uint_trie_g({0xd0, 0xf000, 0xfc0000, 0xffffff00}): for decoding variable length unsigned integers 
 app_trie_g({0xa0, 0xc000, 0xd00000}): for application identifiers
 account_trie_g({0x60, 0xd000, 0xe00000}): for account identifiers
@@ -215,16 +217,17 @@ We use three different representation for a **simple** identifier.
 {0xb2, 0x49, 0x2} == 0xb249020000000000
 ```
 
-Hex string: a string representing the prefix code as a hex number. Leading zeros
-are ignored:
+- Hex string: a string representing of the prefix code as a hex number. Leading
+  zeros are ignored:
 
 ```c
 "0x0ab00" == {0xab, 0x0}
 "0x123" == {0x1, 0x23}
+"0x0abcde" == {0xa, 0xbc, 0xde}
 ```
 
-Decimal string: each byte of the prefix code is represented as a decimal number,
-different bytes are seperated using `.` symbol.
+- Decimal string: each byte of the prefix code is represented as a decimal
+  number, different bytes are seperated using `.` symbol.
 
 ```c
 "1.0.0.1" == {0x1, 0x0, 0x0, 0x1}
@@ -238,27 +241,30 @@ struct like types which always are allocated on the stack. All ArgC types have
 lower case names and use snake_case naming convention. Class types always end
 with `_c` suffix. There are clear differences between primitive and class types:
 
-Primitive types can be passed by value or reference, class types are **always**
-passed by reference.
+* Primitive types can be passed by value or reference, class types are **
+  always**
+  passed by reference.
 
-A function can return a primitive type, but it can not return a class type.
+- A function can return a primitive type, but it can not return a class type.
 
 ```C
-string_c convert(int32 x);    // compiler error!
+string_c convert(int32 x) {    // compiler error!
+    // function body
+}    
 ```
 
-Assignment operator `=` is not defined for class types.
+- Assignment operator `=` is not defined for class types.
 
-All ArgC types must be explicitly initialized. (primitive or class type)
+- All ArgC types must be explicitly initialized. (primitive or class type)
 
-A class type can be initialized by either a constructor or a factory method:
+- A class type can be initialized by either a constructor or a factory method:
 
 ```C
 string_c str("constructor");           // initialization using a constructor
 string_c str = to_string(msg_buffer);  // initialization using a factory method
 ```
 
-All ArgC types (primitive or class) are allocated on stack and their lifetime
-ends at the end of the scope in which they are defined.
+- All ArgC types (primitive or class) are allocated on stack and their lifetime
+  ends at the end of the scope in which they are defined.
 
-ArgC has no unsigned type.
+- ArgC has no unsigned type.

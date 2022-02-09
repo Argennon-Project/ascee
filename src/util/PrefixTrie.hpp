@@ -192,17 +192,18 @@ public:
     }
 
     /**
-     * reads a prefix code from a hex representation without checking the validity of the read code.
-     * @param str standard hex representation of a prefix code, for example: 0x123.
+     * this is a high performance function that reads a prefix code from a hex representation without checking the
+     * validity of the prefix code.
+     * @param str standard hex string representation of a prefix code, for example: 0x123.
      * @return
      */
     static T uncheckedParse(const std::string& str) {
-        auto start = str.find("0x");
-        if (start == std::string::npos || str.at(start + 2) == '0') throw std::runtime_error("not implemented");
-        std::size_t end;
-        auto num = std::stoull(str, &end, 0);
-        auto len = end - start - 2;
-        return num << ((sizeof(T) - len / 2 - len % 2) * 8);
+        static_assert(sizeof(T) <= 8, "types larger than 64-bit are not supported");
+        uint64_t num = std::stoull(str, nullptr, 0);
+        num = (num & 0xffffffff00000000) == 0 ? num << 32 : num;
+        num = (num & 0xffff000000000000) == 0 ? num << 16 : num;
+        num = (num & 0xff00000000000000) == 0 ? num << 8 : num;
+        return T(num >> (64 - sizeof(T) * 8));
     }
 
     void parsePrefixCode(std::string symbolicRep, T& id) const {
