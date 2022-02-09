@@ -71,8 +71,6 @@ public:
 
     void applyDelta(const VarLenFullID& pageID, const Delta& delta, int64_fast blockNumber);
 
-    void setWritableFlag(bool writable);
-
     [[nodiscard]]
     Chunk* getNative();
 
@@ -85,7 +83,6 @@ public:
 
 private:
     int64_fast version = 0;
-    bool writableFlag = false;
     std::unique_ptr<Chunk> native;
     std::vector<Migrant> migrants;
 };

@@ -77,13 +77,6 @@ void Page::addMigrant(Migrant m) {
     migrants.emplace_back(std::move(m));
 }
 
-void Page::setWritableFlag(bool writable) {
-    native->setWritable(writable);
-    for (const auto& m: migrants) {
-        m.chunk->setWritable(writable);
-    }
-}
-
 const std::vector<Page::Migrant>& Page::getMigrants() {
     return migrants;
 }

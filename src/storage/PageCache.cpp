@@ -37,14 +37,13 @@ PageCache::PageCache(PageLoader& loader) : loader(loader) {
 }
 
 vector<pair<full_id, Page*>>
-PageCache::prepareBlockPages(const BlockInfo& block, vector<PageAccessInfo>&& pageAccessList,
+PageCache::prepareBlockPages(const BlockInfo& block, vector<VarLenFullID>&& pageAccessList,
                              const vector<MigrationInfo>& chunkMigrations) {
     vector<pair<full_id, Page*>> result;
     result.reserve(pageAccessList.size());
-    for (const auto& info: pageAccessList) {
-        auto& page = cache.try_emplace(info.pageID, block.blockNumber).first->second;
-        page.setWritableFlag(info.isWritable);
-        result.emplace_back(info.pageID, &page);
+    for (const auto& pageID: pageAccessList) {
+        auto& page = cache.try_emplace(pageID, block.blockNumber).first->second;
+        result.emplace_back(pageID, &page);
     }
 
     // Building the request that will be sent to the PV-DB server
@@ -56,7 +55,7 @@ PageCache::prepareBlockPages(const BlockInfo& block, vector<PageAccessInfo>&& pa
     // Downloading and updating required pages
     for (int i = 0; i < pageAccessList.size(); ++i) {
         //todo: this should be done using async
-        loader.updatePage(pageAccessList[i].pageID, *result[i].second);
+        loader.updatePage(pageAccessList[i], *result[i].second);
     }
 
     // Applying proposed chunk migrations
@@ -64,7 +63,7 @@ PageCache::prepareBlockPages(const BlockInfo& block, vector<PageAccessInfo>&& pa
         Page* from = result.at(migration.fromIndex).second;
         Page* to = result.at(migration.toIndex).second;
         auto migrant = migration.chunkIndex == -1 ?
-                       Page::Migrant(std::move(pageAccessList[migration.fromIndex].pageID), from->getNative()) :
+                       Page::Migrant(std::move(pageAccessList[migration.fromIndex]), from->getNative()) :
                        from->extractMigrant(migration.chunkIndex);
 
         result[migration.toIndex].second->addMigrant(std::move(migrant));
@@ -73,7 +72,7 @@ PageCache::prepareBlockPages(const BlockInfo& block, vector<PageAccessInfo>&& pa
     return std::move(result);
 }
 
-void PageCache::commit(const std::vector<PageAccessInfo>& modifiedPages) {
+void PageCache::commit(vector<pair<full_id, Page*>> modifiedPages) {
 
 }
 

@@ -98,12 +98,11 @@ TEST_F(ArgAppTest, SimpleTransfer) {
     EXPECT_EQ((std::string) *page_2.getNative(),
               "size: 75, capacity: 75, content: 0x[ 2d 2d 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 0 0 0 0 0 ]");
 
-    page_1.setWritableFlag(true);
-    page_2.setWritableFlag(true);
-    ChunkIndex index({
+    ChunkIndex index({}, {
                              {full_id(arg_app_id_g, {0x95ab000000000000, 0}), &page_1},
                              {full_id(arg_app_id_g, {0xaabc000000000000, 0}), &page_2}
-                     }, {}, 4);
+                     },
+                     {}, 4);
 
     RequestScheduler scheduler(1, index);
 
@@ -143,8 +142,8 @@ TEST_F(ArgAppTest, SimpleCreateAcc) {
 
     Page p(46);
     auto newChunkID = full_id(arg_app_id_g, {0x9777000000000000, 0});
-    ChunkIndex index({{newChunkID, &p}}, {{newChunkID},
-                                          {{67, 0}}}, 4);
+    ChunkIndex index({}, {{newChunkID, &p}}, {{newChunkID},
+                                              {{67, 0}}}, 4);
 
     RequestScheduler scheduler(1, index);
 

@@ -40,14 +40,14 @@ protected:
 public:
     RequestSchedulerTest()
             : pc(pl),
-              singleChunk(
-                      pc.prepareBlockPages({10},
-                                           {{VarLenFullID(std::unique_ptr<byte[]>(new byte[4]{0x10, 0x44, 0x5, 0})),
-                                             true}},
-                                           {}),
-                      {{{app_1_id, chunk1_local_id}},
-                       {{8,        3}}},
-                      0) {
+              singleChunk({},
+                          pc.prepareBlockPages({10},
+                                               {{VarLenFullID(
+                                                       std::unique_ptr<byte[]>(new byte[4]{0x10, 0x44, 0x5, 0}))}},
+                                               {}),
+                          {{{app_1_id, chunk1_local_id}},
+                           {{8,        3}}},
+                          0) {
         singleChunk.getChunk({app_1_id, chunk1_local_id})->setSize(5);
     }
 };

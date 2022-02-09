@@ -33,8 +33,9 @@ class ChunkIndex {
     using Chunk = ascee::runtime::Chunk;
 public:
     ChunkIndex(
-            std::vector<std::pair<full_id, Page*>>&& requiredPages,
-            util::FixedOrderedMap<full_id, ChunkBoundsInfo>&& chunkBounds,
+            const std::vector<std::pair<full_id, Page*>>& readonlyPages,
+            std::vector<std::pair<full_id, Page*>>&& writablePages,
+            util::FixedOrderedMap <full_id, ChunkBoundsInfo>&& chunkBounds,
             int32_fast numOfChunks
     );
 
@@ -45,14 +46,16 @@ public:
 
     ascee::runtime::RestrictedModifier buildModifier(const AppRequestInfo::AccessMapType& rawAccessMap);
 
+    const std::vector<std::pair<full_id, Page*>>& getModifiedPages();
+
 private:
-    std::vector<std::pair<full_id, Page*>> pageList;
+    std::vector<std::pair<full_id, Page*>> writablePages;
     std::unordered_map<full_id, Chunk*, full_id::Hash> chunkIndex;
 
     // this map usually is small. That's why we didn't merge it with chunkIndex.
-    util::FixedOrderedMap<full_id, ChunkBoundsInfo> sizeBoundsInfo;
+    util::FixedOrderedMap <full_id, ChunkBoundsInfo> sizeBoundsInfo;
 
-    void indexPage(const std::pair<full_id, Page*>& pageInfo);
+    void indexPage(const std::pair<full_id, Page*>& pageInfo, bool writable);
 };
 
 } // namespace argennon::asa

@@ -54,11 +54,13 @@ public:
     /// This list includes:
     ///     1) The id of pages that contain at least one chunk needed for validating the block
     ///     2) The id of non-existent chunks that are accessed by at least one request.
-    std::vector<PageAccessInfo> getPageAccessList() { return {}; };
+    std::vector<VarLenFullID> getReadonlyPageList() { return {}; };
+
+    std::vector<VarLenFullID> getWritablePageList() { return {}; };
 
     /// This list will not include all chunks. Only expandable chunks and accessed non-existent chunks should be
     /// included.
-    util::FixedOrderedMap <full_id, ChunkBoundsInfo> getProposedSizeBounds() { return {}; };
+    util::FixedOrderedMap<full_id, ChunkBoundsInfo> getProposedSizeBounds() { return {}; };
 
     // BlockLoader does NOT need to verify this value. (only affects performance)
     int32_fast getNumOfChunks() {

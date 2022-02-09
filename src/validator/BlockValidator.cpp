@@ -38,7 +38,8 @@ bool BlockValidator::conditionalValidate(const BlockInfo& current, const BlockIn
         blockLoader.setCurrentBlock(current);
 
         ChunkIndex index(
-                cache.prepareBlockPages(previous, blockLoader.getPageAccessList(), blockLoader.getMigrationList()),
+                cache.prepareBlockPages(previous, blockLoader.getReadonlyPageList(), blockLoader.getMigrationList()),
+                cache.prepareBlockPages(previous, blockLoader.getWritablePageList(), blockLoader.getMigrationList()),
                 blockLoader.getProposedSizeBounds(),
                 blockLoader.getNumOfChunks()
         );
@@ -52,12 +53,12 @@ bool BlockValidator::conditionalValidate(const BlockInfo& current, const BlockIn
         ascee::runtime::Executor executor;
         auto responses = processor.executeRequests(executor);
 
-        cache.commit(blockLoader.getPageAccessList());
+        cache.commit(index.getModifiedPages());
 
         return calculateDigest(responses) == blockLoader.getResponseListDigest();
     } catch (const BlockError& err) {
         std::cout << err.message << std::endl;
-        cache.rollback(blockLoader.getPageAccessList());
+        cache.rollback(blockLoader.getWritablePageList());
         return false;
     }
 }

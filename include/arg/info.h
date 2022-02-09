@@ -156,11 +156,6 @@ struct AppRequestInfo {
     util::Digest digest;
 };
 
-struct PageAccessInfo {
-    VarLenFullID pageID;
-    bool isWritable;
-};
-
 struct MigrationInfo {
     int32_fast chunkIndex;
     /// The index of the page that the chunk should be migrated from. Here, index means the sequence number of the

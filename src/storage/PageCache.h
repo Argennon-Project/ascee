@@ -38,17 +38,17 @@ public:
     std::vector<std::pair<full_id, Page*>>
     prepareBlockPages(
             const BlockInfo& block,
-            std::vector<PageAccessInfo>&& pageAccessList,
+            std::vector<VarLenFullID>&& pageAccessList,
             const std::vector<MigrationInfo>& chunkMigrations
     );
 
-    void commit(const std::vector<PageAccessInfo>& modifiedPages);
+    void commit(std::vector<std::pair<full_id, Page*>> modifiedPages);
 
     /**
      * in a usual implementation this function simply removes any page that is modified.
      * @param modifiedPages
      */
-    void rollback(const std::vector<PageAccessInfo>& modifiedPages) {}
+    void rollback(const std::vector<VarLenFullID>& modifiedPages) {}
 
 private:
     std::unordered_map<VarLenFullID, Page, VarLenFullID::Hash> cache;

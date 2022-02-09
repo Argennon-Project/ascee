@@ -30,14 +30,19 @@ using std::vector, std::pair, std::string;
  * cause problems.
  */
 ChunkIndex::ChunkIndex(
-        vector<pair<full_id, Page*>>&& requiredPages,
+        const vector<pair<full_id, Page*>>& readonlyPages,
+        vector<pair<full_id, Page*>>&& writablePages,
         util::FixedOrderedMap<full_id, ChunkBoundsInfo>&& chunkBounds,
         int32_fast numOfChunks
-) : pageList(std::move(requiredPages)), sizeBoundsInfo(std::move(chunkBounds)) {
+) : writablePages(std::move(writablePages)), sizeBoundsInfo(std::move(chunkBounds)) {
 
     chunkIndex.reserve(numOfChunks);
-    for (const auto& pageInfo: this->pageList) {
-        indexPage(pageInfo);
+    for (const auto& page: readonlyPages) {
+        indexPage(page, false);
+    }
+
+    for (const auto& page: this->writablePages) {
+        indexPage(page, true);
     }
 
     // after indexing requiredPages all chunks are added to chunkIndex, including accessed non-existent chunks.
@@ -110,11 +115,11 @@ Chunk* ChunkIndex::getChunk(const full_id& id) {
     }
 }
 
-void ChunkIndex::indexPage(const pair<full_id, Page*>& pageInfo) {
-    chunkIndex.emplace(pageInfo.first, pageInfo.second->getNative());
+void ChunkIndex::indexPage(const pair<full_id, Page*>& pageInfo, bool writable) {
+    chunkIndex.emplace(pageInfo.first, pageInfo.second->getNative()->setWritable(writable));
 
     for (auto& migrant: pageInfo.second->getMigrants()) {
-        chunkIndex.emplace(migrant.id, migrant.chunk.get());
+        chunkIndex.emplace(migrant.id, migrant.chunk->setWritable(writable));
     }
 }
 
@@ -124,4 +129,8 @@ int32_fast ChunkIndex::getSizeLowerBound(full_id chunkID) {
     } catch (const std::out_of_range&) {
         throw BlockError("missing chunk size bounds");
     }
+}
+
+const vector<pair<full_id, Page*>>& ChunkIndex::getModifiedPages() {
+    return writablePages;
 }
