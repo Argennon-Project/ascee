@@ -200,9 +200,9 @@ public:
     static T uncheckedParse(const std::string& str) {
         static_assert(sizeof(T) <= 8, "types larger than 64-bit are not supported");
         uint64_t num = std::stoull(str, nullptr, 0);
-        num = (num & 0xffffffff00000000) == 0 ? num << 32 : num;
-        num = (num & 0xffff000000000000) == 0 ? num << 16 : num;
-        num = (num & 0xff00000000000000) == 0 ? num << 8 : num;
+        num = num > 0xffffffff ? num : num << 32;
+        num = num > 0xffffffffffff ? num : num << 16;
+        num = num > 0xffffffffffffff ? num : num << 8;
         return T(num >> (64 - sizeof(T) * 8));
     }
 
