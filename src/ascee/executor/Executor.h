@@ -32,6 +32,7 @@
 #include "VirtualSigManager.h"
 #include "AppTable.h"
 #include "heap/RestrictedModifier.h"
+#include "util/crypto/CryptoSystem.h"
 
 // #define ASCEE_MOCK_BUILD
 
@@ -163,6 +164,7 @@ public:
         FailureManager& failureManager = request->failureManager;
         std::unordered_map<uint64_t, bool> isLocked;
         VirtualSigManager virtualSigner;
+        util::CryptoSystem& cryptoSigner;
 
         CallContext* currentCall = nullptr;
         CallResourceHandler* currentResources = nullptr;
@@ -170,6 +172,9 @@ public:
         //SessionInfo(const SessionInfo&) = delete;
     };
 
+    /**
+     * instances of Executor should not be shared between different threads.
+     */
     Executor();
 
     inline static SessionInfo* getSession() { return session; }
@@ -178,7 +183,7 @@ public:
 
     static void unGuard();
 
-    AppResponse executeOne(AppRequest* req) const;
+    AppResponse executeOne(AppRequest* req);
 
     static
     int controlledExec(const std::function<int(long_id, response_buffer_c&, string_view_c)>& invoker,
@@ -188,9 +193,12 @@ public:
                        int_fast64_t execTime, size_t stackSize);
 
 private:
-    static thread_local SessionInfo* session;
+    // IMPORTANT: PBC library is not thread-safe, and this instance should not be shared between threads.
+    util::CryptoSystem cryptoSigner;
 
-    static bool initialized;
+    static inline thread_local SessionInfo* session = nullptr;
+
+    static inline std::atomic<bool> initialized = false;
 
     static void sig_handler(int sig, siginfo_t* info, void* ucontext);
 

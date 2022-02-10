@@ -30,6 +30,7 @@ using testing::Sequence;
 using Access = AccessBlockInfo::Access::Type;
 
 constexpr long_long_id chunk1_local_id(0x4400000000000000, 0x0500000000000000);
+constexpr long_long_id chunk2_local_id(0x4400000000000000, 0x0400000000000000);
 constexpr long_id app_1_id(0x1000000000000000);
 constexpr int max_workers_count = 32;
 
@@ -56,12 +57,17 @@ public:
 
 class MockExecutor {
 public:
+    MOCK_METHOD(AppResponse, executeOne, (AppRequestIdType id), (const));
+};
+
+class FakeExecutor {
+public:
+    static inline MockExecutor* mock;
+
     AppResponse executeOne(AppRequest* req) const {
         std::cout << "->" << req->id;
-        return executeOne(req->id);
+        return mock->executeOne(req->id);
     }
-
-    MOCK_METHOD(AppResponse, executeOne, (AppRequestIdType id), (const));
 };
 
 class FakeStream {
@@ -104,7 +110,8 @@ TEST_F(RequestProcessorTest, ExecOrderTest_1) {
         EXPECT_CALL(mock, executeOne(2)).InSequence(s2);
         EXPECT_CALL(mock, executeOne(1)).InSequence(s1);
 
-        rp.executeRequests(mock);
+        FakeExecutor::mock = &mock;
+        rp.executeRequests<FakeExecutor>();
         std::cout << std::endl;
     }
 }
@@ -137,7 +144,9 @@ TEST_F(RequestProcessorTest, ExecOrderTest_2) {
         EXPECT_CALL(mock, executeOne(4)).InSequence(s1, s2, s3);
         EXPECT_CALL(mock, executeOne(5)).InSequence(s1);
 
-        rp.executeRequests(mock);
+
+        FakeExecutor::mock = &mock;
+        rp.executeRequests<FakeExecutor>();
         std::cout << std::endl;
     }
 }
@@ -167,7 +176,79 @@ TEST_F(RequestProcessorTest, ExecOrderTest_loop) {
         EXPECT_CALL(mock, executeOne(0)).InSequence(s1);
         EXPECT_CALL(mock, executeOne(1)).InSequence(s1);
 
-        EXPECT_THROW(rp.executeRequests(mock), BlockError);
+
+        FakeExecutor::mock = &mock;
+
+        EXPECT_THROW(rp.executeRequests<FakeExecutor>(), BlockError);
         std::cout << std::endl;
     }
+}
+
+TEST_F(RequestProcessorTest, SimpleDependencyGraph) {
+    std::vector<AppRequestInfo> requests{
+            {
+                    .id = 0,
+                    .memoryAccessMap = {
+                            {app_1_id},
+                            {{{chunk1_local_id}, {{{0}, {{3, Access::writable, 0}}},}}}},
+                    .adjList ={}
+            },
+            {
+                    .id = 1,
+                    .memoryAccessMap = {
+                            {app_1_id},
+                            {{{chunk1_local_id}, {{{2}, {{4, Access::read_only, 1}}},}}}},
+                    .adjList ={0}
+            },
+            {
+                    .id = 2,
+                    .memoryAccessMap = {
+                            {app_1_id},
+                            {{{chunk1_local_id}, {{{3}, {{4, Access::read_only, 2}}},}}}},
+                    .adjList ={}
+            },
+            {
+                    .id = 3,
+                    .memoryAccessMap = {
+                            {app_1_id},
+                            {{{chunk2_local_id}, {{{0}, {{4, Access::int_additive, 3}}},}}}},
+                    .adjList ={2}
+            },
+            {
+                    .id = 4,
+                    .memoryAccessMap = {
+                            {app_1_id},
+                            {{{chunk2_local_id}, {{{0}, {{4, Access::int_additive, 4}}},}}}},
+                    .adjList ={2}
+            },
+            {
+                    .id = 5,
+                    .memoryAccessMap = {
+                            {app_1_id},
+                            {{{chunk2_local_id}, {{{3}, {{2, Access::read_only, 5}}},}}}},
+                    .adjList ={3, 4}
+            },
+    };
+
+
+    Page p1(123);
+    Page p2(123);
+
+    ChunkIndex index(
+            {},
+            {{{app_1_id, chunk1_local_id}, &p1},
+             {{app_1_id, chunk2_local_id}, &p2}},
+            {{{app_1_id, chunk1_local_id}, {app_1_id, chunk2_local_id}},
+             {{15,       0},               {15,       0}}},
+            5);
+
+    RequestProcessor rp(index, int(requests.size()), 5);
+
+    rp.loadRequests<FakeStream>({
+                                        {0, 1, requests},
+                                        {1, 3, requests},
+                                        {3, 6, requests},
+                                });
+
+    rp.buildDependencyGraph();
 }

@@ -38,7 +38,7 @@ int main(int argc, char const* argv[]) {
     cout << sk.toString() << "\n";
     cout << pk.toString() << "\n";
 
-    std::string_view msg = R"({"to":0xaabc000000000000,"amount":1399,"spender":0x100000000000000,"nonce":11})";
+    std::string_view msg = R"({"to":0xaabc000000000000,"amount":1234,"spender":0x100000000000000,"nonce":11})";
 
     Signature sig = signer.sign(msg, sk);
 

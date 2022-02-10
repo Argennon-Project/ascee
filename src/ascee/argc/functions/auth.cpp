@@ -18,7 +18,6 @@
 #include <argc/types.h>
 #include <argc/functions.h>
 #include <executor/Executor.h>
-#include "util/crypto/CryptoSystem.h"
 
 
 using namespace argennon;
@@ -31,7 +30,6 @@ constexpr int decision_nonce_size = int(sizeof(uint16));
 constexpr uint16 nonce16_max = UINT16_MAX;
 constexpr long_id nonce_chunk = 0;
 
-static util::CryptoSystem cryptoSigner;
 
 static
 void appendNonceToMsg(message_c& msg, long_id spender, uint32_t nonce) {
@@ -53,7 +51,7 @@ bool verifyWithMultiwayNonce(int nonceCount, int32 nonceIndex,
     auto pk = heap.load<PublicKey>(pkIndex);
 
     if (!invalidate) {
-        return cryptoSigner.verify(StringView(msg), sig, pk);
+        return Executor::getSession()->cryptoSigner.verify(StringView(msg), sig, pk);
     }
 
     if (nonceCount > 1) nonceIndex += int32(spender % nonceCount) * nonce16_size;
@@ -61,7 +59,7 @@ bool verifyWithMultiwayNonce(int nonceCount, int32 nonceIndex,
     if (nonce >= nonce16_max) return false;
 
     appendNonceToMsg(msg, spender, nonce);
-    bool valid = cryptoSigner.verify(StringView(msg), sig, pk);
+    bool valid = Executor::getSession()->cryptoSigner.verify(StringView(msg), sig, pk);
     if (valid) heap.store<uint16>(nonceIndex, nonce + 1);
 
     return valid;

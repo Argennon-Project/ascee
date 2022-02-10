@@ -62,7 +62,7 @@ enum class StatusCode : int {
     out_of_range = 525,
 };
 
-inline const char* gReasonByStatusCode(StatusCode code) {
+constexpr const char* gReasonByStatusCode(StatusCode code) {
     switch (code) {
         case StatusCode::bad_request:
             return "Bad Request";

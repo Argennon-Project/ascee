@@ -50,8 +50,7 @@ bool BlockValidator::conditionalValidate(const BlockInfo& current, const BlockIn
 
         processor.buildDependencyGraph();
 
-        ascee::runtime::Executor executor;
-        auto responses = processor.executeRequests(executor);
+        auto responses = processor.executeRequests<ascee::runtime::Executor>();
 
         cache.commit(index.getModifiedPages());
 

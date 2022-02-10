@@ -26,9 +26,6 @@ using namespace argennon;
 using namespace ascee::runtime;
 using std::unique_ptr, std::string, std::to_string, std::function;
 
-thread_local Executor::SessionInfo* Executor::session = nullptr;
-bool Executor::initialized = false;
-
 static inline
 void maskSignals(int how) {
     sigset_t set;
@@ -118,13 +115,14 @@ void Executor::unGuard() {
 }
 
 // must be thread-safe
-AppResponse Executor::executeOne(AppRequest* req) const {
+AppResponse Executor::executeOne(AppRequest* req) {
     response_buffer_c response;
     int statusCode;
     session = nullptr;
     try {
         SessionInfo threadSession{
                 .request = req,
+                .cryptoSigner = cryptoSigner,
         };
         session = &threadSession;
 
@@ -207,10 +205,7 @@ int Executor::controlledExec(const function<int(long_id, response_buffer_c&, str
 }
 
 Executor::Executor() {
-    if (!initialized) {
-        initHandlers();
-        initialized = true;
-    }
+    if (!initialized.exchange(true)) initHandlers();
 }
 
 static inline
