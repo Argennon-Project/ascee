@@ -18,7 +18,7 @@
 #include <pbc/pbc.h>
 #include <iostream>
 #include <util/StaticArray.hpp>
-#include "util/FixedOrderedMap.hpp"
+#include "util/OrderedStaticMap.hpp"
 #include "validator/RequestScheduler.h"
 #include "validator/BlockLoader.h"
 #include "storage/ChunkIndex.h"
@@ -113,12 +113,12 @@ int main(int argc, char const* argv[]) {
     auto temp = rs.sortAccessBlocks(8).at(app).at({acc, loc});
     rs.findCollisions(full_id(app, {acc, loc}), temp.getKeys(), temp.getValues());
 
-    util::FixedOrderedMap<int, std::string> m1({10, 15, 24}, {"Hi", "Yo", "Bye"});
+    util::OrderedStaticMap<int, std::string> m1({10, 15, 24}, {"Hi", "Yo", "Bye"});
 
-    util::FixedOrderedMap<int, std::string> m2({10, 16, 26}, {"Hi", "Yo2", "Bye2"});
+    util::OrderedStaticMap<int, std::string> m2({10, 16, 26}, {"Hi", "Yo2", "Bye2"});
 
-    util::FixedOrderedMap<int, util::FixedOrderedMap<int, std::string>> m3({100}, {m1});
-    util::FixedOrderedMap<int, util::FixedOrderedMap<int, std::string>> m4({100}, {m2});
+    util::OrderedStaticMap<int, util::OrderedStaticMap<int, std::string>> m3({100}, {m1});
+    util::OrderedStaticMap<int, util::OrderedStaticMap<int, std::string>> m4({100}, {m2});
 
     auto m = util::mergeAllParallel<int, std::string>(
             {

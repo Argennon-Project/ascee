@@ -25,7 +25,7 @@
 #include <arg/info.h>
 #include "Chunk.h"
 #include "util/PrefixTrie.hpp"
-#include "util/FixedOrderedMap.hpp"
+#include "util/OrderedStaticMap.hpp"
 
 namespace argennon::ascee::runtime {
 
@@ -84,7 +84,7 @@ public:
             throw std::out_of_range("isValid: access block not defined");
         }
         // we can't use getChunkSize() here
-        return offset + size <= currentChunk->size.read<int32>(currentVersion, 0);
+        return int64(offset) + int64(size) <= (int64) currentChunk->size.read<uint32>(currentVersion, 0);
     }
 
     uint32 getChunkSize();
@@ -100,7 +100,7 @@ private:
 
         AccessBlock(const AccessBlock&) = delete;
 
-        AccessBlock(const Chunk::Pointer& heapLocation, int32 size, AccessBlockInfo::Access accessType);
+        AccessBlock(const Chunk::Pointer& heapLocation, uint32 size, AccessBlockInfo::Access accessType);
 
         [[nodiscard]]
         bool defined(uint32 requiredSize) const {
@@ -193,7 +193,7 @@ private:
         byte* prepareToWrite(int16_t version, uint32 offset, uint32 writeSize);
     };
 
-    typedef util::FixedOrderedMap <uint32, AccessBlock> AccessTableMap;
+    typedef util::OrderedStaticMap<uint32, AccessBlock> AccessTableMap;
 public:
     class ChunkInfo {
         friend class RestrictedModifier;
@@ -247,7 +247,7 @@ public:
         );
     };
 
-    typedef util::FixedOrderedMap<long_long_id, ChunkInfo> ChunkMap64;
+    typedef util::OrderedStaticMap<long_long_id, ChunkInfo> ChunkMap64;
 
     RestrictedModifier(std::vector<long_id> apps, std::vector<ChunkMap64> chunkMaps) :
             appsAccessMaps(std::move(apps), std::move(chunkMaps)) {}
@@ -269,7 +269,7 @@ public:
     }
 
 private:
-    typedef util::FixedOrderedMap<long_id, ChunkMap64> AppMap;
+    typedef util::OrderedStaticMap<long_id, ChunkMap64> AppMap;
 
     int16_t currentVersion = 0;
     ChunkInfo* currentChunk = nullptr;

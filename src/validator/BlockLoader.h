@@ -22,7 +22,7 @@
 #include <string>
 #include <unordered_set>
 
-#include "util/FixedOrderedMap.hpp"
+#include "util/OrderedStaticMap.hpp"
 #include "arg/info.h"
 
 
@@ -60,7 +60,7 @@ public:
 
     /// This list will not include all chunks. Only expandable chunks and accessed non-existent chunks should be
     /// included.
-    util::FixedOrderedMap<full_id, ChunkBoundsInfo> getProposedSizeBounds() { return {}; };
+    util::OrderedStaticMap<full_id, ChunkBoundsInfo> getProposedSizeBounds() { return {}; };
 
     // BlockLoader does NOT need to verify this value. (only affects performance)
     int32_fast getNumOfChunks() {

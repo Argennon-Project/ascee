@@ -29,19 +29,18 @@ using std::unique_ptr, std::make_unique;
 /// new chunks always have a size of zero. Their size usually should be changed by using reSize() function.
 /// The chunk will be zero initialized. This is important to make sure that smart contracts
 /// behave deterministically and validators will agree on the result of executing a smart contact.
-Chunk::Chunk(int capacity) : capacity(capacity), chunkSize(0) {
+Chunk::Chunk(uint capacity) : capacity(capacity), chunkSize(0) {
     assert(capacity <= maxAllowedCapacity);
     content = make_unique<byte[]>(capacity);
     // arrays created by make_unique are value initialized.
 }
 
-int32 Chunk::getsize() const {
+uint32 Chunk::getsize() const {
     return chunkSize;
 }
 
-Chunk::Pointer Chunk::getContentPointer(int32 offset, int32 size) {
-    assert(offset >= 0 && size >= 0);
-    if (offset + size > capacity) throw std::out_of_range("out of allocated memory range");
+Chunk::Pointer Chunk::getContentPointer(uint32 offset, uint32 size) {
+    if (int64(offset) + int64(size) > int64(capacity)) throw std::out_of_range("out of allocated memory range");
     return {content.get() + offset, size};
 }
 
@@ -50,8 +49,8 @@ Chunk* Chunk::setWritable(bool wr) {
     return this;
 }
 
-void Chunk::setSize(int32 newSize) {
-    assert(newSize <= capacity && newSize >= 0);
+void Chunk::setSize(uint32 newSize) {
+    assert(newSize <= capacity);
 
     // Based on specs offsets beyond chunkSize must be zero initialised at the start of every execution session.
     if (newSize < chunkSize) {
@@ -61,16 +60,16 @@ void Chunk::setSize(int32 newSize) {
     chunkSize = newSize;
 }
 
-void Chunk::resize(int32 newCapacity) {
+void Chunk::resize(uint32 newCapacity) {
     // we need to zero initialize the empty part of the memory.
     auto* newContent = new byte[newCapacity];
     memcpy(newContent, content.get(), chunkSize);
-    memset(newContent + chunkSize, 0, newCapacity - chunkSize);
+    if (newCapacity > chunkSize) memset(newContent + chunkSize, 0, newCapacity - chunkSize);
     content.reset(newContent);
     capacity = newCapacity;
 }
 
-bool Chunk::reserveSpace(int32 newCapacity) {
+bool Chunk::reserveSpace(uint32 newCapacity) {
     assert(newCapacity <= maxAllowedCapacity && newCapacity >= 0);
 
     if (newCapacity <= capacity) return false;

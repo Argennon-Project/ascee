@@ -32,7 +32,7 @@ using std::vector, std::pair, std::string;
 ChunkIndex::ChunkIndex(
         const vector<pair<full_id, Page*>>& readonlyPages,
         vector<pair<full_id, Page*>>&& writablePages,
-        util::FixedOrderedMap<full_id, ChunkBoundsInfo>&& chunkBounds,
+        util::OrderedStaticMap<full_id, ChunkBoundsInfo>&& chunkBounds,
         int32_fast numOfChunks
 ) : writablePages(std::move(writablePages)), sizeBoundsInfo(std::move(chunkBounds)) {
 

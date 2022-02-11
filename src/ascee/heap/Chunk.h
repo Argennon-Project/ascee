@@ -36,7 +36,7 @@ public:
     public:
         Pointer() = default;
 
-        Pointer(byte* ptr, int32) : location(ptr) {}
+        Pointer(byte* ptr, size_t) : location(ptr) {}
 
         inline bool isNull() { return location == nullptr; }
 
@@ -51,19 +51,19 @@ public:
 
     Chunk() = default;
 
-    explicit Chunk(int32 capacity);
+    explicit Chunk(uint32 capacity);
 
     Chunk(const Chunk&) = delete;
 
     explicit operator std::string() const;
 
     [[nodiscard]]
-    int32 getsize() const;
+    uint32 getsize() const;
 
-    void setSize(int32 newSize);;
+    void setSize(uint32 newSize);;
 
     /// This function should only be called at the start of block validation.
-    bool reserveSpace(int32 newCapacity);
+    bool reserveSpace(uint32 newCapacity);
 
     /// This function should only be called at the end of block validation.
     bool shrinkSpace();
@@ -79,7 +79,7 @@ public:
     [[nodiscard]]
     bool isWritable() const;;
 
-    Pointer getContentPointer(int32 offset, int32 size);
+    Pointer getContentPointer(uint32 offset, uint32 size);
 
     std::mutex& getContentMutex();
 
@@ -95,12 +95,12 @@ private:
     // going to be expanded and a request wants to load the chunk to read the start of the chunk.
     // In other words, when the chunkSize is going to be modified the scheduler may still allow some readers of
     // chunkSize to be run concurrently. but concurrent writes can not happen.
-    std::atomic<int32> chunkSize = 0;
-    int32 capacity = 0;
+    std::atomic<uint32> chunkSize = 0;
+    uint32 capacity = 0;
     bool writable = true;
     std::mutex contentMutex;
 
-    void resize(int32 newCapacity);
+    void resize(uint32 newCapacity);
 };
 
 } // namespace argennon::ascee::runtime::heap

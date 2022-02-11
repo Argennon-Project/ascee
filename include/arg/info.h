@@ -23,7 +23,7 @@
 #include <unordered_set>
 #include "primitives.h"
 #include "id.h"
-#include "util/FixedOrderedMap.hpp"
+#include "util/OrderedStaticMap.hpp"
 
 namespace argennon {
 
@@ -99,8 +99,8 @@ struct AccessBlockInfo {
 };
 
 struct AppRequestInfo {
-    using AccessMapType = util::FixedOrderedMap<long_id,
-            util::FixedOrderedMap<long_long_id, util::FixedOrderedMap<int32, AccessBlockInfo>>>;
+    using AccessMapType = util::OrderedStaticMap<long_id,
+            util::OrderedStaticMap<long_long_id, util::OrderedStaticMap<int32, AccessBlockInfo>>>;
     /**
      *  The unique identifier of a request in a block. It must be a 32 bit integer in the interval [0,n), where n is
      *  the total number of requests of the block. Obviously any integer in the interval should be assigned to

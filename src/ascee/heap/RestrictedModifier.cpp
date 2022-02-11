@@ -75,7 +75,7 @@ void RestrictedModifier::writeToHeap() {
             auto chunkSize = chunk.size.read<uint32>(currentVersion, 0);
             if (chunk.resizing == ChunkInfo::ResizingType::expandable ||
                 chunk.resizing == ChunkInfo::ResizingType::shrinkable) {
-                chunk.ptr->setSize(int(chunkSize));
+                chunk.ptr->setSize(chunkSize);
             }
             if (chunkSize > 0 && chunk.ptr->isWritable()) {
                 for (long i = 0; i < chunk.accessTable.size(); ++i) {
@@ -133,7 +133,7 @@ bool RestrictedModifier::AccessBlock::ensureExists(int16_t version) {
 }
 
 byte* RestrictedModifier::AccessBlock::prepareToRead(int16_t version, uint32 offset, uint32 readSize) {
-    if (offset + readSize > size) throw std::out_of_range("out of block read");
+    if (int64(offset) + int64(readSize) > int64(size)) throw std::out_of_range("out of block read");
     if (accessType.denies(Access::Operation::read)) {
         throw std::out_of_range("access block is not readable");
     }
@@ -142,8 +142,7 @@ byte* RestrictedModifier::AccessBlock::prepareToRead(int16_t version, uint32 off
 }
 
 byte* RestrictedModifier::AccessBlock::prepareToWrite(int16_t version, uint32 offset, uint32 writeSize) {
-    // todo IMPORTANT OVERFLOW PROBLEM! we have this issue in many places
-    if (offset + writeSize > size) throw std::out_of_range("out of block write");
+    if (int64(offset) + int64(writeSize) > int64(size)) throw std::out_of_range("out of block write");
     if (accessType.denies(Access::Operation::write)) {
         throw std::out_of_range("block is not writable");
     }
@@ -180,10 +179,12 @@ void RestrictedModifier::AccessBlock::wrToHeap(Chunk* chunk, int16_t version, ui
 }
 
 RestrictedModifier::AccessBlock::AccessBlock(const Chunk::Pointer& heapLocation,
-                                             int32 size,
+                                             uint32 size,
                                              AccessBlockInfo::Access accessType) : heapLocation(heapLocation),
                                                                                    size(size),
-                                                                                   accessType(accessType) {}
+                                                                                   accessType(accessType) {
+    assert(size <= max_chunk_size);
+}
 
 RestrictedModifier::ChunkInfo::ChunkInfo(Chunk* chunk, ResizingType resizingType, uint32 sizeBound,
                                          const std::vector<int32>& sortedAccessedOffsets,
@@ -214,7 +215,7 @@ RestrictedModifier::AccessTableMap RestrictedModifier::ChunkInfo::toAccessBlocks
     vector<uint32> resultOffsets;
     resultOffsets.reserve(offsets.size());
 
-    for (int i = 0; i < offsets.size(); ++i) {
+    for (long i = 0; i < offsets.size(); ++i) {
         if (accessInfoList[i].accessType.mayWrite() && !chunk->isWritable()) {
             throw BlockError("trying to modify a readonly chunk");
         }

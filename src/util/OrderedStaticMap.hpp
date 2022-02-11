@@ -27,11 +27,11 @@
 namespace argennon::util {
 
 template<typename K, typename V>
-class FixedOrderedMap {
+class OrderedStaticMap {
 public:
-    FixedOrderedMap() = default;
+    OrderedStaticMap() = default;
 
-    FixedOrderedMap(std::vector<K> keys, std::vector<V> values) : keys(std::move(keys)), values(std::move(values)) {
+    OrderedStaticMap(std::vector<K> keys, std::vector<V> values) : keys(std::move(keys)), values(std::move(values)) {
         if (this->keys.size() != this->values.size()) {
             throw std::invalid_argument("size mismatch in keys and values");
         }
@@ -75,13 +75,13 @@ public:
         return values;
     }
 
-    static FixedOrderedMap merge(FixedOrderedMap left, FixedOrderedMap right) {
+    static OrderedStaticMap merge(OrderedStaticMap left, OrderedStaticMap right) {
         return std::move(left) | std::move(right);
     }
 
-    friend FixedOrderedMap operator|(FixedOrderedMap&& left, FixedOrderedMap&& right) {
+    friend OrderedStaticMap operator|(OrderedStaticMap&& left, OrderedStaticMap&& right) {
         int i = 0, j = 0;
-        FixedOrderedMap result;
+        OrderedStaticMap result;
         while (true) {
             if (i < left.size() && j < right.size()) {
                 if (left.keys[i] == right.keys[j]) {
@@ -123,8 +123,8 @@ private:
     std::vector<V> values;
 
     template<class T1, class T2>
-    static FixedOrderedMap<T1, T2> mergeValues(FixedOrderedMap<T1, T2>&& left, FixedOrderedMap<T1, T2>&& right,
-                                               bool& possible) {
+    static OrderedStaticMap<T1, T2> mergeValues(OrderedStaticMap<T1, T2>&& left, OrderedStaticMap<T1, T2>&& right,
+                                                bool& possible) {
         possible = true;
         return std::move(left) | std::move(right);
     }
@@ -140,8 +140,8 @@ private:
 /// Calculates: maps[begin] | maps[begin + 1] | maps[begin + 2] | ... | map[end - 1], where | operator merges two maps.
 template<class K, class V>
 static
-FixedOrderedMap<K, V> mergeAllParallel(std::vector<FixedOrderedMap<K, V>>&& maps,
-                                       std::size_t begin, std::size_t end, std::size_t k) {
+OrderedStaticMap<K, V> mergeAllParallel(std::vector<OrderedStaticMap<K, V>>&& maps,
+                                        std::size_t begin, std::size_t end, std::size_t k) {
     using std::move;
 
     if (begin >= end) return {};
@@ -161,7 +161,7 @@ FixedOrderedMap<K, V> mergeAllParallel(std::vector<FixedOrderedMap<K, V>>&& maps
 
 template<class K, class V>
 inline
-FixedOrderedMap<K, V> mergeAllParallel(std::vector<FixedOrderedMap<K, V>>&& maps, int workersCount) {
+OrderedStaticMap<K, V> mergeAllParallel(std::vector<OrderedStaticMap<K, V>>&& maps, int workersCount) {
     return mergeAllParallel(std::move(maps), 0, maps.size(), maps.size() / workersCount);
 }
 

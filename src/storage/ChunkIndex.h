@@ -22,7 +22,7 @@
 #include "arg/primitives.h"
 #include "arg/info.h"
 #include "Page.h"
-#include "util/FixedOrderedMap.hpp"
+#include "util/OrderedStaticMap.hpp"
 #include "heap/Chunk.h"
 #include "heap/RestrictedModifier.h"
 
@@ -35,7 +35,7 @@ public:
     ChunkIndex(
             const std::vector<std::pair<full_id, Page*>>& readonlyPages,
             std::vector<std::pair<full_id, Page*>>&& writablePages,
-            util::FixedOrderedMap <full_id, ChunkBoundsInfo>&& chunkBounds,
+            util::OrderedStaticMap <full_id, ChunkBoundsInfo>&& chunkBounds,
             int32_fast numOfChunks
     );
 
@@ -53,7 +53,7 @@ private:
     std::unordered_map<full_id, Chunk*, full_id::Hash> chunkIndex;
 
     // this map usually is small. That's why we didn't merge it with chunkIndex.
-    util::FixedOrderedMap <full_id, ChunkBoundsInfo> sizeBoundsInfo;
+    util::OrderedStaticMap <full_id, ChunkBoundsInfo> sizeBoundsInfo;
 
     void indexPage(const std::pair<full_id, Page*>& pageInfo, bool writable);
 };
