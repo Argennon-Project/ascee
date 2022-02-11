@@ -57,8 +57,8 @@ jobs:
 
     - name: Configure CMake & Build
       run: |
-        cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
-        cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+        cmake -B ${{github.workspace}}/build 
+        cmake --build ${{github.workspace}}/build 
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v1
