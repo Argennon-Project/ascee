@@ -57,8 +57,8 @@ void RequestScheduler::submitResult(AppRequestIdType reqID, int statusCode) {
 /// sortedOffsets needs to be a sorted list of offsets, and AccessBlocks are corresponding BlockAccessInfos with
 /// those offsets. Access blocks must be non-overlapping.
 ///
-/// we must have offset == -3 for blocks(!writable && size == 0) and offset == -2 for
-/// blocks(!writable && size != 0) and offset == -1 for blocks(writable)
+/// we must have offset == -3 for blocks(!writable && !readable) and offset == -2 for
+/// blocks(!writable && readable) and offset == -1 for blocks(writable)
 ///
 /// sizeLowerBound is the minimum allowed size of the chunk and it is
 /// inclusive. (i.e. it is the mathematical lower bound of chunkSize and we require chunkSize >= sizeLowerBound)

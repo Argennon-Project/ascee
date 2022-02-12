@@ -1,7 +1,7 @@
 #### Chunk
 
 A chunk can be considered as a continuous array of bytes. Every chunk has a
-size: `chunkSize` and a size upper bound :`sizeUpperBound`. The value
+size: `chunkSize` and a size upper bound:`sizeUpperBound`. The value
 of `chunkSize` can be determined uniquely at the start of every execution
 session, and it may be updated during the session like a normal memory location.
 On the other hand `sizeUpperBound` is a value that is constant for every block
@@ -11,7 +11,7 @@ The address space of the chunk starts from zero and only offsets lower
 than `sizeUpperBound` (`offset < sizeUpperBound`)
 are valid. Trying to access any offset higher
 than `sizeUpperBound` (`offset >= sizeUpperBound)` will always result in a
-revert.
+revert for the application (i.e. smart contract).
 
 The value of `chunkSize` at the **end of the execution session** will determine
 if the memory location at an offset is persistent or not. Offsets lower than
@@ -23,38 +23,43 @@ session**.
 Usually an application should not have any assumption about the value of memory
 locations that are outside the chunk. While these locations are zero initialized
 at the start of every execution session, it should be noted that multiple
-invocations of an application may happen in a single execution session and if
+invocations of an application may occur in a single execution session, and if
 one of them modifies a location outside the chunk, the changes can be seen by
 next invocations.
 
-There is no way for an application to query the chunk capacity. As a result in
+There is no way for an application to query the chunk capacity. As a result, in
 the view of an application, accessing offsets higher than `chunkSize` results in
-undefined behaviour, while the behaviour is well-defined for validators.
+undefined behaviour, while the behaviour is well-defined for validators. (as
+described above)
 
 *Rationale: Validators can determine validity of an offset at the start of the
-block validation and the procedure can be parallelized.*
+block validation without executing requests, and creating data structures
+representing access blocks can be parallelized.*
 
 While an application can use `chunkSize` to determine if an offset is persistent
 or not, that is not considered a good practice. Reading `chunkSize`
 decreases transaction parallelization, and should be avoided. Instead,
-applications should use `is_valid` function for checking the persistence status
-of memory addresses.
-
-A chunk can be loaded using `load_chunk` function. This function never fails and
-even non-existent chunks can be loaded by this function. For a non-existent
-chunk the value of `chunkSize` is always zero.
+applications should use `invalid` function for checking the persistence status
+of memory addresses. This function returns `false` for persistent locations and
+true for non-persistent locations.
 
 Reading the value of `chunkSize` is like reading a normal memory location of the
 chunk, and it needs to be pre-declared in the `resourseCap` field of the
-request. On the other hand, for using `is_valid` function there is no need for
-declaring `chunkSize` as a read location of the request. It should be noted that
-a request still needs to declare access to the required chunk for
-using `is_valid` function.
+request. On the other hand, for using `invalid` function there is no need for
+declaring `chunkSize` as a readable location by the request. It should be noted
+that a request still needs to declare access to the **required chunk and access
+block** for using `invalid` function.
 
-*Rationale: `is_valid(offset)` only checks the condition `offset < chunkSize`.
-As a result, as long as modifying the chunk size does not change the result of
-this check `Scheduler` can parallelize requests using `is_valid` with requests
-that modify the chunk size.*
+A chunk can be loaded using `load_chunk` function. This function only fails when
+the chunk address is not a valid prefix code and even non-existent chunks can be
+loaded by this function. For a non-existent chunk the value of `chunkSize` is
+always zero.
+
+*Rationale: `invalid(offset, size)` only checks the
+condition `offset + size <= chunkSize`. As a result, as long as modifying the
+chunk size does not change the result of this check Scheduler can parallelize
+execution of requests that use `invalid` function with requests that modify the
+chunk size.*
 
 #### Chunk Resizing
 
@@ -67,14 +72,51 @@ the start of the session (`initialSize`).
 
 Any request that wants to expand (shrink) a chunk needs to specify
 a `maxSize` (`minSize`). The value of `chunkSize` can not be set higher (lower)
-than that value. (`chunkSize > maxSize` is not allowed)
+than that value and `chunkSize > maxSize` (`chunkSize < maxSize`) is not
+allowed.
 
 *Rationale:*
 
-#### Chunk size bounds
+#### Access Blocks
+
+For accessing memory locations, a request needs to define a `memoryAccessMap`.
+The `memoryAccessMap` is a sorted list of memory locations that the request will
+access. These memory locations are represented by access blocks. Each access
+block belongs to a chunk and has an `offset` and a `size` which determines the
+accessible memory locations inside that chunk. Defined access blocks of a chunk
+must be **non-overlapping**. Access blocks are **byte addressable** and can have
+different access types:
+
+- `read_only`:
+- `writable`:
+- `check_only`: only allows `check` operation which is performed by `invalid`
+  function.
+- `int_additive`: only allows `int_add` operation, which is a signed integer
+  addition without overflow checking.
+- `float_additive`: *not implemented*
+
+A `memoryAccessMap` must be sorted based on appIDs, chunkIDs and offsets of its
+defined access blocks.
+
+First defined access block for every chunk **must** be **one** of the following
+access blocks, which defines the chunk resizing policy:
+
+- `{offset = -3, size = *, access = *}` which indicates that the request does
+  not access the size of the chunk.
+
+- `{offset = -2, size = *, access = read_only}` which means the request reads
+  the chunkSize but will not modify it.
+
+- `{offset = -1, size, access = writable}`, which means the request may resize
+  the chunk. If `size > 0` the request wants to expand the chunk
+  and `sizeBound = size`, which means we must have `newSize <= size`.
+  If `size <= 0` the request can shrink the chunk and `sizeBound = -size`, which
+  means `newSize >= -size`.
+
+#### Chunk Size Bounds
 
 A block proposer is required to propose two values for
-**every** chunk that will be **resized** during a block: `sizeLowerBound`
+**every chunk that will be resized** during a block: `sizeLowerBound`
 , `sizeUpperBound`. These values must meet the following requirements:
 
 - For every chunk expansion declaration we have `maxSize <= sizeUpperBound` for
@@ -100,8 +142,10 @@ and `maxSize <= sizeUpperBound` (`minSize >= sizeLowerBound`)
 check suffices. This way, the process is a read-only process without any shared
 memory and can be easily parallelized.*
 
-**Collision detection:** We assume a request that wants to expand a chunk is a
-writer for all offsets such that: `offset < maxSize && offset >= sizeLowerbound`
+#### Collision Detection
+
+Chunk Resizing: We assume a request that wants to expand a chunk is a writer for
+all offsets such that: `offset < maxSize && offset >= sizeLowerbound`
 . And a request that wants to shrink a chunk is a writer
 for: `offset < sizeUpperBound && offset >= minSize`
 
@@ -127,41 +171,6 @@ other chunks the native chunk will be replaced with a zero size chunk.
 - A zero size chunk proves non-existence of a chunk.
 - A page containing a zero size native chunk can be safely converted into
   a `<<nil>>` page if it doesn't have migrants.
-
-#### Access Blocks
-
-For accessing memory locations, a request needs to define a `memoryAccessMap`.
-A `memoryAccessMap` is a sorted list of memory locations that the request will
-access. These memory locations are represented by access blocks. Each access
-block belongs to a chunk and has an `offset` and a `size` which determines the
-accessible memory locations inside that chunk. Defined access blocks of a chunk
-must be **non-overlapping**. Access blocks are **byte addressable** and can have
-different access types:
-
-- `read_only`:
-- `writable`:
-- `check_only`:
-- `int_additive`:
-- `float_additive`: *not implemented*
-
-A `memoryAccessMap` must be sorted based on appIDs, chunkIDs and offsets of its
-defined access blocks.
-
-First defined access block for every chunk **must** be **one** of the following
-access blocks, which defines the chunk resizing policy:
-
-- `{offset = -3, size = *, access = *}` which means the request does not access
-  the size of the chunk.
-
-- `{offset = -2, size = *, access = *}` which means the request reads the
-  chunkSize but will not modify it.
-
-- `{offset = -1, size, access = *}`, which means the request may resize the
-  chunk. If `size > 0` the request wants to expand the chunk and sizeBound =
-  size, which means `newSize <= size`. If `size <= 0` the request can shrink the
-  chunk and `sizeBound = -size`, which means `newSize >= -size`.
-
-#### Collision Detection
 
 #### Request Attachments
 

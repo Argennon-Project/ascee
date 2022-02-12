@@ -128,9 +128,9 @@ struct AppRequestInfo {
      *
      * {offset = -3, size = *, access = *} which means the request does not access the size of the chunk.
      *
-     * {offset = -2, size = *, access = *} which means the request reads the chunkSize but will not modify it.
+     * {offset = -2, size = *, access = read_only} which means the request reads the chunkSize but will not modify it.
      *
-     * {offset = -1, size, access = *}, which means the request may resize the chunk. If size > 0 the request wants to
+     * {offset = -1, size, access = writable}, which means the request may resize the chunk. If size > 0 the request wants to
      * expand the chunk and sizeBound = size, which means newSize <= size. If size <= 0 the request can shrink the
      * chunk and sizeBound = -size, which means newSize >= -size.
      *

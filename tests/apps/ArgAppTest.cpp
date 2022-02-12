@@ -91,9 +91,6 @@ TEST_F(ArgAppTest, SimpleTransfer) {
                        {}},
                       780);
 
-    std::cout << (std::string) *page_1.getNative() << std::endl;
-    std::cout << (std::string) *page_2.getNative() << std::endl;
-
     EXPECT_EQ((std::string) *page_1.getNative(),
               "size: 75, capacity: 75, content: 0x[ b 0 a7 3f e3 af ce 2b e7 27 3e 56 2b 91 fb f0 e3 b2 dd 82 ea 29 11 43 79 77 4d 0 5f 99 26 82 d8 ef 50 59 55 0 97 77 0 80 22 6d 23 61 d5 a4 5a 20 eb a6 de cd 17 d5 75 cb 28 e0 7 80 f3 6c 25 46 0 15 14 0 0 0 0 0 0 ]");
     EXPECT_EQ((std::string) *page_2.getNative(),
@@ -268,10 +265,6 @@ TEST_F(ArgAppTest, TwoTransfers) {
                         {}},
                        780);
 
-    std::cout << (std::string) *page_1.getNative() << std::endl;
-    std::cout << (std::string) *page_2.getNative() << std::endl;
-    std::cout << (std::string) *page_to.getNative() << std::endl;
-
     EXPECT_EQ((std::string) *page_1.getNative(),
               "size: 75, capacity: 75, content: 0x[ b 0 a7 3f e3 af ce 2b e7 27 3e 56 2b 91 fb f0 e3 b2 dd 82 ea 29 11 43 79 77 4d 0 5f 99 26 82 d8 ef 50 59 55 0 97 77 0 80 22 6d 23 61 d5 a4 5a 20 eb a6 de cd 17 d5 75 cb 28 e0 7 80 f3 6c 25 46 0 1e 37 0 0 0 0 0 0 ]");
     EXPECT_EQ((std::string) *page_2.getNative(),
@@ -286,23 +279,6 @@ TEST_F(ArgAppTest, TwoTransfers) {
                      },
                      {}, 4);
 
-/*
-    RequestScheduler scheduler(2, index);
-
-    scheduler.addRequest(std::move(requests[0]));
-    scheduler.finalizeRequest(0);
-    scheduler.addRequest(std::move(requests[1]));
-    scheduler.finalizeRequest(1);
-    scheduler.buildExecDag();
-
-    auto response = executor.executeOne(scheduler.nextRequest());
-
-    printf("<<<******* Response *******>>> \n%s\n<<<************************>>>\n", response.httpResponse.c_str());
-
-    response = executor.executeOne(scheduler.nextRequest());
-
-    printf("<<<******* Response *******>>> \n%s\n<<<************************>>>\n", response.httpResponse.c_str());
-*/
     RequestProcessor processor(index, 2, 5);
 
     processor.loadRequests<FakeStream>({
@@ -324,6 +300,5 @@ TEST_F(ArgAppTest, TwoTransfers) {
               "size: 75, capacity: 75, content: 0x[ 0 1 a7 3f e3 af ce 2b e7 27 3e 56 2b 91 fb f0 e3 b2 dd 82 ea 29 11 43 79 77 4d 0 5f 99 26 82 d8 ef 50 59 55 0 97 77 0 80 22 6d 23 61 d5 a4 5a 20 eb a6 de cd 17 d5 75 cb 28 e0 7 80 f3 6c 25 46 0 7b 95 b 0 0 0 0 0 ]");
     EXPECT_EQ((std::string) *page_to.getNative(),
               "size: 75, capacity: 75, content: 0x[ 9 9 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 58 84 8 0 0 0 0 0 ]");
-
 }
 

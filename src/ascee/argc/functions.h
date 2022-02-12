@@ -112,6 +112,8 @@ bool verify_by_acc_once(long_id account_id, message_c& msg, signature_c& sig, in
 void store_int16(int32 offset, int16 value);
 
 void store_pk(int32 offset, int32 index, publickey_c& value);
+
+int32 get_chunk_size();
 } // namespace argc
 
 #endif // ARGENNON_ARGC_FUNCTIONS_H

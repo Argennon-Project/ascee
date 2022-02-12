@@ -81,3 +81,11 @@ void argc::resize_chunk(int32 new_size) {
     Executor::unGuard();
 }
 
+int32 argc::get_chunk_size() {
+    Executor::guardArea();
+    auto ret = Executor::getSession()->heapModifier.getChunkSize();
+    Executor::unGuard();
+    return ret;
+
+}
+
