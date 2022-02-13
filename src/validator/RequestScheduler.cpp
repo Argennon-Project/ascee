@@ -73,6 +73,7 @@ void RequestScheduler::findCollisions(
     for (int32_fast i = 0; i < accessBlocks.size(); ++i) {
         auto accessType = accessBlocks[i].accessType;
         auto offset = sortedOffsets[i];
+        auto reqID = accessBlocks[i].requestID;
 
         // with this simple if we can skip non-accessible size blocks because based on their offset they will always
         // be at the start of the list.
@@ -85,7 +86,7 @@ void RequestScheduler::findCollisions(
             if (sortedOffsets[j] < end && accessType.collides(accessBlocks[j].accessType)) {
                 bool additiveSameBlock = accessType.isAdditive() && accessType == accessBlocks[j].accessType &&
                                          offset == sortedOffsets[j] && accessBlocks[i].size == accessBlocks[j].size;
-                if (!additiveSameBlock) registerDependency(accessBlocks[i].requestID, accessBlocks[j].requestID);
+                if (!additiveSameBlock) registerDependency(reqID, accessBlocks[j].requestID);
             }
         }
 
@@ -103,9 +104,11 @@ void RequestScheduler::findCollisions(
         // end > upperBound will never occur, since those transactions must not be included in a block.
         if (end > lowerBound) {
             for (int32_fast j = sizeWritersBegin; j < sizeWritersEnd; ++j) {
-                auto newSize = accessBlocks[j].size;
-                bool collision = newSize > 0 ? offset < newSize : end > -newSize;
-                if (collision) registerDependency(accessBlocks[i].requestID, accessBlocks[j].requestID);
+                if (reqID != accessBlocks[j].requestID) {
+                    auto newSize = accessBlocks[j].size;
+                    bool collision = newSize > 0 ? offset < newSize : end > -newSize;
+                    if (collision) registerDependency(reqID, accessBlocks[j].requestID);
+                }
             }
         }
     }
@@ -159,6 +162,7 @@ void RequestScheduler::finalizeRequest(AppRequestIdType id) {
 }
 
 void RequestScheduler::registerDependency(AppRequestIdType u, AppRequestIdType v) {
+    assert(u != v);
     if (!nodeIndex[u]->isAdjacent(v) && !nodeIndex[v]->isAdjacent(u)) {
         throw BlockError("missing {" + std::to_string(u) + "," + std::to_string(v) +
                          "} edge in the dependency graph");

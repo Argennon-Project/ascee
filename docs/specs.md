@@ -144,10 +144,27 @@ memory and can be easily parallelized.*
 
 #### Collision Detection
 
-Chunk Resizing: We assume a request that wants to expand a chunk is a writer for
-all offsets such that: `offset < maxSize && offset >= sizeLowerbound`
-. And a request that wants to shrink a chunk is a writer
-for: `offset < sizeUpperBound && offset >= minSize`
+If a collision between two requests is detected, scheduler will not allow
+concurrent execution of them. Two requests collide if they have at least two
+colliding access blocks. Two access blocks are colliding when:
+
+1. they are overlapping
+2. at least one access block is `writable` or `additive`
+3. if both access blocks are additive they are **not** defined on exactly same
+   memory locations
+
+Moreover, two requests are considered colliding when they have chunk resizing
+collision. Chunk resizing collision happens between two requests when:
+
+1. One request wants to modify the chunk size` and another request needs to read
+   the size of the chunk.
+2. One request wants to expand the chunk and another requests defines an access
+   block such that: `offset + size > chunk.lowerBound && offset < newSize`.
+3. One request wants to shrink the chunk and another requests defines an access
+   block such that: `offset + size > newSize && offset < chunk.upperBound`
+
+*Note: `offset < chunk.upperBound` check usually is not necessary, since it's
+out of chunk bounds.*
 
 #### Page
 
@@ -195,12 +212,12 @@ or more tries.
 
 Currently, Argennon has 4 prefix tries:
 
-```
-// these tries are only examples. (later will be replaces with real ones)
-var_uint_trie_g({0xd0, 0xf000, 0xfc0000, 0xffffff00}): for decoding variable length unsigned integers 
-app_trie_g({0xa0, 0xc000, 0xd00000}): for application identifiers
-account_trie_g({0x60, 0xd000, 0xe00000}): for account identifiers
-local_trie_g({0xc0, 0xe000, 0xf00000}): for generating local identifiers
+```C
+// these tries are only examples. (later will be replaced with real ones)
+var_uint_trie_g({ 0xd0, 0xf000, 0xfc0000, 0xffffff00 }); // for decoding variable length unsigned integers 
+app_trie_g({ 0xa0, 0xc000, 0xd00000 }); // for application identifiers
+account_trie_g({ 0x60, 0xd000, 0xe00000 }); // for account identifiers
+local_trie_g({ 0xc0, 0xe000, 0xf00000 }); // for generating local identifiers
 ```
 
 Every chunk of the Argennon heap has an identifier `chunkID`, which is a

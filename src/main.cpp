@@ -38,6 +38,7 @@ int overflow(int x, int y, int z) {
 
 /// contains temporary code examples
 int main(int argc, char const* argv[]) {
+    overflow(15, 45, 30);
     // initialize a pairing:
     char param[1024];
     FILE* params = fopen("../param/a.param", "r");
