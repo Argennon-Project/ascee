@@ -64,18 +64,18 @@ chunk size.*
 #### Chunk Resizing
 
 The value of `chunkSize` can be modified during an execution session. However,
-it can only be increased or decreased. More precisely, if a request has declared
-that it wants to expand (shrink) a chunk it can only increase (decrease) the
-value of `chunkSize` and any specified value for `chunkSize` during the
-execution session, needs to be greater (smaller) than the size of the chunk at
-the start of the session (`initialSize`).
+the new size values can only be increasing or decreasing. More precisely, if a
+request declares that it wants to expand (shrink) a chunk, it can only
+increase (decrease) the value of `chunkSize` and any specified value
+for `chunkSize` during the execution session, needs to be greater (smaller) than
+the previous value of the chunk size.
+
+*Rationale: monotonic size values simplifies implementation.*
 
 Any request that wants to expand (shrink) a chunk needs to specify
 a `maxSize` (`minSize`). The value of `chunkSize` can not be set higher (lower)
-than that value and `chunkSize > maxSize` (`chunkSize < maxSize`) is not
+than this value and `chunkSize > maxSize` (`chunkSize < maxSize`) is not
 allowed.
-
-*Rationale:*
 
 #### Access Blocks
 

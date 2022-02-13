@@ -31,6 +31,11 @@ using namespace ave;
 using namespace asa;
 using namespace ascee::runtime;
 
+int overflow(int x, int y, int z) {
+    if (x + y > z) return 1;
+    else return 0;
+}
+
 /// contains temporary code examples
 int main(int argc, char const* argv[]) {
     // initialize a pairing:

@@ -84,7 +84,7 @@ public:
             throw std::out_of_range("isValid: access block not defined");
         }
         // we can't use getChunkSize() here
-        return int64(offset) + int64(size) <= (int64) currentChunk->size.read<uint32>(currentVersion, 0);
+        return int64(offset) + int64(size) <= (int64) currentChunk->sizeBlock().read<uint32>(currentVersion, 0);
     }
 
     uint32 getChunkSize();
@@ -196,13 +196,10 @@ private:
     typedef util::OrderedStaticMap<uint32, AccessBlock> AccessTableMap;
 public:
     class ChunkInfo {
-        friend class RestrictedModifier;
-
     public:
         enum class ResizingType {
             expandable, shrinkable, read_only, non_accessible
         };
-
 
         /**
          *
@@ -226,25 +223,25 @@ public:
 
         ChunkInfo(const ChunkInfo&) = delete;
 
-        [[nodiscard]] uint32 getInitialSize() const {
-            // initial sizeChunk will not be modified as long as wrToHeap function is not called, all changes are only
-            // made to the version array. Therefor we can obtain the initial size this way.
-            return initialSize;
+        AccessBlock& sizeBlock() {
+            // first we need to initialize initialSize
+            if (initialSize == UINT32_MAX) initialSize = ptr->getsize();
+            return size;
         }
-
-    private:
-        AccessTableMap accessTable;
-        AccessBlock size;
-        const uint32 sizeBound = 0;
-        Chunk* ptr{};
-        uint32 initialSize;
-        ResizingType resizing;
 
         static RestrictedModifier::AccessTableMap toAccessBlocks(
                 Chunk* chunk,
                 const std::vector<int32>& offsets,
                 const std::vector<AccessBlockInfo>& accessInfoList
         );
+
+        AccessTableMap accessTable;
+        Chunk* ptr{};
+        const ResizingType resizing;
+        const uint32 sizeBound = 0;
+    private:
+        AccessBlock size;
+        uint32 initialSize = UINT32_MAX;
     };
 
     typedef util::OrderedStaticMap<long_long_id, ChunkInfo> ChunkMap64;

@@ -27,9 +27,8 @@
 using namespace argennon;
 using namespace argennon::ascee::runtime;
 using std::vector, std::move;
-
-
 using Access = AccessBlockInfo::Access;
+
 
 constexpr uint32 max_chunk_size = 64 * 1024;
 
@@ -72,7 +71,7 @@ void RestrictedModifier::writeToHeap() {
 
     for (auto& appMap: appsAccessMaps.getValues()) {
         for (auto& chunk: appMap.getValues()) {
-            auto chunkSize = chunk.size.read<uint32>(currentVersion, 0);
+            auto chunkSize = chunk.sizeBlock().read<uint32>(currentVersion, 0);
             if (chunk.resizing == ChunkInfo::ResizingType::expandable ||
                 chunk.resizing == ChunkInfo::ResizingType::shrinkable) {
                 chunk.ptr->setSize(chunkSize);
@@ -90,27 +89,28 @@ void RestrictedModifier::writeToHeap() {
 }
 
 void RestrictedModifier::updateChunkSize(uint32 newSize) {
-    if (newSize == currentChunk->size.read<uint32>(currentVersion, 0)) return;
+    auto oldSize = currentChunk->sizeBlock().read<uint32>(currentVersion, 0);
+    if (newSize == oldSize) return;
 
     if (currentChunk->resizing == ChunkInfo::ResizingType::expandable) {
-        if (newSize < currentChunk->getInitialSize() || newSize > currentChunk->sizeBound) {
+        if (newSize < oldSize || newSize > currentChunk->sizeBound) {
             throw std::out_of_range("invalid chunk size for expanding");
         }
     } else if (currentChunk->resizing == ChunkInfo::ResizingType::shrinkable) {
-        if (newSize > currentChunk->getInitialSize() || newSize < currentChunk->sizeBound) {
+        if (newSize > oldSize || newSize < currentChunk->sizeBound) {
             throw std::out_of_range("invalid chunk size for shrinking");
         }
     } else {
         throw std::out_of_range("chunk is not resizable");
     }
-    currentChunk->size.write(currentVersion, 0, newSize);
+    currentChunk->sizeBlock().write(currentVersion, 0, newSize);
 }
 
 uint32 RestrictedModifier::getChunkSize() {
     if (currentChunk->resizing == ChunkInfo::ResizingType::non_accessible) {
         throw std::out_of_range("chunkSize is not accessible");
     }
-    return currentChunk->size.read<uint32>(currentVersion, 0);
+    return currentChunk->sizeBlock().read<uint32>(currentVersion, 0);
 }
 
 void RestrictedModifier::AccessBlock::syncTo(int16_t version) {
@@ -202,7 +202,6 @@ RestrictedModifier::ChunkInfo::ChunkInfo(Chunk* chunk, ResizingType resizingType
         resizing(resizingType),
         accessTable(toAccessBlocks(chunk, sortedAccessedOffsets, accessInfoList)) {
     assert(sizeBound <= max_chunk_size);
-    initialSize = chunk->getsize();
 }
 
 RestrictedModifier::AccessTableMap RestrictedModifier::ChunkInfo::toAccessBlocks(

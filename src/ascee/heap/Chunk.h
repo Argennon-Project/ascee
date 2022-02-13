@@ -91,8 +91,9 @@ public:
 
 private:
     std::unique_ptr<byte[]> content;
-    // chunkSize must be atomic because there is a possibility for concurrent access, when for example the chunk is
-    // going to be expanded and a request wants to load the chunk to read the start of the chunk.
+    // chunkSize must be atomic because there is a possibility for concurrent access. This could happen when for example
+    // the chunk is going to be expanded and at the same time a request wants to check the validity of locations inside
+    // old boundaries of the chunk.
     // In other words, when the chunkSize is going to be modified the scheduler may still allow some readers of
     // chunkSize to be run concurrently. but concurrent writes can not happen.
     std::atomic<uint32> chunkSize = 0;

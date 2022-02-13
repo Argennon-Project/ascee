@@ -59,7 +59,7 @@ public:
         return false;
     }
 
-    int32 getChunkSize();
+    uint32 getChunkSize() { return 0; };
 
     MOCK_METHOD(void, loadChunk, (long_id accountID, long_id localID));
     MOCK_METHOD(void, loadChunk, (long_id chunkID));
