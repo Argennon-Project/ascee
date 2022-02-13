@@ -33,7 +33,7 @@ constexpr long_id nonce_chunk = 0;
 
 static
 void appendNonceToMsg(message_c& msg, long_id spender, uint32_t nonce) {
-    msg << ",\"spender\":" << (std::string) spender;
+    msg << ",\"forApp\":" << (std::string) spender;
     msg << ",\"nonce\":" << std::to_string(nonce) << "}";
     std::cout << StringView(msg) << "\n";
 }
@@ -85,7 +85,7 @@ bool verifyByApp(long_id appID, message_c& msg, bool invalidateMsg) {
         return Executor::getSession()->virtualSigner.verify(appID, StringView(msg));
     }
     auto caller = Executor::getSession()->currentCall->appID;
-    msg << ",\"spender\":" << std::to_string(caller) << "}";
+    msg << ",\"forApp\":" << std::to_string(caller) << "}";
     return Executor::getSession()->virtualSigner.verifyAndInvalidate(appID, StringView(msg));
 }
 

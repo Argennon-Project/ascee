@@ -48,7 +48,7 @@ TEST_F(ArgAppTest, SimpleTransfer) {
                            "Content-Type: application/json; charset=utf-8\r\n"
                            "Content-Length: 57\r\n"
                            "\r\n"
-                           R"({"to":0xaabc,"amount":1399,"sig":"jKsEH-x_AxrzyKyXaY76M-VDkb8eOnpX3j4FbzjJvp5WVp9-Qz_QmoPKHB_l7h6NWZJOudej5zNoUoGbUHEgjQA"})",
+                           R"({"to":0xaabc,"amount":1399,"sig":"LNUC49Lhyz702uszzNcfaU3BhPIbdaSgzqDUKzbJzLPTlFS2J9GzHlcDKbvxx5T5yfvJOTAcmnX0Oh0B_-gqPwE"})",
             .gas = 1000,
             .appAccessList = {arg_app_id_g},
             .memoryAccessMap = {
@@ -186,7 +186,7 @@ TEST_F(ArgAppTest, TwoTransfers) {
                                    "Content-Type: application/json; charset=utf-8\r\n"
                                    "Content-Length: 57\r\n"
                                    "\r\n"
-                                   R"({"to":0xaabc,"amount":1234,"sig":"n8WUKeRcB8iTQHlCL7IlAyae4FAsfFTL_N2yw_yrrrqEXoqkHCxWRU3LBo-BWhSy5MDPlnSfKAIaPzFi-G2qOAA"})",
+                                   R"({"to":0xaabc,"amount":1234,"sig":"ET9Xz7GfWu87d4eKnFM6lEtfxUunEZSPD6H0WNZRC2qNvXntEVlLqjfmfeKiiu8eEeVXGiOzF0XvYSkwsZGs8gA"})",
                     .gas = 1000,
                     .appAccessList = {arg_app_id_g},
                     .memoryAccessMap = {
@@ -207,7 +207,7 @@ TEST_F(ArgAppTest, TwoTransfers) {
                                    "Content-Type: application/json; charset=utf-8\r\n"
                                    "Content-Length: 57\r\n"
                                    "\r\n"
-                                   R"({"to":0xaabc,"amount":556677,"sig":"YmWF7LWRIIAJI2dk0-680E9spaLHn2XozXi7PlCuRhWiC6Q2UnKIyCjYPEcTa_Md6EsPc16ap3wBPmi1mtn-RwA"})",
+                                   R"({"to":0xaabc,"amount":556677,"sig":"O1YGnA8EUktYiTaDQudIjrjAsGrW8cB-34fulMY4d0kg4NPlY7EpNN2D9qoPWpqrinYBOvArdaPfzSkdxeV30AE"})",
                     .gas = 1000,
                     .appAccessList = {arg_app_id_g},
                     .memoryAccessMap = {

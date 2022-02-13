@@ -156,15 +156,15 @@ colliding access blocks. Two access blocks are colliding when:
 Moreover, two requests are considered colliding when they have chunk resizing
 collision. Chunk resizing collision happens between two requests when:
 
-1. One request wants to modify the chunk size` and another request needs to read
-   the size of the chunk.
+1. One request wants to modify the chunk size and another request needs to read
+   it.
 2. One request wants to expand the chunk and another requests defines an access
    block such that: `offset + size > chunk.lowerBound && offset < newSize`.
 3. One request wants to shrink the chunk and another requests defines an access
    block such that: `offset + size > newSize && offset < chunk.upperBound`
 
-*Note: `offset < chunk.upperBound` check usually is not necessary, since it's
-out of chunk bounds.*
+*Note: `offset < chunk.upperBound` usually is not necessary, since it's out of
+chunk bounds.*
 
 #### Page
 
