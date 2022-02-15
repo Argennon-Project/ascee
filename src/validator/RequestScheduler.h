@@ -98,7 +98,7 @@ public:
     ascee::runtime::HeapModifier getModifierFor(AppRequestIdType requestID) const;
 
     explicit operator std::string() const {
-        std::string result = "";
+        std::string result;
         for (int i = 0; i < remaining; ++i) {
             result += std::to_string(nodeIndex[i]->adjacentNodes().size()) + "=";
         }

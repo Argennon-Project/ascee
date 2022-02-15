@@ -31,6 +31,12 @@ class OrderedStaticMap {
 public:
     OrderedStaticMap() = default;
 
+    /**
+     * Creates a map. It does not check that the provided keys are sorted.
+     * @param keys a sorted vector of keys. If this vector is not sorted the behaviour of the map is undefined.
+     * @param values corresponding vector of values associated with keys, such that @p values[i] is associated
+     * with @p keys[i].
+     */
     OrderedStaticMap(std::vector<K> keys, std::vector<V> values) : keys(std::move(keys)), values(std::move(values)) {
         if (this->keys.size() != this->values.size()) {
             throw std::invalid_argument("size mismatch in keys and values");

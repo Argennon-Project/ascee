@@ -25,6 +25,7 @@
 #include "storage/PageCache.h"
 
 #include "argc/functions.h"
+#include "validator/RequestProcessor.hpp"
 
 using namespace argennon;
 using namespace ave;
@@ -36,107 +37,103 @@ int overflow(int x, int y, int z) {
     else return 0;
 }
 
+using Access = AccessBlockInfo::Access::Type;
+
+
+class FakeStream {
+public:
+    class EndOfStream : std::exception {
+    };
+
+    FakeStream(int start, int end, std::vector<AppRequestInfo>& requests) : current(start), end(end),
+                                                                            requests(requests) {}
+
+    AppRequestInfo next() {
+        if (current >= end) throw EndOfStream();
+        return requests.at(current++);
+    }
+
+private:
+    int current;
+    int end;
+    std::vector<AppRequestInfo>& requests;
+};
+
 /// contains temporary code examples
 int main(int argc, char const* argv[]) {
-    overflow(INT_MAX, 45, 30);
-    // initialize a pairing:
-    char param[1024];
-    FILE* params = fopen("../param/a.param", "r");
-    if (params == nullptr) {
-        throw std::runtime_error("param file not found");
-    }
-    size_t count = fread(param, 1, 1024, params);
-    fclose(params);
-
-    if (!count) throw std::runtime_error("input error");
-
-    pairing_t pairing{};
-    // We shall need several element_t variables to hold the system parameters, keys and other quantities.
-    // We declare them here and initialize them in the constructor:
-    element_t inv{}, z{};
-    element_t x{}, y{};
-    element_t sig_elem{};
-    element_t temp1{}, temp2{};
-
-    pairing_init_set_buf(pairing, param, count);
-
-    element_init_G2(inv, pairing);
-    element_init_G2(z, pairing);
-    element_init_G2(x, pairing);
-    element_init_G2(y, pairing);
-    element_init_GT(temp1, pairing);
-    element_init_GT(temp2, pairing);
-
-    element_random(x);
-    element_random(y);
-
-    element_invert(inv, x);
-
-    element_add(z, x, inv);
-
-    element_printf("x:%B\nx+y->%B\n", x, z);
-
-    element_mul(z, x, inv);
-
-    element_printf("x.y->%B\n", z);
-
-    using Access = AccessBlockInfo::Access::Type;
-    PageLoader pl;
-    PageCache pc(pl);
-    BlockLoader bl;
-    long_id app = 0x1000000000000000, acc = 0x2200000000000000, loc = 0x3300000000000000;
-    VarLenFullID chunkID(std::unique_ptr<byte[]>(new byte[3]{0x10, 0x22, 0x33}));
-    ChunkIndex ind({}, pc.prepareBlockPages({7878}, {chunkID}, {}),
-                   {
-                           {full_id(chunkID)},
-                           {{20, 0}}
-                   }, 0);
-    RequestScheduler rs(3, ind);
-    rs.addRequest({
-                          .id = 0, .memoryAccessMap = {
-                    {app},
-                    {{{{acc, loc}}, {
-                                            {{-1, 3}, {{1, Access::read_only, 0}, {4, Access::writable, 0}}},
-                                    }}}},
-                          .adjList = {1, 2}
-                  });
-    rs.addRequest({
-                          .id = 1, .memoryAccessMap = {
-                    {app},
-                    {{{{acc, loc}}, {
-                                            {{-1, 2}, {{1, Access::read_only, 1}, {4, Access::read_only, 1}}},
-                                    }}}},
-                          .adjList = {2}
-                  });
-    rs.addRequest({
-                          .id = 2, .memoryAccessMap = {
-                    {app},
-                    {{{{acc, loc}}, {
-                                            {{-1, 2}, {{1, Access::read_only, 2}, {5, Access::writable, 2}}},
-                                    }}}}
-                  });;
-
-    auto temp = rs.sortAccessBlocks(8).at(app).at({acc, loc});
-    rs.findCollisions(full_id(app, {acc, loc}), temp.getKeys(), temp.getValues());
-
-    util::OrderedStaticMap<int, std::string> m1({10, 15, 24}, {"Hi", "Yo", "Bye"});
-
-    util::OrderedStaticMap<int, std::string> m2({10, 16, 26}, {"Hi", "Yo2", "Bye2"});
-
-    util::OrderedStaticMap<int, util::OrderedStaticMap<int, std::string>> m3({100}, {m1});
-    util::OrderedStaticMap<int, util::OrderedStaticMap<int, std::string>> m4({100}, {m2});
-
-    auto m = util::mergeAllParallel<int, std::string>(
+    std::vector<AppRequestInfo> requests{
             {
-                    {{5, 6, 10},     {"5", "6", "10"}},
-                    {{7, 10},        {"7", "10"}},
-                    {{4, 5, 9},      {"4", "5", "9"}},
-                    {{8},            {"8"}},
-                    {{2, 7, 11, 12}, {"2", "5", "11", "12"}}
-            }, 8);
+                    .id = 0,
+                    .calledAppID = arg_app_id_g,
+                    .httpRequest = "PATCH /balances/0x95ab HTTP/1.1\r\n"
+                                   "Content-Type: application/json; charset=utf-8\r\n"
+                                   "Content-Length: 57\r\n"
+                                   "\r\n"
+                                   R"({"to":0xaabc,"amount":1399,"sig":"LNUC49Lhyz702uszzNcfaU3BhPIbdaSgzqDUKzbJzLPTlFS2J9GzHlcDKbvxx5T5yfvJOTAcmnX0Oh0B_-gqPwE"})",
+                    .gas = 1000,
+                    .appAccessList = {arg_app_id_g},
+                    .memoryAccessMap = {
+                            {arg_app_id_g},
+                            {{{{0x95ab000000000000, 0}, {0xaabc000000000000, 0}},
+                                     {
+                                             {{-3, 0, 2, 67}, {{1, Access::writable, 0}, {2, Access::writable, 0},
+                                                                      {65, Access::read_only, 0}, {8, Access::writable, 0}}},
+                                             {{-3, 0, 67}, {{1, Access::writable, 0}, {2, Access::read_only, 0}, {8, Access::int_additive, 0}}},
 
-    for (const auto& item: m.getKeys()) {
-        std::cout << item << ",";
-    }
-    std::cout << std::endl;
+                                     }}}}
+            }
+    };
+
+    auto dummyBlockNumber = 777;
+
+    Page senderPage(dummyBlockNumber);
+    VarLenFullID senderPageID(std::unique_ptr<byte[]>(new byte[4]{0x1, 0x95, 0xab, 0x0}));
+
+    senderPage.applyDelta(senderPageID,
+                          Page::Delta{.content = {0,
+                                                  67 + 8, 1, 69, 11, 0,
+                                  // pk:
+                                                  167, 63, 227, 175, 206, 43, 231, 39, 62, 86, 43, 145, 251, 240, 227,
+                                                  178, 221, 130, 234, 41, 17, 67, 121, 119, 77, 0, 95, 153, 38, 130,
+                                                  216, 239, 80, 89, 85, 0, 151, 119, 0, 128, 34, 109, 35, 97, 213, 164,
+                                                  90, 32, 235, 166, 222, 205, 23, 213, 117, 203, 40, 224, 7, 128, 243,
+                                                  108, 37, 70,
+                                                  0,
+                                  // pk end
+                                                  21, 20},
+                                  .finalDigest = {}},
+                          dummyBlockNumber + 1
+    );
+
+    Page recipientPage(dummyBlockNumber);
+    VarLenFullID toPageID(std::unique_ptr<byte[]>(new byte[4]{0x1, 0xaa, 0xbc, 0x0}));
+    recipientPage.applyDelta(toPageID,
+                             {{
+                                      0,
+                                      67 + 8, 1, 2, 45, 45,
+                                      66, 2, 1, 1
+                              },
+                              {}},
+                             dummyBlockNumber + 1
+    );
+
+    ChunkIndex index({}, {
+                             {full_id(arg_app_id_g, {0x95ab000000000000, 0}), &senderPage},
+                             {full_id(arg_app_id_g, {0xaabc000000000000, 0}), &recipientPage}
+                     },
+                     {}, 2);
+
+    AppLoader::global = std::make_unique<AppLoader>("apps");
+    RequestProcessor processor(index, int(requests.size()), 5);
+
+    processor.loadRequests<FakeStream>({
+                                               {0, 1, requests},
+                                       });
+    processor.buildDependencyGraph();
+    auto response = processor.executeRequests<Executor>();
+
+    printf("<<<******* Response *******>>> \n%s\n<<<************************>>>\n", response[0].httpResponse.c_str());
+
+    std::cout << (std::string) *senderPage.getNative() << "\n";
+    std::cout << (std::string) *recipientPage.getNative() << "\n";
 }

@@ -52,9 +52,9 @@ public:
         for (long i = 0; i < sortedMap.size(); ++i) {
             runAll([&, i](long j) {
                 const auto& chunkList = sortedMap.getValues()[i];
-                auto chunkID = chunkList.getKeys()[j];
+                auto chunkLocalID = chunkList.getKeys()[j];
                 const auto& blocks = chunkList.getValues()[j];
-                scheduler.findCollisions(full_id(sortedMap.getKeys()[i], chunkID), blocks.getKeys(),
+                scheduler.findCollisions(full_id(sortedMap.getKeys()[i], chunkLocalID), blocks.getKeys(),
                                          blocks.getValues());
             }, sortedMap.getValues()[i].size(), workersCount);
         }

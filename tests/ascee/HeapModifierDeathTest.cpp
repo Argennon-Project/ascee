@@ -264,3 +264,63 @@ TEST_F(HeapModifierDeathTest, RestoringMultiVersions) {
     EXPECT_EQ(modifier->load<int64>(100), 789);
     EXPECT_EQ(modifier->load<int64>(120), 321);
 }
+
+TEST_F(HeapModifierDeathTest, ChunkExpansion) {
+    Chunk tempChunk;
+    tempChunk.reserveSpace(15);
+    tempChunk.setSize(5);
+
+    vector<HeapModifier::ChunkInfo> chunks;
+    EXPECT_THROW(
+            chunks.emplace_back(&tempChunk, SizeType::expandable, 15,
+                                vector<int32>{12},
+                                vector<AccessBlockInfo>{
+                                        {4, Access::writable, 0},
+                                }), std::out_of_range);
+
+    chunks.emplace_back(&tempChunk, SizeType::expandable, 15,
+                        vector<int32>{3, 11},
+                        vector<AccessBlockInfo>{
+                                {8, Access::writable, 0},
+                                {4, Access::writable, 0},
+                        });
+
+    vector<HeapModifier::ChunkMap64> appMaps;
+    appMaps.emplace_back(vector<long_long_id>{{123, 10}}, std::move(chunks));
+    HeapModifier m({0x1000}, std::move(appMaps));
+
+    // start of test:
+    m.loadContext(0x1000);
+    m.loadChunk(123, 10);
+    m.saveVersion();
+
+    EXPECT_EQ(m.getChunkSize(), 5);
+    EXPECT_EQ(m.load<int64>(3), 0);
+    m.store<int64>(3, 0x1122334455667788);
+    m.store<int16>(11, 0x1020, 2);
+
+    EXPECT_THROW(m.updateChunkSize(4), std::out_of_range);
+
+    m.updateChunkSize(10);
+
+    EXPECT_EQ(m.load<int32>(11), 0x10200000);
+
+    auto v = m.saveVersion();
+    m.store<int32>(11, 0x22222222);
+    m.store<int32>(3, 0x22222222);
+
+    EXPECT_EQ(m.load<int16>(11, 2), 0x2222);
+    EXPECT_EQ(m.load<int32>(3), 0x22222222);
+    m.updateChunkSize(15);
+
+    EXPECT_EQ(m.getChunkSize(), 15);
+
+    m.restoreVersion(v);
+
+    EXPECT_EQ(m.getChunkSize(), 10);
+
+    m.writeToHeap();
+
+    tempChunk.setSize(15);
+    EXPECT_EQ((std::string) tempChunk, "size: 15, capacity: 15, content: 0x[ 0 0 0 88 77 66 55 44 33 22 0 0 0 0 0 ]");
+}

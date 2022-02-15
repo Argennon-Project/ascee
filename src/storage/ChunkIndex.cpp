@@ -61,9 +61,9 @@ RestrictedModifier ChunkIndex::buildModifier(const AppRequestInfo::AccessMapType
         vector<RestrictedModifier::ChunkInfo> chunkInfoList;
         chunkInfoList.reserve(chunkMap.size());
         for (long j = 0; j < chunkMap.size(); ++j) {
-            auto chunkID = chunkMap.getKeys()[j];
+            auto chunkLocalID = chunkMap.getKeys()[j];
             // When the chunk is not found getChunk throws a BlockError exception.
-            auto* chunkPtr = getChunk(full_id(appID, chunkID));
+            auto* chunkPtr = getChunk(full_id(appID, chunkLocalID));
             auto offset = chunkMap.getValues()[j].getKeys()[0];
             auto chunkNewSize = chunkMap.getValues()[j].getValues()[0].size;
 
@@ -80,17 +80,17 @@ RestrictedModifier ChunkIndex::buildModifier(const AppRequestInfo::AccessMapType
             // if chunk is resizable we check the validity of the proposed chunk bounds
             if (offset == -1) {
                 try {
-                    auto& chunkBounds = sizeBoundsInfo.at(full_id(appID, chunkID));
+                    auto& chunkBounds = sizeBoundsInfo.at(full_id(appID, chunkLocalID));
                     if (chunkPtr->getsize() < chunkBounds.sizeLowerBound ||
                         chunkPtr->getsize() > chunkBounds.sizeUpperBound ||
                         chunkNewSize > 0 && chunkNewSize > chunkBounds.sizeUpperBound ||
                         chunkNewSize <= 0 && -chunkNewSize < chunkBounds.sizeLowerBound) {
                         throw BlockError("invalid sizeBounds for chunk [" +
-                                         string(appID) + "::" + string(chunkID) + "]");
+                                         string(appID) + "::" + string(chunkLocalID) + "]");
                     }
                 } catch (const std::out_of_range&) {
                     throw BlockError("missing sizeBounds for chunk ["
-                                     + string(appID) + "::" + string(chunkID) + "]");
+                                     + string(appID) + "::" + string(chunkLocalID) + "]");
                 }
             }
 
