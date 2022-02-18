@@ -22,7 +22,6 @@
 #include "validator/RequestScheduler.h"
 #include "validator/BlockLoader.h"
 #include "storage/ChunkIndex.h"
-#include "storage/PageCache.h"
 
 #include "argc/functions.h"
 #include "validator/RequestProcessor.hpp"

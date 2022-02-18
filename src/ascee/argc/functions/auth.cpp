@@ -30,13 +30,13 @@ constexpr int decision_nonce_size = int(sizeof(uint16));
 constexpr uint16 nonce16_max = UINT16_MAX;
 constexpr long_id nonce_chunk = 0;
 
-static constexpr
+static
 void appendNonceToMsg(message_c& msg, long_id spender, uint32_t nonce) {
     msg << ",\"forApp\":" << (std::string) spender;
     msg << ",\"nonce\":" << std::to_string(nonce) << "}";
 }
 
-static constexpr
+static
 void appendSpenderToMsg(message_c& msg, long_id spender) {
     msg << ",\"forApp\":" << (std::string) spender << "}";
     std::cout << StringView(msg) << "\n";

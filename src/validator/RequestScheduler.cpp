@@ -79,11 +79,10 @@ void RequestScheduler::findCollisions(
         // be at the start of the list.
         if (offset == -3) continue;
 
-        //auto& request = nodeIndex[accessBlocks[i].requestID]->getAppRequest();
         auto end = (offset == -1 || offset == -2) ? 0 : offset + accessBlocks[i].size;
 
-        for (int32_fast j = i + 1; j < accessBlocks.size(); ++j) {
-            if (sortedOffsets[j] < end && accessType.collides(accessBlocks[j].accessType)) {
+        for (int32_fast j = i + 1; j < accessBlocks.size() && sortedOffsets[j] < end; ++j) {
+            if (accessType.collides(accessBlocks[j].accessType)) {
                 bool additiveSameBlock = accessType.isAdditive() && accessType == accessBlocks[j].accessType &&
                                          offset == sortedOffsets[j] && accessBlocks[i].size == accessBlocks[j].size;
                 if (!additiveSameBlock) registerDependency(reqID, accessBlocks[j].requestID);
@@ -112,6 +111,16 @@ void RequestScheduler::findCollisions(
             }
         }
     }
+}
+
+bool RequestScheduler::hasCollision(const AccessBlockInfo& left, int32 leftOffset,
+                                    const AccessBlockInfo& right, int32 rightOffset) {
+    if (left.accessType.collides(right.accessType)) {
+        bool additiveSameBlock = left.accessType.isAdditive() && left.accessType == right.accessType &&
+                                 leftOffset == rightOffset && left.size == right.size;
+        if (!additiveSameBlock) return true;
+    }
+    return false;
 }
 
 void RequestScheduler::addRequest(AppRequestInfo&& data) {
@@ -163,10 +172,10 @@ void RequestScheduler::finalizeRequest(AppRequestIdType id) {
 
 void RequestScheduler::registerDependency(AppRequestIdType u, AppRequestIdType v) {
     assert(u != v);
-    if (!nodeIndex[u]->isAdjacent(v) && !nodeIndex[v]->isAdjacent(u)) {
-        throw BlockError("missing {" + std::to_string(u) + "," + std::to_string(v) +
-                         "} edge in the dependency graph");
-    }
+    /* if (!nodeIndex[u]->isAdjacent(v) && !nodeIndex[v]->isAdjacent(u)) {
+         throw BlockError("missing {" + std::to_string(u) + "," + std::to_string(v) +
+                          "} edge in the dependency graph");
+     }*/
     printf("[%ld--%ld] ", u, v);
 }
 

@@ -73,6 +73,10 @@ public:
         return keys;
     }
 
+    [[nodiscard]] std::vector<K>& getKeys() {
+        return keys;
+    }
+
     [[nodiscard]] std::vector<V>& getValues() {
         return values;
     }
@@ -85,6 +89,12 @@ public:
         return std::move(left) | std::move(right);
     }
 
+    /**
+     * merges two maps, for tie breaking < operator is used for comparing values when two keys are equal.
+     * @param left
+     * @param right
+     * @return
+     */
     friend OrderedStaticMap operator|(OrderedStaticMap&& left, OrderedStaticMap&& right) {
         int i = 0, j = 0;
         OrderedStaticMap result;
@@ -137,9 +147,8 @@ private:
 
     template<typename T>
     static T mergeValues(T&& left, T&& right, bool& possible) {
-        printf("called\n");
         possible = false;
-        return left;
+        return left < right ? left : right;
     }
 };
 

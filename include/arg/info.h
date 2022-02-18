@@ -45,13 +45,16 @@ struct AccessBlockInfo {
 
         Access(Type type) : type(type) {} // NOLINT(google-explicit-constructor)
 
-        bool isAdditive() {
+        [[nodiscard]]
+        bool isAdditive() const {
             return type == Type::int_additive;
         }
 
-        bool operator==(Access other) {
+        bool operator==(Access other) const {
             return type == other.type;
         }
+
+        //Access& operator=(Access& other) = default;
 
         [[nodiscard]]
         bool mayWrite() const {
@@ -75,6 +78,11 @@ struct AccessBlockInfo {
         }
 
         [[nodiscard]]
+        bool merges(Access other) const {
+            return !isAdditive() && type == other.type;
+        }
+
+        [[nodiscard]]
         bool collides(Access other) const {
             switch (type) {
                 case Type::check_only:
@@ -90,8 +98,12 @@ struct AccessBlockInfo {
         }
 
     private:
-        const Type type;
+        Type type;
     };
+
+    bool operator<(const AccessBlockInfo& other) const {
+        return requestID < other.requestID;
+    }
 
     int32 size;
     Access accessType;
@@ -109,6 +121,10 @@ struct AppRequestInfo {
      *  If the proposed execution DAG of the block has k nodes with zero in-degree the first k integers
      *  (integers in the interval [0,k)) must be assigned to nodes (requests) with zero in-degree, otherwise
      *  the block will be considered invalid.
+     *
+     *  For using cluster-product collision detection algorithm the order of request identifiers must
+     *  respect a topological sort of the execution dag. That means in the proposed
+     *  execution dag a request can not be adjacent with a request with a smaller identifier.
      */
     // BlockLoaders must ensure: id >= 0 && id < numOfRequests
     AppRequestIdType id = 0;

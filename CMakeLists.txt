@@ -47,7 +47,7 @@ add_subdirectory(src/storage)
 add_subdirectory(tests)
 
 add_executable(ascee_run src/main.cpp apps/app0x100000000000000.cpp)
-target_link_libraries(ascee_run asa ave ascee argutil stdc++ pthread rt pbc gmp crypto dl)
+target_link_libraries(ascee_run ave asa ascee argutil stdc++ pthread rt pbc gmp crypto dl)
 
 add_executable(signer src/signer.cpp)
 target_link_libraries(signer argutil stdc++ rt pbc gmp crypto dl)

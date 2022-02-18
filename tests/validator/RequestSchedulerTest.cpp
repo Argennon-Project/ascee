@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-
+#include <gmock/gmock.h>
 #include "subtest.h"
 #include "storage/PageLoader.h"
 #include "validator/RequestScheduler.h"
@@ -27,7 +27,7 @@ using namespace asa;
 
 
 using Access = AccessBlockInfo::Access::Type;
-
+using ClusterType = std::vector<AppRequestIdType>;
 constexpr long_long_id chunk1_local_id(0x4400000000000000, 0x0500000000000000);
 constexpr long_id app_1_id(0x1000000000000000);
 
@@ -49,6 +49,38 @@ public:
                            {{8,        3}}},
                           0) {
         singleChunk.getChunk({app_1_id, chunk1_local_id})->setSize(5);
+    }
+};
+
+class MockGraph {
+public:
+    MOCK_METHOD(void, registerDependency, (const std::vector<AppRequestIdType>& cluster, AppRequestIdType v));
+
+    MOCK_METHOD(void, registerDependency, (AppRequestIdType u, AppRequestIdType v));
+
+    MOCK_METHOD(void, registerClique, (const std::vector<AppRequestIdType>& clique));
+};
+
+class LoggerGraph {
+public:
+    void registerDependency(const std::vector<AppRequestIdType>& cluster, AppRequestIdType v) {
+        printf("[ ");
+        for (const auto& u: cluster) {
+            printf("%ld ", u);
+        }
+        printf("]->(%ld)\n", v);
+    }
+
+    void registerDependency(AppRequestIdType u, AppRequestIdType v) {
+        printf("%ld->%ld\n", u, v);
+    }
+
+    void registerClique(const std::vector<AppRequestIdType>& clique) {
+        printf("(");
+        for (int i = 0; i < clique.size() - 1; ++i) {
+            printf("%ld ", clique[i]);
+        }
+        printf("%ld)\n", clique.back());
     }
 };
 
@@ -132,8 +164,64 @@ TEST_F(RequestSchedulerTest, CollisionsFromRequests) {
 
     auto sortedMap = scheduler.sortAccessBlocks(8);
 
-    scheduler.findCollisions({app_1_id, chunk1_local_id}, sortedMap.at(app_1_id).at(chunk1_local_id).getKeys(),
-                             sortedMap.at(app_1_id).at(chunk1_local_id).getValues());
+    scheduler.checkCollisions({app_1_id, chunk1_local_id},
+                              sortedMap.at(app_1_id).at(chunk1_local_id).getKeys(),
+                              sortedMap.at(app_1_id).at(chunk1_local_id).getValues());
+
+
+    MockGraph mock;
+    EXPECT_CALL(mock, registerDependency(ClusterType({13}), 10));
+    EXPECT_CALL(mock, registerDependency(ClusterType({13}), 11));
+    EXPECT_CALL(mock, registerDependency(ClusterType({10}), 11));
+    EXPECT_CALL(mock, registerDependency(ClusterType({4}), 1));
+    EXPECT_CALL(mock, registerDependency(ClusterType({1, 2}), 5));
+    EXPECT_CALL(mock, registerClique(ClusterType({1, 2})));
+    EXPECT_CALL(mock, registerDependency(ClusterType({5}), 3));
+    EXPECT_CALL(mock, registerDependency(ClusterType({3}), 6));
+
+    scheduler.findCollisionCliques(std::move(sortedMap.at(app_1_id).at(chunk1_local_id).getKeys()),
+                                   std::move(sortedMap.at(app_1_id).at(chunk1_local_id).getValues()),
+                                   mock);
+}
+
+TEST_F(RequestSchedulerTest, CollisionCliques_1) {
+    ChunkIndex index{{}, {}, {}, 5};
+    RequestScheduler scheduler(0, index);
+
+    MockGraph mock;
+    EXPECT_CALL(mock, registerDependency(ClusterType({0}), 1));
+    EXPECT_CALL(mock, registerClique(ClusterType{0, 2}));
+    EXPECT_CALL(mock, registerClique(ClusterType{2, 3, 4}));
+
+    scheduler.findCollisionCliques({0, 0, 2, 6, 6}, {
+                                           {4, Access::writable, 0},
+                                           {2, Access::writable, 1},
+                                           {6, Access::writable, 2},
+                                           {4, Access::writable, 3},
+                                           {4, Access::writable, 4},
+                                   },
+                                   mock);
+}
+
+TEST_F(RequestSchedulerTest, CollisionCliques_2) {
+    ChunkIndex index{{}, {}, {}, 5};
+    RequestScheduler scheduler(0, index);
+
+    MockGraph mock;
+    EXPECT_CALL(mock, registerClique(ClusterType{0, 1, 2, 3}));
+    EXPECT_CALL(mock, registerClique(ClusterType{3, 2, 4, 5}));
+
+    scheduler.findCollisionCliques({0, 0, 2, 2, 5, 5},
+                                   {
+                                           {3, Access::writable, 0},
+                                           {3, Access::writable, 1},
+                                           {5, Access::writable, 2},
+                                           {5, Access::writable, 3},
+                                           {4, Access::writable, 4},
+                                           {4, Access::writable, 5},
+                                   },
+                                   mock);
+
 }
 
 TEST_F(RequestSchedulerTest, AdditiveCollisions) {
@@ -173,8 +261,16 @@ TEST_F(RequestSchedulerTest, AdditiveCollisions) {
 
     auto sortedMap = scheduler.sortAccessBlocks(4);
 
-    scheduler.findCollisions({app_1_id, chunk1_local_id}, sortedMap.at(app_1_id).at(chunk1_local_id).getKeys(),
-                             sortedMap.at(app_1_id).at(chunk1_local_id).getValues());
+    MockGraph mock;
+    EXPECT_CALL(mock, registerDependency(ClusterType{0}, 1));
+    EXPECT_CALL(mock, registerDependency(ClusterType{0}, 2));
+    EXPECT_CALL(mock, registerDependency(ClusterType{1}, 3));
+    EXPECT_CALL(mock, registerDependency(ClusterType{2}, 3));
+    EXPECT_CALL(mock, registerDependency(ClusterType{3}, 4));
+
+    scheduler.findCollisionCliques(
+            std::move(sortedMap.at(app_1_id).at(chunk1_local_id).getKeys()),
+            std::move(sortedMap.at(app_1_id).at(chunk1_local_id).getValues()), mock);
 }
 
 TEST_F(RequestSchedulerTest, SimpleDagFull) {
