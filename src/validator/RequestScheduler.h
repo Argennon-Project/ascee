@@ -160,12 +160,15 @@ public:
         std::vector<std::vector<AppRequestIdType>> clusters(sortedOffsets.size());
         for (int32_fast i = 0; i < sortedOffsets.size(); ++i) {
             auto accessType = accessBlocks[i].accessType;
-            auto offset = sortedOffsets[i];
 
+            auto offset = sortedOffsets[i];
+            // with this simple if we can skip non-accessible size blocks because based on their offset they will always
+            // be at the start of the list.
             if (offset == -3 || accessType == AccessBlockInfo::Access::Type::check_only) continue;
 
             clusters[i].emplace_back(accessBlocks[i].requestID);
             auto end = (offset == -1 || offset == -2) ? 0 : offset + accessBlocks[i].size;
+
             bool skipped = false;
             for (int32_fast j = i + 1; sortedOffsets[j] < end && j < accessBlocks.size(); ++j) {
                 auto collidingEnd = sortedOffsets[j] + accessBlocks[j].size;
@@ -209,15 +212,9 @@ public:
         int32_fast sizeWritersBegin = 0, sizeWritersEnd = 0;
         bool inSizeWriterList = false;
         int32_fast lowerBound = 0;
-        for (int32_fast i = 0; i < accessBlocks.size(); ++i) {
+
+        for (int32_fast i = 0; i < accessBlocks.size() && sortedOffsets[i] < 0; ++i) {
             auto offset = sortedOffsets[i];
-            auto reqID = accessBlocks[i].requestID;
-
-            // with this simple if we can skip non-accessible size blocks because based on their offset they will always
-            // be at the start of the list.
-            if (offset == -3) continue;
-
-            auto end = (offset == -1 || offset == -2) ? 0 : offset + accessBlocks[i].size;
 
             // finding the index interval of chunk resizing info blocks in the input vector: for all of them we
             // have offset == -1
@@ -229,6 +226,17 @@ public:
                 sizeWritersEnd = i;
                 lowerBound = heapIndex.getSizeLowerBound(chunkID);
             }
+        }
+
+        // sizeWriterEnd == 0 means that either no request wants to resize the chunk or no normal access block is
+        // defined for the chunk.
+        if (sizeWritersEnd == 0) return;
+
+        for (int32_fast i = sizeWritersEnd; i < accessBlocks.size(); ++i) {
+            auto offset = sortedOffsets[i];
+            assert(offset >= 0);
+            auto end = offset + accessBlocks[i].size;
+            auto reqID = accessBlocks[i].requestID;
 
             // end > upperBound will never occur, since those transactions must not be included in a block.
             if (end > lowerBound) {
