@@ -62,7 +62,7 @@ void RequestScheduler::submitResult(AppRequestIdType reqID, int statusCode) {
 ///
 /// sizeLowerBound is the minimum allowed size of the chunk and it is
 /// inclusive. (i.e. it is the mathematical lower bound of chunkSize and we require chunkSize >= sizeLowerBound)
-void RequestScheduler::findCollisions22(
+void RequestScheduler::findCollisions(
         full_id chunkID,
         const vector<int32>& sortedOffsets,
         const vector<AccessBlockInfo>& accessBlocks

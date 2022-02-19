@@ -74,19 +74,28 @@ public:
     void registerDependency(const std::vector<AppRequestIdType>& cluster, AppRequestIdType v) {
         printf("[ ");
         for (const auto& u: cluster) {
-            verifyIsAdjacent(u, v);
-            printf("%ld ", u);
+            registerDependency(u, v);
         }
-        printf("]->(%ld)\n", v);
+        printf("]\n");
     }
 
     void registerDependency(AppRequestIdType u, AppRequestIdType v) {
-        verifyIsAdjacent(u, v);
+        if (u < v) verifyIsAdjacent(u, v);
+        else verifyIsAdjacent(v, u);
 
-        printf("%ld->%ld\n", u, v);
+        printf("%ld<->%ld ", u, v);
     }
 
-    void registerClique(const std::vector<AppRequestIdType>& clique) {
+    void registerClique(std::vector<AppRequestIdType>&& clique) {
+        // for verifying a clique we have to verify that a path exist in the dag that passes through all clique
+        // vertices.
+
+        // first we need to sort vertices. without sorting this function can not guarantee that a path exist through
+        // all vertices.
+        // we use insertion sort because usually the input is a sorted or a nearly sorted vector.
+        util::insertionSort(clique);
+        // std::sort(clique.begin(), clique.end());
+
         printf("(");
         for (int i = 0; i < clique.size() - 1; ++i) {
             verifyIsAdjacent(clique[i], clique[i + 1]);
@@ -99,8 +108,7 @@ private:
     const Dag& dag;
 
     void verifyIsAdjacent(AppRequestIdType u, AppRequestIdType v) {
-        bool adjacent = u < v ? dag.isAdjacent(u, v) : dag.isAdjacent(v, u);
-        if (!adjacent) {
+        if (!dag.isAdjacent(u, v)) {
             throw std::invalid_argument("missing {" + std::to_string(u) + "," + std::to_string(v) +
                                         "} edge in the dependency graph");
         }
@@ -115,9 +123,9 @@ public:
 
     void submitResult(AppRequestIdType reqID, int statusCode);
 
-    void findCollisions22(full_id chunkID,
-                          const std::vector<int32>& sortedOffsets,
-                          const std::vector<AccessBlockInfo>& accessBlocks);
+    void findCollisions(full_id chunkID,
+                        const std::vector<int32>& sortedOffsets,
+                        const std::vector<AccessBlockInfo>& accessBlocks);
 
     /// this function is thread-safe as long as all used `id`s are distinct
     auto& requestAt(AppRequestIdType id);
@@ -190,7 +198,7 @@ public:
                 }
             }
             if (!skipped && clusters[i].size() > 1 && accessType.collides(accessType)) {
-                graph.registerClique(clusters[i]);
+                graph.registerClique(std::move(clusters[i]));
             }
         }
     }

@@ -87,13 +87,14 @@ public:
         return responseList;
     }
 
+    /**
+     *
+     * @param task is a function that accepts a taskID and runs the corresponding task with that id.
+     * @param tasksCount
+     * @param workersCount
+     */
     static
-    void runAll(const std::function<void(int64_fast taskIndex)
-
-    >& task,
-    int64_fast tasksCount,
-    int workersCount
-    ) {
+    void runAll(const std::function<void(int64_fast)>& task, int64_fast tasksCount, int workersCount) {
         const auto step = std::max<int64_fast>(tasksCount / workersCount, 1);
 
         std::vector<std::future<void>> pendingTasks;

@@ -19,6 +19,7 @@
 #include "arg/primitives.h"
 #include "util/PrefixTrie.hpp"
 #include "util/StaticArray.hpp"
+#include "util/OrderedStaticMap.hpp"
 
 using namespace argennon;
 using namespace util;
@@ -325,7 +326,6 @@ TEST(PrefixTrieTest, ParseSymbolic) {
 
     EXPECT_THROW(t2.parsePrefixCode("g2", id2), std::invalid_argument);
 }
-
 
 TEST(PrefixTrieTest, ToDecimal) {
     PrefixTrie<uint64_t, 4> t({0x40, 0x7050, 0x800010, 0xbb001122});
