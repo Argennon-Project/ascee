@@ -18,7 +18,8 @@ add_executable(Google_Tests_run
         validator/RequestSchedulerTest.cpp
         apps/ArgAppTest.cpp
         storage/AsaPageTest.cpp
-        validator/RequestProcessorTest.cpp)
+        validator/RequestProcessorTest.cpp
+        util/OrderedStaticMapTest.cpp)
 
 
 # linking Google_Tests_run with libraries

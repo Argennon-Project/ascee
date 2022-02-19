@@ -96,22 +96,15 @@ public:
      * @return
      */
     friend OrderedStaticMap operator|(OrderedStaticMap&& left, OrderedStaticMap&& right) {
-        int i = 0, j = 0;
+        std::size_t i = 0, j = 0;
         OrderedStaticMap result;
         while (true) {
             if (i < left.size() && j < right.size()) {
                 if (left.keys[i] == right.keys[j]) {
                     result.keys.emplace_back(left.keys[i]);
-                    bool possible;
                     result.values.emplace_back(
-                            mergeValues(std::move(left.values[i]), std::move(right.values[j]), possible)
+                            mergeValues(std::move(left.values[i]), std::move(right.values[j]), i, j)
                     );
-                    if (!possible) {
-                        result.keys.emplace_back(right.keys[j]);
-                        result.values.emplace_back(std::move(right.values[j]));
-                    }
-                    ++i;
-                    ++j;
                 } else if (left.keys[i] < right.keys[j]) {
                     result.keys.emplace_back(left.keys[i]);
                     result.values.emplace_back(std::move(left.values[i]));
@@ -140,15 +133,21 @@ private:
 
     template<class T1, class T2>
     static OrderedStaticMap<T1, T2> mergeValues(OrderedStaticMap<T1, T2>&& left, OrderedStaticMap<T1, T2>&& right,
-                                                bool& possible) {
-        possible = true;
+                                                std::size_t& i, std::size_t& j) {
+        ++i;
+        ++j;
         return std::move(left) | std::move(right);
     }
 
     template<typename T>
-    static T mergeValues(T&& left, T&& right, bool& possible) {
-        possible = false;
-        return left < right ? left : right;
+    static T mergeValues(T&& left, T&& right, std::size_t& i, std::size_t& j) {
+        if (left < right) {
+            ++i;
+            return std::forward<T>(left);
+        } else {
+            ++j;
+            return std::forward<T>(right);
+        }
     }
 };
 

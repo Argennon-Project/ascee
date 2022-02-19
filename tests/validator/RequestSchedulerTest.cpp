@@ -84,6 +84,83 @@ public:
     }
 };
 
+TEST_F(RequestSchedulerTest, CollisionCliques_1) {
+    MockGraph mock;
+    EXPECT_CALL(mock, registerDependency(ClusterType({0}), 1));
+    EXPECT_CALL(mock, registerClique(ClusterType{0, 2}));
+    EXPECT_CALL(mock, registerClique(ClusterType{2, 3, 4}));
+
+    RequestScheduler::findCollisionCliques({0, 0, 2, 6, 6}, {
+                                                   {4, Access::writable, 0},
+                                                   {2, Access::writable, 1},
+                                                   {6, Access::writable, 2},
+                                                   {4, Access::writable, 3},
+                                                   {4, Access::writable, 4},
+                                           },
+                                           mock);
+}
+
+TEST_F(RequestSchedulerTest, CollisionCliques_2) {
+    MockGraph mock;
+    EXPECT_CALL(mock, registerClique(ClusterType{0, 1, 2, 3}));
+    EXPECT_CALL(mock, registerClique(ClusterType{3, 2, 4, 5}));
+
+    RequestScheduler::findCollisionCliques({0, 0, 2, 2, 5, 5},
+                                           {
+                                                   {3, Access::writable, 0},
+                                                   {3, Access::writable, 1},
+                                                   {5, Access::writable, 2},
+                                                   {5, Access::writable, 3},
+                                                   {4, Access::writable, 4},
+                                                   {4, Access::writable, 5},
+                                           },
+                                           mock);
+
+}
+
+TEST_F(RequestSchedulerTest, CollisionCliques_3) {
+    MockGraph mock;
+    EXPECT_CALL(mock, registerClique(ClusterType{0, 1, 2}));
+    EXPECT_CALL(mock, registerDependency(ClusterType({0, 1, 2}), 3));
+    EXPECT_CALL(mock, registerDependency(ClusterType({2, 1}), 5));
+    EXPECT_CALL(mock, registerDependency(ClusterType({3}), 1));
+    EXPECT_CALL(mock, registerDependency(ClusterType({3}), 2));
+    EXPECT_CALL(mock, registerClique(ClusterType{2, 1}));
+
+    RequestScheduler::findCollisionCliques({0, 1, 1, 5, 5, 6},
+                                           {
+                                                   {6, Access::writable,   0},
+                                                   {6, Access::writable,   1},
+                                                   {6, Access::writable,   2},
+                                                   {4, Access::read_only,  3},
+                                                   {4, Access::check_only, 4},
+                                                   {4, Access::read_only,  5},
+                                           },
+                                           mock);
+}
+
+TEST_F(RequestSchedulerTest, CollisionCliques_additive) {
+    MockGraph mock;
+    EXPECT_CALL(mock, registerDependency(ClusterType({0}), 2));
+    EXPECT_CALL(mock, registerDependency(ClusterType({0}), 3));
+    EXPECT_CALL(mock, registerDependency(ClusterType({0}), 4));
+    EXPECT_CALL(mock, registerDependency(ClusterType({1}), 2));
+    EXPECT_CALL(mock, registerDependency(ClusterType({1}), 3));
+    EXPECT_CALL(mock, registerDependency(ClusterType({1}), 4));
+    EXPECT_CALL(mock, registerDependency(ClusterType({2}), 4));
+    EXPECT_CALL(mock, registerDependency(ClusterType({3}), 4));
+
+    RequestScheduler::findCollisionCliques({1, 1, 4, 4, 4},
+                                           {
+                                                   {6, Access::int_additive, 0},
+                                                   {6, Access::int_additive, 1},
+                                                   {3, Access::int_additive, 2},
+                                                   {3, Access::int_additive, 3},
+                                                   {4, Access::int_additive, 4},
+                                           },
+                                           mock);
+}
+
 TEST_F(RequestSchedulerTest, CollisionsFromRequests) {
     // [13--10] [13--11] [10--11] [4--1] [1--2] [1--5] [2--5] [2--10] [2--11] [5--3] [5--10] [5--11] [3--6] [3--10] [3--11] [6--10] [6--11] [7--11] [8--11]
     RequestScheduler scheduler(14, singleChunk);
@@ -184,83 +261,6 @@ TEST_F(RequestSchedulerTest, CollisionsFromRequests) {
                                    mock);
 }
 
-TEST_F(RequestSchedulerTest, CollisionCliques_1) {
-    MockGraph mock;
-    EXPECT_CALL(mock, registerDependency(ClusterType({0}), 1));
-    EXPECT_CALL(mock, registerClique(ClusterType{0, 2}));
-    EXPECT_CALL(mock, registerClique(ClusterType{2, 3, 4}));
-
-    RequestScheduler::findCollisionCliques({0, 0, 2, 6, 6}, {
-                                                   {4, Access::writable, 0},
-                                                   {2, Access::writable, 1},
-                                                   {6, Access::writable, 2},
-                                                   {4, Access::writable, 3},
-                                                   {4, Access::writable, 4},
-                                           },
-                                           mock);
-}
-
-TEST_F(RequestSchedulerTest, CollisionCliques_2) {
-    MockGraph mock;
-    EXPECT_CALL(mock, registerClique(ClusterType{0, 1, 2, 3}));
-    EXPECT_CALL(mock, registerClique(ClusterType{3, 2, 4, 5}));
-
-    RequestScheduler::findCollisionCliques({0, 0, 2, 2, 5, 5},
-                                           {
-                                                   {3, Access::writable, 0},
-                                                   {3, Access::writable, 1},
-                                                   {5, Access::writable, 2},
-                                                   {5, Access::writable, 3},
-                                                   {4, Access::writable, 4},
-                                                   {4, Access::writable, 5},
-                                           },
-                                           mock);
-
-}
-
-TEST_F(RequestSchedulerTest, CollisionCliques_3) {
-    MockGraph mock;
-    EXPECT_CALL(mock, registerClique(ClusterType{0, 1, 2}));
-    EXPECT_CALL(mock, registerDependency(ClusterType({0, 1, 2}), 3));
-    EXPECT_CALL(mock, registerDependency(ClusterType({2, 1}), 5));
-    EXPECT_CALL(mock, registerDependency(ClusterType({3}), 1));
-    EXPECT_CALL(mock, registerDependency(ClusterType({3}), 2));
-    EXPECT_CALL(mock, registerClique(ClusterType{2, 1}));
-
-    RequestScheduler::findCollisionCliques({0, 1, 1, 5, 5, 6},
-                                           {
-                                                   {6, Access::writable,   0},
-                                                   {6, Access::writable,   1},
-                                                   {6, Access::writable,   2},
-                                                   {4, Access::read_only,  3},
-                                                   {4, Access::check_only, 4},
-                                                   {4, Access::read_only,  5},
-                                           },
-                                           mock);
-}
-
-TEST_F(RequestSchedulerTest, CollisionCliques_additive) {
-    MockGraph mock;
-    EXPECT_CALL(mock, registerDependency(ClusterType({0}), 2));
-    EXPECT_CALL(mock, registerDependency(ClusterType({0}), 3));
-    EXPECT_CALL(mock, registerDependency(ClusterType({0}), 4));
-    EXPECT_CALL(mock, registerDependency(ClusterType({1}), 2));
-    EXPECT_CALL(mock, registerDependency(ClusterType({1}), 3));
-    EXPECT_CALL(mock, registerDependency(ClusterType({1}), 4));
-    EXPECT_CALL(mock, registerDependency(ClusterType({2}), 4));
-    EXPECT_CALL(mock, registerDependency(ClusterType({3}), 4));
-
-    RequestScheduler::findCollisionCliques({1, 1, 4, 4, 4},
-                                           {
-                                                   {6, Access::int_additive, 0},
-                                                   {6, Access::int_additive, 1},
-                                                   {3, Access::int_additive, 2},
-                                                   {3, Access::int_additive, 3},
-                                                   {4, Access::int_additive, 4},
-                                           },
-                                           mock);
-}
-
 TEST_F(RequestSchedulerTest, AdditiveCollisions) {
     // [0--1] [0--2] [1--3] [2--3] [3--4]
     RequestScheduler scheduler(5, singleChunk);
@@ -298,17 +298,54 @@ TEST_F(RequestSchedulerTest, AdditiveCollisions) {
 
     auto sortedMap = scheduler.sortAccessBlocks(4);
 
-    MockGraph mock;
-    EXPECT_CALL(mock, registerDependency(ClusterType{0}, 1));
-    EXPECT_CALL(mock, registerDependency(ClusterType{0}, 2));
-    EXPECT_CALL(mock, registerDependency(ClusterType{1}, 3));
-    EXPECT_CALL(mock, registerDependency(ClusterType{2}, 3));
-    EXPECT_CALL(mock, registerDependency(ClusterType{3}, 4));
-
-    scheduler.findCollisionCliques(
-            std::move(sortedMap.at(app_1_id).at(chunk1_local_id).getKeys()),
-            std::move(sortedMap.at(app_1_id).at(chunk1_local_id).getValues()), mock);
+    scheduler.checkCollisions({app_1_id, chunk1_local_id},
+                              std::move(sortedMap.at(app_1_id).at(chunk1_local_id).getKeys()),
+                              std::move(sortedMap.at(app_1_id).at(chunk1_local_id).getValues()));
 }
+
+
+TEST_F(RequestSchedulerTest, WritersCollisions) {
+    // [0--1] [0--2] [1--3] [2--3] [3--4]
+    RequestScheduler scheduler(5, singleChunk);
+
+    scheduler.addRequest({.id = 0, .memoryAccessMap = {
+            {app_1_id},
+            {{{chunk1_local_id}, {
+                                         {{0}, {{3, Access::writable, 0}}},
+                                 }}}},
+                                 .adjList = {1}});
+    scheduler.addRequest({.id = 1, .memoryAccessMap = {
+            {app_1_id},
+            {{{chunk1_local_id}, {
+                                         {{0}, {{4, Access::writable, 1}}},
+                                 }}}},
+                                 .adjList = {2}});
+    scheduler.addRequest({.id = 2, .memoryAccessMap = {
+            {app_1_id},
+            {{{chunk1_local_id}, {
+                                         {{0}, {{4, Access::writable, 2}}},
+                                 }}}},
+                                 .adjList = {}});
+    scheduler.addRequest({.id = 3, .memoryAccessMap = {
+            {app_1_id},
+            {{{chunk1_local_id}, {
+                                         {{4}, {{4, Access::writable, 3}}},
+                                 }}}},
+                                 .adjList = {4}});
+    scheduler.addRequest({.id = 4, .memoryAccessMap = {
+            {app_1_id},
+            {{{chunk1_local_id}, {
+                                         {{4}, {{4, Access::writable, 4}}},
+                                 }}}},
+                                 .adjList = {}});
+
+    auto sortedMap = scheduler.sortAccessBlocks(2);
+
+    scheduler.checkCollisions({app_1_id, chunk1_local_id},
+                              std::move(sortedMap.at(app_1_id).at(chunk1_local_id).getKeys()),
+                              std::move(sortedMap.at(app_1_id).at(chunk1_local_id).getValues()));
+}
+
 
 TEST_F(RequestSchedulerTest, SimpleDagFull) {
     auto numOfRequests = 3;
