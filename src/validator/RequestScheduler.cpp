@@ -62,7 +62,7 @@ void RequestScheduler::submitResult(AppRequestIdType reqID, int statusCode) {
 ///
 /// sizeLowerBound is the minimum allowed size of the chunk and it is
 /// inclusive. (i.e. it is the mathematical lower bound of chunkSize and we require chunkSize >= sizeLowerBound)
-void RequestScheduler::findCollisions(
+void RequestScheduler::findCollisions22(
         full_id chunkID,
         const vector<int32>& sortedOffsets,
         const vector<AccessBlockInfo>& accessBlocks
@@ -172,10 +172,10 @@ void RequestScheduler::finalizeRequest(AppRequestIdType id) {
 
 void RequestScheduler::registerDependency(AppRequestIdType u, AppRequestIdType v) {
     assert(u != v);
-    /* if (!nodeIndex[u]->isAdjacent(v) && !nodeIndex[v]->isAdjacent(u)) {
-         throw BlockError("missing {" + std::to_string(u) + "," + std::to_string(v) +
-                          "} edge in the dependency graph");
-     }*/
+    if (!nodeIndex[u]->isAdjacent(v) && !nodeIndex[v]->isAdjacent(u)) {
+        throw BlockError("missing {" + std::to_string(u) + "," + std::to_string(v) +
+                         "} edge in the dependency graph");
+    }
     printf("[%ld--%ld] ", u, v);
 }
 

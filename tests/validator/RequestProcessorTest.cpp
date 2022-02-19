@@ -191,42 +191,42 @@ TEST_F(RequestProcessorTest, SimpleDependencyGraph) {
                     .memoryAccessMap = {
                             {app_1_id},
                             {{{chunk1_local_id}, {{{0}, {{3, Access::writable, 0}}},}}}},
-                    .adjList ={}
+                    .adjList ={1}
             },
             {
                     .id = 1,
                     .memoryAccessMap = {
                             {app_1_id},
                             {{{chunk1_local_id}, {{{2}, {{4, Access::read_only, 1}}},}}}},
-                    .adjList ={0}
+                    .adjList ={}
             },
             {
                     .id = 2,
                     .memoryAccessMap = {
                             {app_1_id},
                             {{{chunk1_local_id}, {{{3}, {{4, Access::read_only, 2}}},}}}},
-                    .adjList ={}
+                    .adjList ={3, 4}
             },
             {
                     .id = 3,
                     .memoryAccessMap = {
                             {app_1_id},
                             {{{chunk2_local_id}, {{{0}, {{4, Access::int_additive, 3}}},}}}},
-                    .adjList ={2}
+                    .adjList ={5}
             },
             {
                     .id = 4,
                     .memoryAccessMap = {
                             {app_1_id},
                             {{{chunk2_local_id}, {{{0}, {{4, Access::int_additive, 4}}},}}}},
-                    .adjList ={2}
+                    .adjList ={5}
             },
             {
                     .id = 5,
                     .memoryAccessMap = {
                             {app_1_id},
                             {{{chunk2_local_id}, {{{3}, {{2, Access::read_only, 5}}},}}}},
-                    .adjList ={3, 4}
+                    .adjList ={}
             },
     };
 

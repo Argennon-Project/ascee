@@ -51,11 +51,12 @@ public:
 
         for (long i = 0; i < sortedMap.size(); ++i) {
             runAll([&, i](long j) {
-                const auto& chunkList = sortedMap.getValues()[i];
+                auto& chunkList = sortedMap.getValues()[i];
                 auto chunkLocalID = chunkList.getKeys()[j];
-                const auto& blocks = chunkList.getValues()[j];
-                scheduler.findCollisions(full_id(sortedMap.getKeys()[i], chunkLocalID), blocks.getKeys(),
-                                         blocks.getValues());
+                auto& blocks = chunkList.getValues()[j];
+                scheduler.checkCollisions(full_id(sortedMap.getKeys()[i], chunkLocalID),
+                                          std::move(blocks.getKeys()),
+                                          std::move(blocks.getValues()));
             }, sortedMap.getValues()[i].size(), workersCount);
         }
     };
@@ -87,7 +88,12 @@ public:
     }
 
     static
-    void runAll(const std::function<void(int64_fast taskIndex)>& task, int64_fast tasksCount, int workersCount) {
+    void runAll(const std::function<void(int64_fast taskIndex)
+
+    >& task,
+    int64_fast tasksCount,
+    int workersCount
+    ) {
         const auto step = std::max<int64_fast>(tasksCount / workersCount, 1);
 
         std::vector<std::future<void>> pendingTasks;

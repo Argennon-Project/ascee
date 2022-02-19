@@ -36,7 +36,7 @@ struct AccessBlockInfo {
     class Access {
     public:
         enum class Type : byte {
-            check_only, int_additive, read_only, writable
+            check_only = 0, writable = 1, read_only = 2, int_additive = 3,
         };
 
         enum class Operation : byte {
@@ -52,6 +52,10 @@ struct AccessBlockInfo {
 
         bool operator==(Access other) const {
             return type == other.type;
+        }
+
+        bool operator<(Access other) const {
+            return type < other.type;
         }
 
         //Access& operator=(Access& other) = default;
@@ -101,8 +105,15 @@ struct AccessBlockInfo {
         Type type;
     };
 
+    /**
+     * This operator should be defined to make sure that cluster-product algorithm returns a deterministic result. The
+     * operator is defined in a way that makes cluster-product algorithm more efficient.
+     * @param other
+     * @return
+     */
     bool operator<(const AccessBlockInfo& other) const {
-        return requestID < other.requestID;
+        return accessType < other.accessType ||
+               accessType == other.accessType && requestID < other.requestID;
     }
 
     int32 size;
@@ -113,6 +124,7 @@ struct AccessBlockInfo {
 struct AppRequestInfo {
     using AccessMapType = util::OrderedStaticMap<long_id,
             util::OrderedStaticMap<long_long_id, util::OrderedStaticMap<int32, AccessBlockInfo>>>;
+
     /**
      *  The unique identifier of a request in a block. It must be a 32 bit integer in the interval [0,n), where n is
      *  the total number of requests of the block. Obviously any integer in the interval should be assigned to
@@ -136,17 +148,18 @@ struct AppRequestInfo {
     std::vector<long_id> appAccessList;
     std::unordered_set<int_fast32_t> stackSizeFailures;
     std::unordered_set<int_fast32_t> cpuTimeFailures;
+
     /**
      * memoryAccessMap is the sorted list of memory locations that the request will access. This list must be sorted
      * based on appIDs, chunkIDs and offsets. Defined access blocks must be non-overlapping. The first defined
      * access block for every chunk MUST be ONE of the following access blocks:
      *
      *
-     * {offset = -3, size = *, access = *} which means the request does not access the size of the chunk.
+     * @ResizingBlock {offset = -3, size = *, access = *} which means the request does not access the size of the chunk.
      *
-     * {offset = -2, size = *, access = read_only} which means the request reads the chunkSize but will not modify it.
+     * @ResizingBlock  {offset = -2, size = *, access = read_only} which means the request reads the chunkSize but will not modify it.
      *
-     * {offset = -1, size, access = writable}, which means the request may resize the chunk. If size > 0 the request wants to
+     * @ResizingBlock  {offset = -1, size, access = writable}, which means the request may resize the chunk. If size > 0 the request wants to
      * expand the chunk and sizeBound = size, which means newSize <= size. If size <= 0 the request can shrink the
      * chunk and sizeBound = -size, which means newSize >= -size.
      *
@@ -154,8 +167,19 @@ struct AppRequestInfo {
     */
     // block loader needs to endure that this list is: 1) sorted. 2) all AccessBlocks are non-overlapping.
     AccessMapType memoryAccessMap;
-    /// This list should be checked to make sure no id is out of range.
+
+    /**
+     * This list defines the requests that are adjacent to this request in the proposed execution dag of requests. The proposed
+     * execution dag must have enough edges to be verifiable by the cluster-product algorithm but does not need
+     * to contain all edges of the dependency graph.
+     *
+     * A request can only be adjacent to requests that have a greater identifier. This property will be automatically
+     * satisfied if the request identifiers have been chosen based on a topological order of the execution dag.
+     */
+    // The adjList should be checked to make sure all ids are in the range (id, numOfRequests). In other words all
+    // adjacent nodes should have a greater id.
     std::unordered_set<AppRequestIdType> adjList;
+
     /**
      *  attachments is a list of requests of the current block that are "attached" to this request. That means, for
      *  validating this request a validator first needs to "inject" the digest of attached requests into the httpRequest
@@ -166,16 +190,19 @@ struct AppRequestInfo {
      *  for which it wants to pay fees for. By injecting digest of those request by validators that signature can
      *  be validated correctly by the ARG application.
      */
+    // BlockLoader needs to verify that all integers in the attachments list are in [0, numOfRequests)
     std::vector<AppRequestIdType> attachments;
-    // BlockLoader needs to verify that all integers in the list are in [0, numOfRequests)
 
     util::Digest digest;
 };
 
 struct MigrationInfo {
     int32_fast chunkIndex;
-    /// The index of the page that the chunk should be migrated from. Here, index means the sequence number of the
-    /// page in the PageAccessInfo list. The sequence numbers starts from zero.
+
+    /**
+     * The index of the page that the chunk should be migrated from. Here, index means the sequence number of the
+     * page in the PageAccessInfo list. The sequence numbers starts from zero.
+     */
     int32_fast fromIndex;
     int32_fast toIndex;
 };

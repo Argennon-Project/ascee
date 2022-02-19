@@ -115,9 +115,9 @@ public:
 
     void submitResult(AppRequestIdType reqID, int statusCode);
 
-    void findCollisions(full_id chunkID,
-                        const std::vector<int32>& sortedOffsets,
-                        const std::vector<AccessBlockInfo>& accessBlocks);
+    void findCollisions22(full_id chunkID,
+                          const std::vector<int32>& sortedOffsets,
+                          const std::vector<AccessBlockInfo>& accessBlocks);
 
     /// this function is thread-safe as long as all used `id`s are distinct
     auto& requestAt(AppRequestIdType id);
@@ -154,7 +154,7 @@ public:
             auto accessType = accessBlocks[i].accessType;
             auto offset = sortedOffsets[i];
 
-            if (offset == -3) continue;
+            if (offset == -3 || accessType == AccessBlockInfo::Access::Type::check_only) continue;
 
             clusters[i].emplace_back(accessBlocks[i].requestID);
             auto end = (offset == -1 || offset == -2) ? 0 : offset + accessBlocks[i].size;
@@ -235,6 +235,13 @@ public:
         }
     }
 
+    /**
+     * verifies that the execution dag of requests properly considers all collisions between requests. Collisions
+     * are computed using cluster-product algorithm.
+     * @param chunkID
+     * @param sortedOffsets when possible, use std::move for this parameter
+     * @param accessBlocks when possible, use std::move for this parameter
+     */
     void checkCollisions(full_id chunkID, std::vector<int32> sortedOffsets,
                          std::vector<AccessBlockInfo> accessBlocks) {
         DagVerifier verifier(*this);
