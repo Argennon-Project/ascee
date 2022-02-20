@@ -82,11 +82,6 @@ struct AccessBlockInfo {
         }
 
         [[nodiscard]]
-        bool merges(Access other) const {
-            return !isAdditive() && type == other.type;
-        }
-
-        [[nodiscard]]
         bool collides(Access other) const {
             switch (type) {
                 case Type::check_only:

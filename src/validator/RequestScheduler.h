@@ -160,7 +160,6 @@ public:
         std::vector<std::vector<AppRequestIdType>> clusters(sortedOffsets.size());
         for (int32_fast i = 0; i < sortedOffsets.size(); ++i) {
             auto accessType = accessBlocks[i].accessType;
-
             auto offset = sortedOffsets[i];
             // with this simple if we can skip non-accessible size blocks because based on their offset they will always
             // be at the start of the list.
@@ -170,10 +169,12 @@ public:
             auto end = (offset == -1 || offset == -2) ? 0 : offset + accessBlocks[i].size;
 
             bool skipped = false;
-            for (int32_fast j = i + 1; sortedOffsets[j] < end && j < accessBlocks.size(); ++j) {
+            for (int32_fast j = i + 1; j < accessBlocks.size() && sortedOffsets[j] < end; ++j) {
                 auto collidingEnd = sortedOffsets[j] + accessBlocks[j].size;
-                if (end > collidingEnd || !accessBlocks[j].accessType.merges(accessType)) {
-                    if (hasCollision(accessBlocks[i], offset, accessBlocks[j], sortedOffsets[j])) {
+                if (!canMerge(accessBlocks[i], offset, accessBlocks[j], sortedOffsets[j]) || end > collidingEnd) {
+                    // canMerge returns true for same additive blocks, so we don't need to check that here. In other
+                    // word we merge additive blocks that do not collide.
+                    if (accessType.collides(accessBlocks[j].accessType)) {
                         graph.registerDependency(clusters[i], accessBlocks[j].requestID);
                     }
                 } else {
@@ -200,7 +201,7 @@ public:
                     break;
                 }
             }
-            if (!skipped && clusters[i].size() > 1 && accessType.collides(accessType)) {
+            if (!skipped && clusters[i].size() > 1 && accessType == AccessBlockInfo::Access::Type::writable) {
                 graph.registerClique(std::move(clusters[i]));
             }
         }
@@ -282,7 +283,7 @@ private:
     void injectDigest(util::Digest digest, std::string& httpRequest) {}
 
     static bool
-    hasCollision(const AccessBlockInfo& left, int32 leftOffset, const AccessBlockInfo& right, int32 rightOffset);
+    canMerge(const AccessBlockInfo& left, int32 leftOffset, const AccessBlockInfo& right, int32 rightOffset);
 };
 
 } // namespace argennon::ave

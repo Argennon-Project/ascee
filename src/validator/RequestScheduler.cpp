@@ -113,16 +113,6 @@ void RequestScheduler::findCollisions(
     }
 }
 
-bool RequestScheduler::hasCollision(const AccessBlockInfo& left, int32 leftOffset,
-                                    const AccessBlockInfo& right, int32 rightOffset) {
-    if (left.accessType.collides(right.accessType)) {
-        bool additiveSameBlock = left.accessType.isAdditive() && left.accessType == right.accessType &&
-                                 leftOffset == rightOffset && left.size == right.size;
-        if (!additiveSameBlock) return true;
-    }
-    return false;
-}
-
 void RequestScheduler::addRequest(AppRequestInfo&& data) {
     auto id = data.id;
     memoryAccessMaps[id] = std::move(data.memoryAccessMap);
@@ -181,6 +171,13 @@ void RequestScheduler::registerDependency(AppRequestIdType u, AppRequestIdType v
 
 HeapModifier RequestScheduler::getModifierFor(AppRequestIdType requestID) const {
     return heapIndex.buildModifier(memoryAccessMaps[requestID]);
+}
+
+bool RequestScheduler::canMerge(const AccessBlockInfo& left, int32 leftOffset,
+                                const AccessBlockInfo& right, int32 rightOffset) {
+    return left.accessType == right.accessType &&
+           (!left.accessType.isAdditive() || left.accessType.isAdditive() && leftOffset == rightOffset &&
+                                             left.size == right.size);
 }
 
 DagNode::DagNode(AppRequestInfo&& data,

@@ -141,14 +141,10 @@ TEST_F(RequestSchedulerTest, CollisionCliques_3) {
 
 TEST_F(RequestSchedulerTest, CollisionCliques_additive) {
     MockGraph mock;
-    EXPECT_CALL(mock, registerDependency(ClusterType({0}), 2));
-    EXPECT_CALL(mock, registerDependency(ClusterType({0}), 3));
-    EXPECT_CALL(mock, registerDependency(ClusterType({0}), 4));
-    EXPECT_CALL(mock, registerDependency(ClusterType({1}), 2));
-    EXPECT_CALL(mock, registerDependency(ClusterType({1}), 3));
-    EXPECT_CALL(mock, registerDependency(ClusterType({1}), 4));
-    EXPECT_CALL(mock, registerDependency(ClusterType({2}), 4));
-    EXPECT_CALL(mock, registerDependency(ClusterType({3}), 4));
+    EXPECT_CALL(mock, registerDependency(ClusterType({0, 1}), 2));
+    EXPECT_CALL(mock, registerDependency(ClusterType({0, 1}), 3));
+    EXPECT_CALL(mock, registerDependency(ClusterType({0, 1}), 4));
+    EXPECT_CALL(mock, registerDependency(ClusterType({2, 3}), 4));
 
     RequestScheduler::findCollisionCliques({1, 1, 4, 4, 4},
                                            {

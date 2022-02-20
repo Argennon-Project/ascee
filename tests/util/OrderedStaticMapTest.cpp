@@ -35,7 +35,6 @@ TEST(OrderedStaticMapTest, Merge) {
     EXPECT_EQ(m.getKeys(), vector<int>({1, 1, 1, 2, 3, 4, 5, 5, 5, 6, 7, 7, 7, 8}));
 }
 
-
 TEST(OrderedStaticMapTest, MergeParallel) {
     vector<OrderedStaticMap<int, int>> vm;
     vm.emplace_back(vector<int>{1, 1, 1, 2}, vector<int>{10, 20, 30, 2000});
