@@ -181,10 +181,32 @@ OrderedStaticMap<K, V> mergeAllParallel(std::vector<OrderedStaticMap<K, V>>&& ma
 
 template<typename T>
 void insertionSort(std::vector<T>& v) {
-    for (size_t i = 1; i < v.size(); ++i) {
-        for (size_t j = i; j > 0 && v[j] < v[j - 1]; --j) {
+    for (std::size_t i = 1; i < v.size(); ++i) {
+        for (std::size_t j = i; j > 0 && v[j] < v[j - 1]; --j) {
             std::swap(v[j], v[j - 1]);
         }
+    }
+}
+
+/**
+ * Inserts a sorted vector to another sorted vector. The final result will be a sorted vector. When two vectors are
+ * trivially merge-able number of comparisons and moves is relatively low. For example, if @p r[0]>l.back() only
+ * @p r.size() comparisons will be done without any moves.
+ * @tparam T
+ * @param l A sorted vector that @p r will be inserted into it. This vector will hold the final result of merging
+ * two vectors.
+ * @param r A sorted vector that will be inserted into @p l
+ */
+template<typename T>
+void mergeInsert(std::vector<T>& l, const std::vector<T>& r) {
+    int_fast32_t j = l.size() - 1;
+    l.resize(l.size() + r.size());
+    for (int_fast32_t i = r.size() - 1; i >= 0; --i) {
+        while (j >= 0 && l[j] > r[i]) {
+            l[j + i + 1] = std::move(l[j]);
+            --j;
+        }
+        l[j + i + 1] = r[i];
     }
 }
 

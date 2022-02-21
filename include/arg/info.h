@@ -164,9 +164,10 @@ struct AppRequestInfo {
     AccessMapType memoryAccessMap;
 
     /**
-     * This list defines the requests that are adjacent to this request in the proposed execution dag of requests. The proposed
-     * execution dag must have enough edges to be verifiable by the cluster-product algorithm but does not need
-     * to contain all edges of the dependency graph.
+     * This list defines the requests that are adjacent to this request in the proposed execution dag of requests.
+     * The proposed execution dag must have enough edges to be verifiable by the ClusterProduct algorithm but
+     * does not need to contain all edges of the dependency graph. It should be noted that a minimal execution dag may
+     * not be verified by the ClusterProduct algorithm.
      *
      * A request can only be adjacent to requests that have a greater identifier. This property will be automatically
      * satisfied if the request identifiers have been chosen based on a topological order of the execution dag.
