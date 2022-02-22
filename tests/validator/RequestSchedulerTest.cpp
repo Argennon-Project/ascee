@@ -152,6 +152,49 @@ TEST_F(RequestSchedulerTest, CollisionCliques_2) {
 
 }
 
+TEST_F(RequestSchedulerTest, CliquetoSingleNode_1) {
+    // 1 1 1 1 * * w
+    // 3 3 3 3 * * w
+    // 4 4 4 4 * * w
+    // * * 2 2 * * r
+
+    MockDag mock;
+    EXPECT_CALL(mock, isAdjacent(1, 3)).WillOnce(Return(true));
+    EXPECT_CALL(mock, isAdjacent(3, 4)).WillOnce(Return(true));
+    EXPECT_CALL(mock, isAdjacent(1, 2)).WillOnce(Return(true));
+    EXPECT_CALL(mock, isAdjacent(2, 3)).WillOnce(Return(true));
+
+    RequestScheduler::findCollisionCliques({0, 0, 0, 2},
+                                           {
+                                                   {4, Access::writable,  1},
+                                                   {4, Access::writable,  3},
+                                                   {4, Access::writable,  4},
+                                                   {2, Access::read_only, 2},
+                                           },
+                                           &mock);
+}
+
+TEST_F(RequestSchedulerTest, CliquetoSingleNode_2) {
+    // 1 1 1 1 * * w
+    // 3 3 3 3 * * w
+    // 4 4 4 4 * * w
+    // * * 0 0 * * r
+
+    MockDag mock;
+    EXPECT_CALL(mock, isAdjacent(1, 3)).WillOnce(Return(true));
+    EXPECT_CALL(mock, isAdjacent(3, 4)).WillOnce(Return(true));
+    EXPECT_CALL(mock, isAdjacent(0, 1)).WillOnce(Return(true));
+
+    RequestScheduler::findCollisionCliques({0, 0, 0, 2},
+                                           {
+                                                   {4, Access::writable,  1},
+                                                   {4, Access::writable,  3},
+                                                   {4, Access::writable,  4},
+                                                   {2, Access::read_only, 0},
+                                           },
+                                           &mock);
+}
+
 TEST_F(RequestSchedulerTest, CollisionCliques_3) {
     // 0 0 0 0 0 0 * * * * w
     // * 1 1 1 1 1 1 * * * w

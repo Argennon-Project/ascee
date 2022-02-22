@@ -127,7 +127,7 @@ public:
                 // we keep vertices of cliques sorted. Without sorting, this function can not guarantee that a path
                 // exists through all vertices.
                 for (int32_fast i = 0; i + 1 < members.size(); ++i) {
-                    registerDependency(members[i], members[i + 1]);
+                    registerAdjacency(dag, members[i], members[i + 1]);
                 }
 
                 printf("( ");
@@ -137,12 +137,22 @@ public:
         }
 
         void addDependency(AppRequestIdType u) {
-            // when the cluster represents a clique (i.e. its writable) having an edge from the biggest element to u
-            // would be enough to build a path between all vertices.
-            if (type == AccessType::writable) registerDependency(members.back(), u);
-            else {
+            // when the cluster represents a clique (i.e. it's writable) we just make sure that there is a path between
+            // every member of the clique to u.
+            if (type == AccessType::writable) {
+                auto next = std::upper_bound(members.begin(), members.end(), u);
+                auto previous = next - 1;
+                if (next == members.end()) {
+                    registerAdjacency(dag, *previous, u);
+                } else if (next == members.begin()) {
+                    registerAdjacency(dag, u, *next);
+                } else {
+                    registerAdjacency(dag, *previous, u);
+                    registerAdjacency(dag, u, *next);
+                }
+            } else {
                 for (const auto& member: members) {
-                    registerDependency(member, u);
+                    registerDependency(dag, member, u);
                 }
             }
 
@@ -153,8 +163,13 @@ public:
 
         static
         void registerDependency(Dag* dag, AppRequestIdType u, AppRequestIdType v) {
-            bool isAdjacent = u < v ? dag->isAdjacent(u, v) : dag->isAdjacent(v, u);
-            if (!isAdjacent) {
+            if (u < v) registerAdjacency(dag, u, v);
+            else registerAdjacency(dag, v, u);
+        }
+
+        static
+        void registerAdjacency(Dag* dag, AppRequestIdType u, AppRequestIdType v) {
+            if (!dag->isAdjacent(u, v)) {
                 throw std::invalid_argument("missing edge:{" + std::to_string(u) + "," + std::to_string(v) +
                                             "} in the dependency graph");
             }
@@ -164,10 +179,6 @@ public:
         Dag* dag;
         AccessBlockInfo::Access type = AccessType::check_only;
         std::vector<AppRequestIdType> members;
-
-        void registerDependency(AppRequestIdType u, AppRequestIdType v) {
-            registerDependency(dag, u, v);
-        }
     };
 
     template<class Dag>
