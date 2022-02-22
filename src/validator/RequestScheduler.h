@@ -271,6 +271,7 @@ public:
 
     [[nodiscard]]
     bool isAdjacent(AppRequestIdType u, AppRequestIdType v) const {
+        printf("e:(%ld,%ld)\n", u, v);
         return nodeIndex[u]->isAdjacent(v);
     }
 
