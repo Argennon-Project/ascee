@@ -24,7 +24,7 @@
 using namespace argennon;
 using namespace ave;
 using namespace asa;
-using ::testing::Return;
+using ::testing::Return, std::vector;
 
 
 using Access = AccessBlockInfo::Access::Type;
@@ -65,6 +65,14 @@ public:
 class MockDag {
 public:
     MOCK_METHOD(bool, isAdjacent, (AppRequestIdType u, AppRequestIdType v), (const));
+};
+
+class LoggerDag {
+public:
+    bool isAdjacent(AppRequestIdType u, AppRequestIdType v) const {
+        printf("(%ld, %ld) \n", u, v);
+        return true;
+    }
 };
 
 class LoggerGraph {
@@ -215,6 +223,113 @@ TEST_F(RequestSchedulerTest, CollisionCliques_additive) {
                                            &mock);
 }
 
+TEST_F(RequestSchedulerTest, ResizingCollisions) {
+    // * * * * 2 2 2 2 2 2 2 * * * expand
+    // * * * * * * * 3 3 3 3 3 3 3 shrink
+    // 0 0 * * * * * * * * * * * * w
+    // * 1 1 1 1 * * * * * * * * * c
+    // * * * * * * 4 4 * * * * * * r
+    // * * * * * * * * * * * 5 5 * a
+    // * * * * 2 2 * * * * * * * * w
+
+    MockDag resizing;
+    EXPECT_CALL(resizing, isAdjacent(1, 2)).WillOnce(Return(true));
+    EXPECT_CALL(resizing, isAdjacent(2, 4)).WillOnce(Return(true));
+    EXPECT_CALL(resizing, isAdjacent(3, 4)).WillOnce(Return(true));
+    EXPECT_CALL(resizing, isAdjacent(3, 5)).WillOnce(Return(true));
+
+    MockDag normal;
+    EXPECT_CALL(normal, isAdjacent(2, 6)).WillOnce(Return(true));
+    EXPECT_CALL(normal, isAdjacent(3, 6)).WillOnce(Return(true));
+    EXPECT_CALL(normal, isAdjacent(2, 3)).WillOnce(Return(true));
+
+    vector<int32> offsets({-3, -2, -1, -1, 0, 1, 4, 6, 11});
+    vector<AccessBlockInfo> blocks({
+                                           {10, Access::writable,     0},
+                                           {10, Access::read_only,    6},
+                                           {11, Access::writable,     2},
+                                           {-7, Access::writable,     3},
+
+                                           {2,  Access::writable,     0},
+                                           {4,  Access::check_only,   1},
+                                           {2,  Access::writable,     2},
+                                           {2,  Access::read_only,    4},
+                                           {2,  Access::int_additive, 5},
+                                   });
+
+    RequestScheduler::findResizingCollisions(offsets, blocks, &resizing, [] { return 4; });
+    RequestScheduler::findCollisionCliques(std::move(offsets), std::move(blocks), &normal);
+}
+
+TEST_F(RequestSchedulerTest, SortingRequests) {
+    RequestScheduler scheduler(8, singleChunk);
+
+    scheduler.addRequest({.id = 4, .memoryAccessMap = {
+            {app_1_id},
+            {{{chunk1_local_id}, {
+                                         {{1}, {{1, Access::read_only, 4},}},
+                                 }}}},
+                                 .adjList = {}});
+    scheduler.addRequest({.id = 3, .memoryAccessMap = {
+            {app_1_id},
+            {{{chunk1_local_id}, {
+                                         {{1}, {{1, Access::read_only, 3},}},
+                                 }}}},
+                                 .adjList = {}});
+    scheduler.addRequest({.id = 2, .memoryAccessMap = {
+            {app_1_id},
+            {{{chunk1_local_id}, {
+                                         {{1}, {{1, Access::writable, 2},}},
+                                 }}}},
+                                 .adjList = {}});
+    scheduler.addRequest({.id = 1, .memoryAccessMap = {
+            {app_1_id},
+            {{{chunk1_local_id}, {
+                                         {{1}, {{1, Access::writable, 1},}},
+                                 }}}},
+                                 .adjList = {}});
+    scheduler.addRequest({.id = 0, .memoryAccessMap = {
+            {app_1_id},
+            {{{chunk1_local_id}, {
+                                         {{1}, {{1, Access::writable, 0},}},
+                                 }}}},
+                                 .adjList = {}});
+    scheduler.addRequest({.id = 5, .memoryAccessMap = {
+            {app_1_id},
+            {{{chunk1_local_id}, {
+                                         {{1}, {{1, Access::check_only, 5},}},
+                                 }}}},
+                                 .adjList = {}});
+    scheduler.addRequest({.id = 6, .memoryAccessMap = {
+            {app_1_id},
+            {{{chunk1_local_id}, {
+                                         {{1}, {{1, Access::int_additive, 6},}},
+                                 }}}},
+                                 .adjList = {}});
+    scheduler.addRequest({.id = 7, .memoryAccessMap = {
+            {app_1_id},
+            {{{chunk1_local_id}, {
+                                         {{1}, {{1, Access::int_additive, 7},}},
+                                 }}}},
+                                 .adjList = {}});
+
+
+    vector<AccessBlockInfo> want(
+            {
+                    {1, Access::check_only,   5},
+                    {1, Access::writable,     0},
+                    {1, Access::writable,     1},
+                    {1, Access::writable,     2},
+                    {1, Access::read_only,    3},
+                    {1, Access::read_only,    4},
+                    {1, Access::int_additive, 6},
+                    {1, Access::int_additive, 7},
+            });
+    auto sortedMap = scheduler.sortAccessBlocks(5);
+
+    EXPECT_EQ(sortedMap.at(app_1_id).at(chunk1_local_id).getValues(), want);
+}
+
 TEST_F(RequestSchedulerTest, CollisionsFromRequests) {
     // [13--10] [13--11] [10--11] [4--1] [1--2] [1--5] [2--5] [2--10] [2--11] [5--3] [5--10] [5--11] [3--6] [3--10] [3--11] [6--10] [6--11] [7--11] [8--11]
     RequestScheduler scheduler(14, singleChunk);
@@ -298,21 +413,6 @@ TEST_F(RequestSchedulerTest, CollisionsFromRequests) {
     scheduler.checkCollisions({app_1_id, chunk1_local_id},
                               sortedMap.at(app_1_id).at(chunk1_local_id).getKeys(),
                               sortedMap.at(app_1_id).at(chunk1_local_id).getValues());
-
-/*
-    MockGraph mock;
-    EXPECT_CALL(mock, registerDependency(ClusterType({13}), 10));
-    EXPECT_CALL(mock, registerDependency(ClusterType({13}), 11));
-    EXPECT_CALL(mock, registerDependency(ClusterType({10}), 11));
-    EXPECT_CALL(mock, registerDependency(ClusterType({4}), 1));
-    EXPECT_CALL(mock, registerDependency(ClusterType({1, 2}), 5));
-    EXPECT_CALL(mock, registerClique(ClusterType({1, 2})));
-    EXPECT_CALL(mock, registerDependency(ClusterType({5}), 3));
-    EXPECT_CALL(mock, registerDependency(ClusterType({3}), 6));
-
-    scheduler.findCollisionCliques(std::move(sortedMap.at(app_1_id).at(chunk1_local_id).getKeys()),
-                                   std::move(sortedMap.at(app_1_id).at(chunk1_local_id).getValues()),
-                                   mock);*/
 }
 
 TEST_F(RequestSchedulerTest, AdditiveCollisions) {

@@ -16,7 +16,6 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include "RequestScheduler.h"
-#include "ascee/heap/RestrictedModifier.h"
 
 
 using namespace argennon;
@@ -124,7 +123,7 @@ auto& RequestScheduler::requestAt(AppRequestIdType id) {
 }
 
 RequestScheduler::RequestScheduler(
-        int_fast32_t totalRequestCount,
+        int32_fast totalRequestCount,
         ChunkIndex& heapIndex
 ) :
         heapIndex(heapIndex),
@@ -178,6 +177,14 @@ bool RequestScheduler::canMerge(const AccessBlockInfo& left, int32 leftOffset,
     return left.accessType == right.accessType &&
            (!left.accessType.isAdditive() || left.accessType.isAdditive() && leftOffset == rightOffset &&
                                              left.size == right.size);
+}
+
+RequestScheduler::operator std::string() const {
+    std::string result;
+    for (int i = 0; i < remaining; ++i) {
+        result += std::to_string(nodeIndex[i]->adjacentNodes().size()) + "=";
+    }
+    return result;
 }
 
 DagNode::DagNode(AppRequestInfo&& data,

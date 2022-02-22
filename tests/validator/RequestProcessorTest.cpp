@@ -185,6 +185,13 @@ TEST_F(RequestProcessorTest, ExecOrderTest_loop) {
 }
 
 TEST_F(RequestProcessorTest, SimpleDependencyGraph) {
+    // 0 0 0 * * * * w
+    // * * 1 1 1 1 * r
+    // * * * 2 2 2 2 r
+    //
+    // 3 3 3 3 * * * a
+    // 4 4 4 4 * * * a
+    // * * * 5 5 * * r
     std::vector<AppRequestInfo> requests{
             {
                     .id = 0,
@@ -205,7 +212,7 @@ TEST_F(RequestProcessorTest, SimpleDependencyGraph) {
                     .memoryAccessMap = {
                             {app_1_id},
                             {{{chunk1_local_id}, {{{3}, {{4, Access::read_only, 2}}},}}}},
-                    .adjList ={3, 4}
+                    .adjList ={}
             },
             {
                     .id = 3,

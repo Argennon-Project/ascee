@@ -92,18 +92,12 @@ public:
     [[nodiscard]]
     AppRequestInfo::AccessMapType sortAccessBlocks(int workersCount);
 
-    explicit RequestScheduler(int_fast32_t totalRequestCount, asa::ChunkIndex& heapIndex);
+    explicit RequestScheduler(int32_fast totalRequestCount, asa::ChunkIndex& heapIndex);
 
     [[nodiscard]]
     ascee::runtime::HeapModifier getModifierFor(AppRequestIdType requestID) const;
 
-    explicit operator std::string() const {
-        std::string result;
-        for (int i = 0; i < remaining; ++i) {
-            result += std::to_string(nodeIndex[i]->adjacentNodes().size()) + "=";
-        }
-        return result;
-    }
+    explicit operator std::string() const;
 
     template<class Dag>
     class Cluster {
@@ -161,8 +155,8 @@ public:
         void registerDependency(Dag* dag, AppRequestIdType u, AppRequestIdType v) {
             bool isAdjacent = u < v ? dag->isAdjacent(u, v) : dag->isAdjacent(v, u);
             if (!isAdjacent) {
-                throw std::invalid_argument("missing {" + std::to_string(u) + "," + std::to_string(v) +
-                                            "} edge in the dependency graph");
+                throw std::invalid_argument("missing edge:{" + std::to_string(u) + "," + std::to_string(v) +
+                                            "} in the dependency graph");
             }
         }
 
@@ -228,32 +222,19 @@ public:
     }
 
     template<class Dag>
-    void findResizingCollisions(full_id chunkID,
-                                const std::vector<int32>& sortedOffsets,
-                                const std::vector<AccessBlockInfo>& accessBlocks,
-                                Dag* dag) {
-        int32_fast sizeWritersBegin = 0, sizeWritersEnd = 0;
-        bool inSizeWriterList = false;
-        int32_fast lowerBound = 0;
+    static void findResizingCollisions(const std::vector<int32>& sortedOffsets,
+                                       const std::vector<AccessBlockInfo>& accessBlocks,
+                                       Dag* dag,
+                                       const std::function<int32_fast()>& getSizeLowerBound) {
+        auto writersEndIt = std::upper_bound(sortedOffsets.begin(), sortedOffsets.end(), -1);
+        if (writersEndIt == sortedOffsets.end()) return;
 
-        for (int32_fast i = 0; i < accessBlocks.size() && sortedOffsets[i] < 0; ++i) {
-            auto offset = sortedOffsets[i];
+        auto writersBeginIt = std::lower_bound(sortedOffsets.begin(), writersEndIt, -1);
+        if (writersBeginIt == writersEndIt) return;
 
-            // finding the index interval of chunk resizing info blocks in the input vector: for all of them we
-            // have offset == -1
-            if (!inSizeWriterList && offset == -1) {
-                inSizeWriterList = true;
-                sizeWritersBegin = i;
-            } else if (inSizeWriterList && offset != -1) {
-                inSizeWriterList = false;
-                sizeWritersEnd = i;
-                lowerBound = heapIndex.getSizeLowerBound(chunkID);
-            }
-        }
-
-        // sizeWriterEnd == 0 means that either no request wants to resize the chunk or no normal access block is
-        // defined for the chunk.
-        if (sizeWritersEnd == 0) return;
+        int32_fast sizeWritersEnd = writersEndIt - sortedOffsets.begin();
+        int32_fast sizeWritersBegin = writersBeginIt - sortedOffsets.begin();
+        int32_fast lowerBound = getSizeLowerBound();
 
         for (int32_fast i = sizeWritersEnd; i < accessBlocks.size(); ++i) {
             auto offset = sortedOffsets[i];
@@ -281,9 +262,10 @@ public:
      * @param sortedOffsets when possible, use std::move for this parameter
      * @param accessBlocks when possible, use std::move for this parameter
      */
-    void checkCollisions(full_id chunkID, std::vector<int32> sortedOffsets,
-                         std::vector<AccessBlockInfo> accessBlocks) {
-        findResizingCollisions(chunkID, sortedOffsets, accessBlocks, this);
+    void checkCollisions(full_id chunkID,
+                         std::vector<int32> sortedOffsets, std::vector<AccessBlockInfo> accessBlocks) {
+        findResizingCollisions(sortedOffsets, accessBlocks, this,
+                               [this, chunkID] { return heapIndex.getSizeLowerBound(chunkID); });
         findCollisionCliques(std::move(sortedOffsets), std::move(accessBlocks), this);
     }
 

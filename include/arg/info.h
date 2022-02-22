@@ -103,12 +103,16 @@ struct AccessBlockInfo {
     /**
      * This operator should be defined to make sure that cluster-product algorithm returns a deterministic result. The
      * operator is defined in a way that makes cluster-product algorithm more efficient.
-     * @param other
+     * @param rhs
      * @return
      */
-    bool operator<(const AccessBlockInfo& other) const {
-        return accessType < other.accessType ||
-               accessType == other.accessType && requestID < other.requestID;
+    bool operator<(const AccessBlockInfo& rhs) const {
+        return accessType < rhs.accessType ||
+               accessType == rhs.accessType && requestID < rhs.requestID;
+    }
+
+    bool operator==(const AccessBlockInfo& other) const {
+        return size == other.size && accessType == other.accessType && requestID == other.requestID;
     }
 
     int32 size;
@@ -152,11 +156,12 @@ struct AppRequestInfo {
      *
      * @ResizingBlock {offset = -3, size = *, access = *} which means the request does not access the size of the chunk.
      *
-     * @ResizingBlock  {offset = -2, size = *, access = read_only} which means the request reads the chunkSize but will not modify it.
+     * @ResizingBlock {offset = -2, size = *, access = read_only} which means the request reads the chunkSize but will
+     * not modify it.
      *
-     * @ResizingBlock  {offset = -1, size, access = writable}, which means the request may resize the chunk. If size > 0 the request wants to
-     * expand the chunk and sizeBound = size, which means newSize <= size. If size <= 0 the request can shrink the
-     * chunk and sizeBound = -size, which means newSize >= -size.
+     * @ResizingBlock {offset = -1, size, access = writable}, which means the request may resize the chunk. If
+     * size > 0 the request wants to expand the chunk and sizeBound = size, which means newSize <= size. If size <= 0
+     * the request can shrink the chunk and sizeBound = -size, which means newSize >= -size.
      *
      * @note * indicates any value.
     */
@@ -195,16 +200,21 @@ struct AppRequestInfo {
 struct MigrationInfo {
     int32_fast chunkIndex;
 
-    /**
-     * The index of the page that the chunk should be migrated from. Here, index means the sequence number of the
-     * page in the PageAccessInfo list. The sequence numbers starts from zero.
-     */
+    /// The index of the page that the chunk should be migrated from. Here, index means the sequence number of the
+    /// page in the PageAccessInfo list. The sequence numbers starts from zero.
     int32_fast fromIndex;
     int32_fast toIndex;
 };
 
+/**
+ * A block proposer is required to propose chunk bounds for every chunk that will be resized during a block.
+ */
 struct ChunkBoundsInfo {
+    /// For every chunk expansion declaration we must have `maxSize <= sizeUpperBound` for  that chunk Also we
+    /// must have chunkSize <= sizeUpperBound
     int32 sizeUpperBound;
+    /// For every chunk shrinkage declaration we must have `minSize >= sizeLowerBound` for  that chunk. Also we
+    /// must have chunkSize >= sizeLowerBound
     int32 sizeLowerBound;
 };
 
