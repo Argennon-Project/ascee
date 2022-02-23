@@ -66,6 +66,88 @@ private:
     std::atomic<int_fast32_t> inDegree = 0;
 };
 
+template<class Dag>
+class VerifierCluster {
+    using AccessType = AccessBlockInfo::Access::Type;
+public:
+    explicit VerifierCluster(Dag* dag) : dag(dag) { members.reserve(16); }
+
+    void merge(const VerifierCluster& c) {
+        if (c.type == AccessType::writable) {
+            util::mergeInsert(members, c.members);
+        } else {
+            members.insert(members.end(), c.members.begin(), c.members.end());
+        }
+    }
+
+    void insert(AppRequestIdType requestID, AccessBlockInfo::Access accessType) {
+        type = accessType;
+        if (type == AccessType::writable) util::mergeInsert(members, {requestID});
+        else members.emplace_back(requestID);
+    }
+
+    void finalize() {
+        if (type == AccessType::writable) {
+            // for verifying a clique we have to verify that a path exist in the dag that passes through all clique
+            // vertices.
+
+            // we keep vertices of cliques sorted. Without sorting, this function can not guarantee that a path
+            // exists through all vertices.
+            for (int32_fast i = 0; i + 1 < members.size(); ++i) {
+                registerAdjacency(dag, members[i], members[i + 1]);
+            }
+
+            printf("( ");
+            for (const auto& member: members) printf("%ld ", member);
+            printf(")\n");
+        }
+    }
+
+    void addDependency(AppRequestIdType u) {
+        // when the cluster represents a clique (i.e. it's writable) we just make sure that there is a path between
+        // every member of the clique to u.
+        if (type == AccessType::writable) {
+            auto next = std::upper_bound(members.begin(), members.end(), u);
+            auto previous = next - 1;
+            if (next == members.end()) {
+                registerAdjacency(dag, *previous, u);
+            } else if (next == members.begin()) {
+                registerAdjacency(dag, u, *next);
+            } else {
+                registerAdjacency(dag, *previous, u);
+                registerAdjacency(dag, u, *next);
+            }
+        } else {
+            for (const auto& member: members) {
+                addDependency(dag, member, u);
+            }
+        }
+
+        printf("[ ");
+        for (const auto& member: members) printf("%ld ", member);
+        printf("] * %ld\n", u);
+    }
+
+    static
+    void addDependency(Dag* dag, AppRequestIdType u, AppRequestIdType v) {
+        if (u < v) registerAdjacency(dag, u, v);
+        else registerAdjacency(dag, v, u);
+    }
+
+private:
+    Dag* dag;
+    AccessBlockInfo::Access type = AccessType::check_only;
+    std::vector<AppRequestIdType> members;
+
+    static
+    void registerAdjacency(Dag* dag, AppRequestIdType u, AppRequestIdType v) {
+        if (!dag->isAdjacent(u, v)) {
+            throw std::invalid_argument("missing edge:{" + std::to_string(u) + "," + std::to_string(v) +
+                                        "} in the dependency graph");
+        }
+    }
+};
+
 /// works fine even if the graph is not a dag and contains loops
 /// RequestSchedulers are created per block
 class RequestScheduler {
@@ -99,92 +181,10 @@ public:
 
     explicit operator std::string() const;
 
-    template<class Dag>
-    class Cluster {
-        using AccessType = AccessBlockInfo::Access::Type;
-    public:
-        explicit Cluster(Dag* dag) : dag(dag) { members.reserve(16); }
-
-        void merge(const Cluster& c) {
-            if (c.type == AccessType::writable) {
-                util::mergeInsert(members, c.members);
-            } else {
-                members.insert(members.end(), c.members.begin(), c.members.end());
-            }
-        }
-
-        void insert(AppRequestIdType requestID, AccessBlockInfo::Access accessType) {
-            type = accessType;
-            if (type == AccessType::writable) util::mergeInsert(members, {requestID});
-            else members.emplace_back(requestID);
-        }
-
-        void finalize() {
-            if (type == AccessType::writable) {
-                // for verifying a clique we have to verify that a path exist in the dag that passes through all clique
-                // vertices.
-
-                // we keep vertices of cliques sorted. Without sorting, this function can not guarantee that a path
-                // exists through all vertices.
-                for (int32_fast i = 0; i + 1 < members.size(); ++i) {
-                    registerAdjacency(dag, members[i], members[i + 1]);
-                }
-
-                printf("( ");
-                for (const auto& member: members) printf("%ld ", member);
-                printf(")\n");
-            }
-        }
-
-        void addDependency(AppRequestIdType u) {
-            // when the cluster represents a clique (i.e. it's writable) we just make sure that there is a path between
-            // every member of the clique to u.
-            if (type == AccessType::writable) {
-                auto next = std::upper_bound(members.begin(), members.end(), u);
-                auto previous = next - 1;
-                if (next == members.end()) {
-                    registerAdjacency(dag, *previous, u);
-                } else if (next == members.begin()) {
-                    registerAdjacency(dag, u, *next);
-                } else {
-                    registerAdjacency(dag, *previous, u);
-                    registerAdjacency(dag, u, *next);
-                }
-            } else {
-                for (const auto& member: members) {
-                    registerDependency(dag, member, u);
-                }
-            }
-
-            printf("[ ");
-            for (const auto& member: members) printf("%ld ", member);
-            printf("] * %ld\n", u);
-        }
-
-        static
-        void registerDependency(Dag* dag, AppRequestIdType u, AppRequestIdType v) {
-            if (u < v) registerAdjacency(dag, u, v);
-            else registerAdjacency(dag, v, u);
-        }
-
-        static
-        void registerAdjacency(Dag* dag, AppRequestIdType u, AppRequestIdType v) {
-            if (!dag->isAdjacent(u, v)) {
-                throw std::invalid_argument("missing edge:{" + std::to_string(u) + "," + std::to_string(v) +
-                                            "} in the dependency graph");
-            }
-        }
-
-    private:
-        Dag* dag;
-        AccessBlockInfo::Access type = AccessType::check_only;
-        std::vector<AppRequestIdType> members;
-    };
-
-    template<class Dag>
+    template<class Cluster, class Dag>
     static void findCollisionCliques(std::vector<int32>&& sortedOffsets, std::vector<AccessBlockInfo>&& accessBlocks,
                                      Dag* dag) {
-        std::vector<Cluster<Dag>> clusters(sortedOffsets.size(), Cluster(dag));
+        std::vector<Cluster> clusters(sortedOffsets.size(), Cluster(dag));
         for (int32_fast i = 0; i < sortedOffsets.size(); ++i) {
             auto accessType = accessBlocks[i].accessType;
             auto offset = sortedOffsets[i];
@@ -232,7 +232,7 @@ public:
         }
     }
 
-    template<class Dag>
+    template<class Cluster, class Dag>
     static void findResizingCollisions(const std::vector<int32>& sortedOffsets,
                                        const std::vector<AccessBlockInfo>& accessBlocks,
                                        Dag* dag,
@@ -259,7 +259,7 @@ public:
                     if (reqID != accessBlocks[j].requestID) {
                         auto newSize = accessBlocks[j].size;
                         bool collision = newSize > 0 ? offset < newSize : end > -newSize;
-                        if (collision) Cluster<Dag>::registerDependency(dag, reqID, accessBlocks[j].requestID);
+                        if (collision) Cluster::addDependency(dag, reqID, accessBlocks[j].requestID);
                     }
                 }
             }
@@ -275,9 +275,12 @@ public:
      */
     void checkCollisions(full_id chunkID,
                          std::vector<int32> sortedOffsets, std::vector<AccessBlockInfo> accessBlocks) {
-        findResizingCollisions(sortedOffsets, accessBlocks, this,
-                               [this, chunkID] { return heapIndex.getSizeLowerBound(chunkID); });
-        findCollisionCliques(std::move(sortedOffsets), std::move(accessBlocks), this);
+        findResizingCollisions<VerifierCluster<RequestScheduler>>(sortedOffsets, accessBlocks, this,
+                                                                  [this, chunkID] {
+                                                                      return heapIndex.getSizeLowerBound(chunkID);
+                                                                  });
+        findCollisionCliques<VerifierCluster<RequestScheduler>>(std::move(sortedOffsets), std::move(accessBlocks),
+                                                                this);
     }
 
     [[nodiscard]]
