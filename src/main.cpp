@@ -123,7 +123,7 @@ int main(int argc, char const* argv[]) {
                      {}, 2);
 
     AppLoader::global = std::make_unique<AppLoader>("apps");
-    RequestProcessor processor(index, int(requests.size()), 5);
+    RequestProcessor processor(index, int(requests.size()), 3);
 
     processor.loadRequests<FakeStream>({
                                                {0, 1, requests},

@@ -41,15 +41,14 @@ void AppLoader::loadApp(long_id appID) {
     void* handle;
     char* error;
     auto appLib = libraryPath / ("libapp" + (string) appID + ".so");
-    auto appSrc = libraryPath / ("app" + (string) appID + ".cpp");
+    auto appSrc = libraryPath / ("app" + (string) appID + ".argc");
     string includePath = "-I include -I ../include";
 
     printf("loading: %s...\n", appLib.c_str());
 
     handle = dlopen(appLib.c_str(), RTLD_LAZY);
     if (!handle) {
-        auto cmd = "gcc -std=c++2a " + includePath + " -fPIC -shared -o " +
-                   appLib.string() + " " + appSrc.string();
+        auto cmd = "java -jar resources/argcc.jar \"" + includePath + "\" " + appSrc.string() + " " + appLib.string();
         printf("%s\n", cmd.c_str());
         auto pipe = popen(cmd.c_str(), "r");
         if (pipe) {
@@ -61,7 +60,7 @@ void AppLoader::loadApp(long_id appID) {
 
     dlerror(); /* Clear any existing error */
 
-    auto dispatcher = (dispatcher_ptr) dlsym(handle, "dispatcher");
+    auto dispatcherPtr = (DispatcherPointer) dlsym(handle, "dispatcher");
 
     error = dlerror();
     if (error != nullptr) {
@@ -69,14 +68,14 @@ void AppLoader::loadApp(long_id appID) {
         throw runtime_error(error);
     }
     scoped_lock<mutex> lock(mapMutex);
-    dispatchersMap[appID] = {handle, dispatcher};
+    dispatchersMap[appID] = {handle, dispatcherPtr};
 }
 
-dispatcher_ptr AppLoader::getDispatcher(long_id appID) {
+DispatcherPointer AppLoader::getDispatcher(long_id appID) {
     // we should let readers access the map concurrently, but in the current implementation we are not doing so.
     try {
         scoped_lock<mutex> lock(mapMutex);
-        return dispatchersMap.at(appID).dispatcher;
+        return dispatchersMap.at(appID).dispatcherPtr;
     } catch (const out_of_range& out) {
         try {
             loadApp(appID);
@@ -88,8 +87,8 @@ dispatcher_ptr AppLoader::getDispatcher(long_id appID) {
     }
 }
 
-unordered_map<uint64_t, dispatcher_ptr> AppLoader::createAppTable(const vector<long_id>& appList) {
-    unordered_map<uint64_t, dispatcher_ptr> table(appList.size());
+unordered_map<uint64_t, DispatcherPointer> AppLoader::createAppTable(const vector<long_id>& appList) {
+    unordered_map<uint64_t, DispatcherPointer> table(appList.size());
     for (const auto& appID: appList) {
         table[appID] = getDispatcher(appID);
     }

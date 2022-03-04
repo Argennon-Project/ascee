@@ -19,8 +19,8 @@
 
 using namespace argennon::util;
 
-#define PARAMS_FILE "param/a.param"
-#define G_FILE "param/g.rand"
+#define PARAMS_FILE "resources/param/a.param"
+#define G_FILE "resources/param/g.rand"
 
 CryptoSystem::CryptoSystem() {
     // initialize a pairing:

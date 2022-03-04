@@ -32,7 +32,7 @@ class AppLoader {
 private:
     struct AppHandle {
         void* handle;
-        dispatcher_ptr dispatcher;
+        DispatcherPointer dispatcherPtr;
     };
     const std::filesystem::path libraryPath;
     std::unordered_map<uint64_t, AppHandle> dispatchersMap;
@@ -49,9 +49,9 @@ public:
 
     void updateApp(long_id);
 
-    dispatcher_ptr getDispatcher(long_id appID);
+    DispatcherPointer getDispatcher(long_id appID);
 
-    std::unordered_map<uint64_t, dispatcher_ptr>
+    std::unordered_map<uint64_t, DispatcherPointer>
     createAppTable(const std::vector<long_id>& appList);
 
     static std::unique_ptr<AppLoader> global;

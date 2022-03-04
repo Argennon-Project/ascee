@@ -19,8 +19,8 @@ FetchContent_MakeAvailable(googletest)
 include_directories(include src src/ascee)
 include_directories(tests ${gtest_SOURCE_DIR}/include ${gmock_SOURCE_DIR}/include)
 
-file(COPY param DESTINATION .)
-file(COPY param DESTINATION tests)
+file(COPY resources DESTINATION .)
+file(COPY resources DESTINATION tests)
 
 file(REMOVE_RECURSE ${CMAKE_BINARY_DIR}/apps)
 file(COPY apps DESTINATION .)
@@ -46,7 +46,7 @@ add_subdirectory(src/validator)
 add_subdirectory(src/storage)
 add_subdirectory(tests)
 
-add_executable(ascee_run src/main.cpp apps/app0x100000000000000.cpp)
+add_executable(ascee_run src/main.cpp)
 target_link_libraries(ascee_run ave asa ascee argutil stdc++ pthread rt pbc gmp crypto dl)
 
 add_executable(signer src/signer.cpp)

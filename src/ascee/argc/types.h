@@ -31,6 +31,8 @@ using string_view_c = runtime::StringView;
 template<int max_size>
 using string_buffer_c = runtime::StringBuffer<max_size>;
 using response_buffer_c = runtime::StringBuffer<8 * 1024>;
+template<typename T, int size>
+using array_c = util::StaticArray<T, size>;
 
 using signature_c = util::Signature;
 using publickey_c = util::PublicKey;
@@ -115,12 +117,11 @@ public:
     const StatusCode code;
 };
 
-typedef int (* dispatcher_ptr)(response_buffer_c& response, string_view_c request);
+typedef int (* DispatcherPointer)(response_buffer_c& response, string_view_c request);
 
 #define STRING(name, str) char __##name##_buf__[] = str; string_view_c name(__##name##_buf__)
 #define STRING_BUFFER(name, size) string_buffer_c<size> name
-#define DEF_ARGC_DISPATCHER extern "C" int dispatcher(response_buffer_c& response, string_view_c request)
-
+#define dispatcher extern "C" int dispatcher(response_buffer_c& response, string_view_c request)
 
 /// HTTP status codes. new costume coded could be defined.
 #define HTTP_OK 200

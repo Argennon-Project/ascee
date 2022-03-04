@@ -1,0 +1,9 @@
+
+
+dispatcher {
+clear_buffer(response);
+int32 ret = invoke_dispatcher(100, 22, response, request);
+if (ret == 277) revert("deferred success!");
+return 200;
+}
+

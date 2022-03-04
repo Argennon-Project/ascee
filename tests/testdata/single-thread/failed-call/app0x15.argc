@@ -1,0 +1,17 @@
+
+
+dispatcher {
+STRING(dummy,
+"too long");
+append_str(response, dummy
+);
+STRING_BUFFER(temp,
+7);
+append_str(temp, dummy
+);
+return
+HTTP_OK;
+}
+
+
+
