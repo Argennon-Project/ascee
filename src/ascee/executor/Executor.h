@@ -26,9 +26,7 @@
 #include <vector>
 
 #include "executor/FailureManager.h"
-#include "arg/primitives.h"
 #include "ThreadCpuTimer.h"
-#include "arg/info.h"
 #include "VirtualSigManager.h"
 #include "AppTable.h"
 #include "heap/RestrictedModifier.h"
@@ -71,7 +69,7 @@ struct AppRequest {
     AppTable appTable;
     FailureManager failureManager;
     std::vector<AppRequestIdType> attachments;
-    util::Digest digest;
+    Digest digest;
 };
 
 struct AppResponse {

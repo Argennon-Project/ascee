@@ -19,7 +19,6 @@
 #define ARGENNON_CORE_APP_TABLE_H
 
 #include <unordered_map>
-#include "arg/primitives.h"
 #include "argc/types.h"
 #include "loader/AppLoader.h"
 

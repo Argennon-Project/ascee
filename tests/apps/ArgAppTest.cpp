@@ -17,7 +17,6 @@
 
 
 #include "subtest.h"
-#include "arg/info.h"
 #include "ascee/executor/Executor.h"
 #include "storage/Page.h"
 #include "storage/ChunkIndex.h"

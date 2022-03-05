@@ -20,7 +20,7 @@
 #define ARGENNON_CRYPTO_KEYS_H
 
 #include <util/StaticArray.hpp>
-#include <arg/primitives.h>
+#include <core/primitives.h>
 
 
 namespace argennon::util {

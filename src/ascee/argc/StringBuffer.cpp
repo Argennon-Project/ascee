@@ -84,3 +84,12 @@ StringView::StringView(const char* str) : string_view(str) {}
 StringView::StringView(const char* str, size_type len) : basic_string_view(str, len) {}
 
 StringView::StringView(const string_view& view) : basic_string_view(view) {}
+
+int64_t StringView::parse(std::string_view str, const int64_t&) {
+    // string constructor copies its input, therefore we truncate the input str to make the copy less costly.
+    return std::stoll(std::string(str.substr(0, max_num64_length)), nullptr, 0);
+}
+
+double StringView::parse(std::string_view str, const double&) {
+    return std::stod(std::string(str.substr(0, max_num64_length)), nullptr);
+}

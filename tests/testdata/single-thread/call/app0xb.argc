@@ -1,12 +1,9 @@
 
 
 dispatcher {
-clear_buffer(response);
-append_str(response, request
-);
-append_str(response,
-" is DONE!");
-return
-HTTP_OK;
+    clear_buffer(response);
+    append_str(response, request);
+    append_str(response, " is DONE!");
+    return HTTP_OK;
 }
 

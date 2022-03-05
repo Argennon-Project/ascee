@@ -16,10 +16,9 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include "subtest.h"
-#include "arg/primitives.h"
+#include "core/primitives.h"
 #include "util/PrefixTrie.hpp"
 #include "util/StaticArray.hpp"
-#include "util/OrderedStaticMap.hpp"
 
 using namespace argennon;
 using namespace util;

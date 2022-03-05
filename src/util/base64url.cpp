@@ -51,6 +51,7 @@
 #include <cstdint>
 #include <stdexcept>
 #include <cassert>
+#include <cstring>
 #include "encoding.h"
 
 typedef int error_t;
@@ -80,7 +81,7 @@ static const uint8_t base64urlDecTable[128] =
         };
 
 
-size_t util::base64DecodeLen(size_t base64Len) {
+size_t util::base64DecodeLen(size_type base64Len) {
     auto r = base64Len % 4;
     return r == 1 ? 0 : 3 * (base64Len / 4) + 3 * r / 4;
 }
@@ -91,10 +92,10 @@ size_t util::base64DecodeLen(size_t base64Len) {
  * @param[in] inputLen Length of the data to encode
  * @return std::string encoded with Base64url algorithm
  */
-std::string util::base64urlEncode(const void* input, size_t inputLen) {
+std::string util::base64urlEncode(const void* input, size_type inputLen) {
     // The buf should have one extra space for the terminating-NULL
     char buf[4 * (inputLen / 3) + 4];
-    size_t len;
+    size_type len;
     base64urlEncode(input, inputLen, buf, &len);
     assert(sizeof(buf) > len);
     return {buf, len};
@@ -107,9 +108,9 @@ std::string util::base64urlEncode(const void* input, size_t inputLen) {
  * @param[out] output NULL-terminated string encoded with Base64url algorithm
  * @param[out] outputLen Length of the encoded string (optional parameter)
  **/
-void util::base64urlEncode(const void* input, size_t inputLen, char* output,
-                           size_t* outputLen) {
-    size_t n;
+void util::base64urlEncode(const void* input, size_type inputLen, char* output,
+                           size_type* outputLen) {
+    size_type n;
     uint8_t a;
     uint8_t b;
     uint8_t c;
@@ -306,8 +307,8 @@ error_t base64urlDecodeImpl(const char* input, size_t inputLen, void* output,
  * @param[out] output Resulting decoded data
  * @return Length of the decoded data
  */
-size_t util::base64urlDecode(const char* input, size_t inputLen, void* output) {
-    size_t outputLen = 0;
+size_t util::base64urlDecode(const char* input, size_type inputLen, void* output) {
+    size_type outputLen = 0;
     auto err = base64urlDecodeImpl(input, inputLen, output, &outputLen);
     if (err == NO_ERROR) return outputLen;
 
@@ -317,4 +318,12 @@ size_t util::base64urlDecode(const char* input, size_t inputLen, void* output) {
 
     // err == ERROR_INVALID_PARAMETER
     throw std::invalid_argument("base64: invalid input parameters");
+}
+
+void util::memCopy(void* dest, const void* src, size_type n) {
+    std::memcpy(dest, src, n);
+}
+
+void util::memSet(void* dest, int value, size_type n) {
+    std::memset(dest, value, n);
 }

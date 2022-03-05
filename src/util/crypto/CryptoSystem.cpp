@@ -29,7 +29,7 @@ CryptoSystem::CryptoSystem() {
     if (params == nullptr) {
         throw std::runtime_error("param file not found");
     }
-    size_t count = fread(param, 1, 1024, params);
+    size_type count = fread(param, 1, 1024, params);
     fclose(params);
 
     if (!count) throw std::runtime_error("input error");

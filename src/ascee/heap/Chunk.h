@@ -18,12 +18,11 @@
 #ifndef ARGENNON_CHUNK_H
 #define ARGENNON_CHUNK_H
 
-#include <arg/primitives.h>
-#include <arg/info.h>
+#include <core/primitives.h>
+#include <core/info.h>
 #include <memory>
 #include <atomic>
 #include <mutex>
-#include "util/crypto/DigestCalculator.h"
 
 namespace argennon::ascee::runtime {
 
@@ -69,8 +68,8 @@ public:
     bool shrinkSpace();
 
     [[nodiscard]]
-    util::Digest calculateDigest() const {
-        util::DigestCalculator calculator;
+    Digest calculateDigest() const {
+        DigestCalculator calculator;
         calculator << int32(chunkSize);
         calculator.append(content.get(), chunkSize);
         return calculator.CalculateDigest();

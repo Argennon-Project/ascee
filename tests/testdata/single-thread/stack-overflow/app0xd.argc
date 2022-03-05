@@ -5,14 +5,9 @@ void foo() {
 }
 
 dispatcher {
-append_str(response, request
-);
-append_str(response,
-" OVER FLOW!");
-
-foo();
-
-return
-HTTP_OK;
+    append_str(response, request);
+    append_str(response, " OVER FLOW!");
+    foo();
+    return HTTP_OK;
 }
 

@@ -19,9 +19,9 @@
 #define ARGENNON_PAGE_LOADER_H
 
 
-#include "arg/primitives.h"
+#include "core/primitives.h"
 #include "Page.h"
-#include "arg/info.h"
+#include "core/info.h"
 
 namespace argennon::asa {
 

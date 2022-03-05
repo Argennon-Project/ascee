@@ -22,7 +22,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "arg/info.h"
+#include "core/info.h"
 #include "Page.h"
 #include "PageLoader.h"
 

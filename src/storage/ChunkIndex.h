@@ -19,8 +19,8 @@
 #define ARGENNON_CHUNK_INDEX_H
 
 #include <vector>
-#include "arg/primitives.h"
-#include "arg/info.h"
+#include "core/primitives.h"
+#include "core/info.h"
 #include "Page.h"
 #include "util/OrderedStaticMap.hpp"
 #include "heap/Chunk.h"

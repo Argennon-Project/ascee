@@ -19,18 +19,21 @@
 #define ARGENNON_ENCODING_H
 
 
-#include <cstddef>
-
 namespace argennon::util {
 
+using size_type = unsigned long;
+
 //Base64url encoding related functions
-void base64urlEncode(const void* input, size_t inputLen, char* output, size_t* outputLen = nullptr);
+void base64urlEncode(const void* input, size_type inputLen, char* output, size_type* outputLen = nullptr);
 
-size_t base64urlDecode(const char* input, size_t inputLen, void* output);
+size_type base64urlDecode(const char* input, size_type inputLen, void* output);
 
-size_t base64DecodeLen(size_t binaryLen);
+size_type base64DecodeLen(size_type binaryLen);
 
-std::string base64urlEncode(const void* input, size_t inputLen);
+std::string base64urlEncode(const void* input, size_type inputLen);
 
+void memCopy(void* dest, const void* src, size_type n);
+
+void memSet(void* dest, int value, size_type n);
 } // namespace argennon::util
 #endif // ARGENNON_ENCODING_H

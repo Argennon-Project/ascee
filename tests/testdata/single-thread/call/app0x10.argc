@@ -1,9 +1,7 @@
 
 
 dispatcher {
-invoke_dispatcher(85, 555, response, request);
-append_str(response,
-" wrong app!");
-return
-HTTP_OK;
+    invoke_dispatcher(85, 555, response, request);
+    append_str(response, " wrong app!");
+    return HTTP_OK;
 }

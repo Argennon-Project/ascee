@@ -18,15 +18,17 @@
 #ifndef ARGENNON_HEAP_PAGE_H
 #define ARGENNON_HEAP_PAGE_H
 
-#include "arg/primitives.h"
+#include "core/primitives.h"
 #include <map>
 #include <cassert>
 #include <vector>
 #include <memory>
 #include "heap/Chunk.h"
-#include "util/crypto/DigestCalculator.h"
 
 namespace argennon::asa {
+
+using VarLenFullID = ascee::runtime::VarLenFullID;
+
 /**
  * When a page contains migrants, its native chunk can not be migrated. We need to check that in this class.
  *
@@ -48,7 +50,7 @@ public:
 
     struct Delta {
         std::vector<byte> content;
-        util::Digest finalDigest;
+        Digest finalDigest;
     };
 
     explicit Page(int64_fast blockNumber) : version(blockNumber) {

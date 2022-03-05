@@ -19,7 +19,6 @@
 #define ARGENNON_ARGC_FUNCTIONS_H
 
 #include <argc/types.h>
-#include "arg/id.h"
 
 namespace argennon::ascee::argc {
 

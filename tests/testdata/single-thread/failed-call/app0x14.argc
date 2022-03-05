@@ -1,11 +1,9 @@
 
 
 dispatcher {
-append_str(response,
-"dummy");
-int32 y = 0;
-int32 x = 10 / y;
-return
-HTTP_OK;
+    append_str(response, "dummy");
+    int32 y = 0;
+    int32 x = 10 / y;
+    return HTTP_OK;
 }
 

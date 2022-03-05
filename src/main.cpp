@@ -29,7 +29,8 @@
 using namespace argennon;
 using namespace ave;
 using namespace asa;
-using namespace ascee::runtime;
+using namespace ascee;
+using namespace runtime;
 
 int overflow(int x, int y, int z) {
     if (x + y > z) return 1;

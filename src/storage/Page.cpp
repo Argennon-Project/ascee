@@ -38,7 +38,7 @@ void Page::applyDelta(const VarLenFullID& pageID, const Page::Delta& delta, int6
         }
     }
 
-    auto keysDigest = util::DigestCalculator();
+    auto keysDigest = DigestCalculator();
     native->applyDelta(reader, end);
     keysDigest << pageID << native->calculateDigest();
     for (const auto& m: migrants) {

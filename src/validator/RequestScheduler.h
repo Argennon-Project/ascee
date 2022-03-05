@@ -22,8 +22,8 @@
 #include <atomic>
 #include <cassert>
 
-#include "arg/primitives.h"
-#include "arg/info.h"
+#include "core/primitives.h"
+#include "core/info.h"
 #include "util/BlockingQueue.hpp"
 #include "storage/ChunkIndex.h"
 #include "ascee/executor/Executor.h"
@@ -298,7 +298,7 @@ private:
 
     void registerDependency(AppRequestIdType u, AppRequestIdType v);
 
-    void injectDigest(util::Digest digest, std::string& httpRequest) {}
+    void injectDigest(Digest digest, std::string& httpRequest) {}
 
     static bool
     canMerge(const AccessBlockInfo& left, int32 leftOffset, const AccessBlockInfo& right, int32 rightOffset);

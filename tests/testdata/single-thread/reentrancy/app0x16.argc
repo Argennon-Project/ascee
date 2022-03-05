@@ -40,39 +40,22 @@ void g() {
 
 int32 h() {
     enter_area();
-    printf("h called!\n");
     exit_area();
     return 277;
 }
 
-
 dispatcher {
-STRING(pattern,
-"choice: ");
-int64 choice = 0;
-string_view_c rest = scan_int64(request, pattern, choice);;
+    STRING(pattern, "choice: ");
+    int64 choice = 0;
+    string_view_c rest = scan_int64(request, pattern, choice);;
 
-if (choice == 1)
-f(response,
-0);
-else if (choice == 2)
+    if (choice == 1) f(response, 0);
+    else if (choice == 2) g();
+    else if (choice == 3) return h();
+    else if (choice == 4) f(response, 1); // deferred call
 
-g();
-
-else if (choice == 3) return
-
-h();
-
-else if (choice == 4)
-f(response,
-1); // deferred call
-
-STRING(done,
-" Done: ");
-append_str(response, done
-);
-append_int64(response, choice
-);
-return
-HTTP_OK;
+    STRING(done, " Done: ");
+    append_str(response, done);
+    append_int64(response, choice);
+    return HTTP_OK;
 }

@@ -20,33 +20,14 @@
 
 #define MAX_BUFFER_SIZE (2*1024*1024)
 
-#include "arg/primitives.h"
+#include "core/primitives.h"
 #include <string>
-#include <cstring>
 #include <stdexcept>
-#include <array>
 #include "util/StaticArray.hpp"
+#include "heap/id.h"
 
 namespace argennon::ascee::runtime {
-//constexpr int len = 10;
-/*
-template<size_t len>
-class String {
-public:
-    String(std::array<char,len> str3) : str{str3} {
-        memcpy(str, str3, len);
-    }
-private:
 
-    char str[len];
-};
-
-void f() {
-    char str[10] = "dsfs";
-    std::array<char,5> a;
-    String<10> s({"dfdf"});
-}
-*/
 class StringView : public std::string_view {
 public:
     static constexpr int max_num64_length = 32;
@@ -90,14 +71,9 @@ public:
     }
 
 private:
-    static int64_t parse(std::string_view str, const int64_t&) {
-        // string constructor copies its input, therefore we truncate the input str to make the copy less costly.
-        return std::stoll(std::string(str.substr(0, max_num64_length)), nullptr, 0);
-    }
+    static int64_t parse(std::string_view str, const int64_t&);
 
-    static double parse(std::string_view str, const double&) {
-        return std::stod(std::string(str.substr(0, max_num64_length)), nullptr);
-    }
+    static double parse(std::string_view str, const double&);
 
     template<typename T>
     static T parse(std::string_view str, const T&) {
@@ -113,7 +89,7 @@ class StringBuffer {
 public:
     StringBuffer& append(const std::string_view& str) {
         if (maxSize < end + str.size()) throw std::out_of_range("append: str is too long");
-        std::memcpy(buffer + end, str.data(), str.size());
+        util::memCopy(buffer + end, str.data(), str.size());
         end += str.size();
         return *this;
     }
@@ -122,7 +98,7 @@ public:
         return append(str);
     }
 
-    StringBuffer& operator<<(const long_id& v) {
+    StringBuffer& operator<<(const LongID& v) {
         return append(std::string(v));
     }
 

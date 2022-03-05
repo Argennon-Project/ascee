@@ -20,9 +20,7 @@
 
 #include <string>
 #include <array>
-#include <cassert>
 #include <stdexcept>
-#include <cstring>
 #include "encoding.h"
 
 namespace argennon::util {
@@ -38,8 +36,7 @@ public:
         auto sizeInBytes = size * sizeof(T);
         if (base64DecodeLen(base64.length()) > sizeInBytes) throw std::out_of_range("array is too small");
         auto modified = base64urlDecode(base64.data(), base64.length(), this->data());
-        assert(modified <= sizeInBytes);
-        std::memset(this->data() + modified, 0, sizeInBytes - modified);
+        util::memSet(this->data() + modified, 0, sizeInBytes - modified);
     }
 
     std::string toBase64() {

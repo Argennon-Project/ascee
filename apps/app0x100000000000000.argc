@@ -1,3 +1,5 @@
+
+
 const static long_id balance_chunk = 0;
 const static int32 size_of_balance = 8;
 
@@ -58,32 +60,25 @@ void transfer(long_id from, long_id to, int64 amount, signature_c& sig) {
 }
 
 dispatcher {
-int32 position = 0;
-string_view_c method = p_scan_str(request, "", " ", position);
-if (method == "PATCH") {
-long_id account = p_scan_long_id(request, "/balances/", "/", position);
-long_id to = p_scan_long_id(request, "{\"to\":", ",", position);
-int64 amount = p_scan_int64(request, "\"amount\":", ",", position);
-signature_c sig = p_scan_sig(request, "\"sig\":\"", "\"", position);
-transfer(account, to, amount, sig
-);
-append_str(response,
-"success and a good response!");
-return
-HTTP_OK;
-} else if (method == "PUT") {
-long_id address = p_scan_long_id(request, "/balances/", "/", position);
-publickey_c pk = p_scan_pk(request, "{\"pk\":\"", "\"", position);
-signature_c proof = p_scan_sig(request, "\"sig\":\"", "\"", position);
-if (
-create_normal_account(address, pk, proof
-)) {
-return
-HTTP_OK;
-} else {
-return 300;
-}
-}
-return
-HTTP_OK;
+    int32 position = 0;
+    string_view_c method = p_scan_str(request, "", " ", position);
+    if (method == "PATCH") {
+        long_id account = p_scan_long_id(request, "/balances/", "/", position);
+        long_id to = p_scan_long_id(request, "{\"to\":", ",", position);
+        int64 amount = p_scan_int64(request, "\"amount\":", ",", position);
+        signature_c sig = p_scan_sig(request, "\"sig\":\"", "\"", position);
+        transfer(account, to, amount, sig);
+        append_str(response, "success and a good response!");
+        return HTTP_OK;
+    } else if (method == "PUT") {
+        long_id address = p_scan_long_id(request, "/balances/", "/", position);
+        publickey_c pk = p_scan_pk(request, "{\"pk\":\"", "\"", position);
+        signature_c proof = p_scan_sig(request, "\"sig\":\"", "\"", position);
+        if (create_normal_account(address, pk, proof)) {
+            return HTTP_OK;
+        } else {
+            return 300;
+        }
+    }
+    return HTTP_OK;
 }
