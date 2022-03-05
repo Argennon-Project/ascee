@@ -29,7 +29,6 @@ file(REMOVE_RECURSE ${CMAKE_BINARY_DIR}/tests/testdata)
 file(COPY tests/testdata DESTINATION tests)
 
 configure_file(include/core/primitives.h include/core/primitives.h COPYONLY)
-configure_file(src/ascee/heap/id.h include/heap/id.h COPYONLY)
 configure_file(src/ascee/argc/types.h include/argc/types.h COPYONLY)
 configure_file(src/ascee/argc/functions.h include/argc COPYONLY)
 configure_file(src/ascee/argc/StringBuffer.h include COPYONLY)

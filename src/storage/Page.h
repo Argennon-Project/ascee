@@ -27,8 +27,6 @@
 
 namespace argennon::asa {
 
-using VarLenFullID = ascee::runtime::VarLenFullID;
-
 /**
  * When a page contains migrants, its native chunk can not be migrated. We need to check that in this class.
  *

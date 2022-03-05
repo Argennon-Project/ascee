@@ -24,7 +24,6 @@
 #include <vector>
 #include <mutex>
 #include "argc/types.h"
-#include "heap/id.h"
 
 namespace argennon::ascee::runtime {
 

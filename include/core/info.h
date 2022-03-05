@@ -24,19 +24,11 @@
 #include "primitives.h"
 #include "util/OrderedStaticMap.hpp"
 #include "util/PrefixTrie.hpp"
-#include "heap/id.h"
+#include "tries.hpp"
+
 
 namespace argennon {
 
-
-/// For decoding variable length unsigned integers
-constexpr util::PrefixTrie<uint32_t, 4> var_uint_trie_g({0xd0, 0xf000, 0xfc0000, 0xffffff00});
-/// For application identifiers
-constexpr util::PrefixTrie<uint64_t, 3> app_trie_g({0xa0, 0xc000, 0xd00000});
-/// For account identifiers
-constexpr util::PrefixTrie<uint64_t, 3> account_trie_g({0x60, 0xd000, 0xe00000});
-/// For generating local identifiers
-constexpr util::PrefixTrie<uint64_t, 3> local_trie_g({0xc0, 0xe000, 0xf00000});
 
 struct Digest {
     int x = 0;
@@ -283,7 +275,7 @@ public:
         return *this;
     }
 
-    auto& operator<<(const ascee::runtime::VarLenFullID& id) {
+    auto& operator<<(const VarLenFullID& id) {
         return append(id.getBinary(), id.getLen());
     }
 

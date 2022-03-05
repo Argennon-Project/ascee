@@ -15,15 +15,15 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef ARGENNON_ENCODING_H
-#define ARGENNON_ENCODING_H
+#ifndef ARGENNON_UTIL_ENCODING_H
+#define ARGENNON_UTIL_ENCODING_H
 
 
 namespace argennon::util {
 
 using size_type = unsigned long;
 
-//Base64url encoding related functions
+// Base64url encoding related functions
 void base64urlEncode(const void* input, size_type inputLen, char* output, size_type* outputLen = nullptr);
 
 size_type base64urlDecode(const char* input, size_type inputLen, void* output);
@@ -32,8 +32,12 @@ size_type base64DecodeLen(size_type binaryLen);
 
 std::string base64urlEncode(const void* input, size_type inputLen);
 
+// utility functions
 void memCopy(void* dest, const void* src, size_type n);
 
 void memSet(void* dest, int value, size_type n);
+
+std::string toHex(uint64_t value);
+
 } // namespace argennon::util
-#endif // ARGENNON_ENCODING_H
+#endif // ARGENNON_UTIL_ENCODING_H

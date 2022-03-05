@@ -18,7 +18,6 @@ set(SOURCE_FILES
         argc/StringBuffer.cpp
         heap/Chunk.cpp
         heap/RestrictedModifier.cpp
-        heap/id.cpp
         executor/AppTable.cpp
         )
 

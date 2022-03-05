@@ -21,7 +21,6 @@
 #include <unordered_map>
 #include <unordered_set>
 #include "argc/types.h"
-#include "heap/id.h"
 #include "argc/StringBuffer.h"
 
 namespace argennon::ascee::runtime {

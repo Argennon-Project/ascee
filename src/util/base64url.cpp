@@ -52,6 +52,7 @@
 #include <stdexcept>
 #include <cassert>
 #include <cstring>
+#include <sstream>
 #include "encoding.h"
 
 typedef int error_t;
@@ -326,4 +327,10 @@ void util::memCopy(void* dest, const void* src, size_type n) {
 
 void util::memSet(void* dest, int value, size_type n) {
     std::memset(dest, value, n);
+}
+
+std::string util::toHex(uint64_t value) {
+    std::stringstream buf;
+    buf << "0x" << std::hex << value;
+    return {buf.str()};
 }

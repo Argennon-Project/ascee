@@ -24,7 +24,6 @@
 #include <string>
 #include <stdexcept>
 #include "util/StaticArray.hpp"
-#include "heap/id.h"
 
 namespace argennon::ascee::runtime {
 
@@ -74,6 +73,8 @@ private:
     static int64_t parse(std::string_view str, const int64_t&);
 
     static double parse(std::string_view str, const double&);
+
+    static long_id parse(std::string_view str, const long_id&);
 
     template<typename T>
     static T parse(std::string_view str, const T&) {

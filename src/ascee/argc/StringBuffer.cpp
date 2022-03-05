@@ -16,6 +16,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include "StringBuffer.h"
+#include "util/PrefixTrie.hpp"
 
 #define MAX_NUM64_LENGTH 32
 
@@ -92,4 +93,8 @@ int64_t StringView::parse(std::string_view str, const int64_t&) {
 
 double StringView::parse(std::string_view str, const double&) {
     return std::stod(std::string(str.substr(0, max_num64_length)), nullptr);
+}
+
+argennon::long_id StringView::parse(std::string_view str, const argennon::long_id&) {
+    return util::PrefixTrie<uint64_t>::uncheckedParse(std::string(str));
 }

@@ -18,12 +18,12 @@
 #ifndef ASCEE_PRIMITIVES_H
 #define ASCEE_PRIMITIVES_H
 
-#include <cstdint>
-#include "heap/id.h"
+#include <cinttypes>
+#include <string>
+#include "util/encoding.h"
 
 namespace argennon {
 
-/// int represents a signed integer with the most efficient size for the platform which MUST NOT be smaller than 32 bits.
 typedef uint8_t byte;
 typedef uint16_t uint16;
 typedef int16_t int16;
@@ -38,11 +38,96 @@ typedef double float64;
 
 typedef uint32_t short_id;
 
-using long_id = ascee::runtime::LongID;
-using long_long_id = ascee::runtime::LongLongID;
-using full_id = ascee::runtime::FullID;
+class LongID {
+public:
+    LongID() = default;
+
+    constexpr LongID(uint64_t id) noexcept: id(id) {} // NOLINT(google-explicit-constructor)
+
+    operator uint64_t() const { return id; } // NOLINT(google-explicit-constructor)
+
+    explicit operator std::string() const {
+        return util::toHex(id);
+    }
+
+private:
+    uint64_t id = 0;
+};
+
+class LongLongID {
+public:
+    constexpr LongLongID(LongID up, LongID down) : up(up), down(down) {}
+
+    explicit operator std::string() const {
+        return (std::string) up + "::" + (std::string) down;
+    }
+
+
+    // this is a small class, we pass it by value.
+    bool operator<(LongLongID rhs) const {
+        return up < rhs.up || (up == rhs.up && down < rhs.down);
+    }
+
+    bool operator==(LongLongID rhs) const {
+        return up == rhs.up && down == rhs.down;
+    }
+
+    /**
+    * gives a 32-bit hash value.
+    * @return
+    */
+    struct Hash {
+        std::size_t operator()(LongLongID key) const noexcept {
+            uint64_t prime1 = 8602280293;
+            uint64_t prime2 = 17184414901;
+            return uint64_t(key.up) % prime1 ^ uint64_t(key.down) % prime2;
+        }
+    };
+
+private:
+    const LongID up;
+    const LongID down;
+};
+
+class FullID {
+public:
+    constexpr FullID(LongID up, LongLongID down) : up(up), down(down) {}
+
+    explicit operator std::string() const {
+        return (std::string) up + "::" + (std::string) down;
+    }
+
+    // this is a small class, we pass it by value.
+    bool operator<(const FullID& rhs) const {
+        return up < rhs.up || (up == rhs.up && down < rhs.down);
+    }
+
+    bool operator==(const FullID& rhs) const {
+        return up == rhs.up && down == rhs.down;
+    }
+
+    /**
+     * gives a 32-bit hash value.
+     * @return
+     */
+    struct Hash {
+        std::size_t operator()(const FullID& key) const noexcept {
+            uint64_t prime = 15236479477;
+            return uint64_t(key.up) % prime ^ LongLongID::Hash{}(key.down);
+        }
+    };
+
+private:
+    const LongID up;
+    const LongLongID down;
+};
+
+using long_id = LongID;
+using long_long_id = LongLongID;
+using full_id = FullID;
 
 constexpr long_id arg_app_id_g = 0x100000000000000;
 constexpr uint16_t nonce_start_g = 8;
+
 } // namespace argennon
 #endif // ASCEE_PRIMITIVES_H
