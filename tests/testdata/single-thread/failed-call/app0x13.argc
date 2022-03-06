@@ -1,8 +1,8 @@
 
 
 dispatcher {
-    STRING(dummy, "dummy");
-    STRING_BUFFER(all, 2048);
+    string_view_c dummy = "dummy";
+    string_buffer_c<2 * 1024> all = {};
 
 // time out
     append_str(response, dummy);
@@ -30,7 +30,6 @@ dispatcher {
 
     clear_buffer(response);
     append_str(response, all);
-    STRING(end, " all called...");
-    append_str(response, end);
+    append_str(response, " all called...");
     return HTTP_OK;
 }

@@ -27,21 +27,47 @@
 
 namespace argennon::ascee::runtime {
 
-class StringView : public std::string_view {
+class StringView {
 public:
     static constexpr int max_num64_length = 32;
 
-    void operator=(const StringView&) = delete;
-
     StringView() = default;
 
-    StringView(const char* cStr, size_type len);
+    StringView(const char* cStr, size_t len) : view(cStr, len) {}
 
-    StringView(const char* cStr); // NOLINT(google-explicit-constructor)
+    StringView(const char* cStr) : view(cStr) {} // NOLINT(google-explicit-constructor)
 
-    StringView(const std::string_view& view); // NOLINT(google-explicit-constructor)
+    StringView(std::string_view view) : view(view) {} // NOLINT(google-explicit-constructor)
 
-    bool isNull();
+    StringView(const std::string& str) : view(str) {} // NOLINT(google-explicit-constructor)
+
+    void operator=(const StringView&) = delete;
+
+    bool operator==(const StringView& other) const {
+        return view == other.view;
+    }
+
+    // should be explicit since string_view is not safe
+    explicit operator std::string_view() const {
+        return view;
+    }
+
+    explicit operator std::string() const;
+
+    [[nodiscard]]
+    auto data() const {
+        return view.data();
+    }
+
+    [[nodiscard]]
+    auto size() const {
+        return view.size();
+    }
+
+    [[nodiscard]]
+    auto length() const {
+        return view.length();
+    }
 
     template<typename T>
     StringView scan(const StringView& pattern, T& output) const;
@@ -56,20 +82,22 @@ public:
      */
     template<typename T>
     T matchPattern(StringView start, StringView end, int32& pos) {
-        auto foundPos = find(start, pos);
-        if (foundPos == npos) throw std::invalid_argument("start pattern not found");
+        auto foundPos = view.find((std::string_view) start, pos);
+        if (foundPos == std::string_view::npos) throw std::invalid_argument("start pattern not found");
 
         auto startPos = foundPos + start.size();
 
-        foundPos = find(end, startPos);
-        if (foundPos == npos) throw std::invalid_argument("end pattern not found");
+        foundPos = view.find((std::string_view) end, startPos);
+        if (foundPos == std::string_view::npos) throw std::invalid_argument("end pattern not found");
 
         auto len = foundPos - startPos;
         pos = int32(foundPos + end.size());
-        return parse(substr(startPos, len), T{});
+        return parse(view.substr(startPos, len), T{});
     }
 
 private:
+    const std::string_view view;
+
     static int64_t parse(std::string_view str, const int64_t&);
 
     static double parse(std::string_view str, const double&);
@@ -88,14 +116,14 @@ template<int maxSize>
 class StringBuffer {
     static_assert(maxSize < MAX_BUFFER_SIZE && maxSize >= 0);
 public:
-    StringBuffer& append(const std::string_view& str) {
+    StringBuffer& append(StringView str) {
         if (maxSize < end + str.size()) throw std::out_of_range("append: str is too long");
         util::memCopy(buffer + end, str.data(), str.size());
         end += str.size();
         return *this;
     }
 
-    StringBuffer& operator<<(std::string_view str) {
+    StringBuffer& operator<<(StringView str) {
         return append(str);
     }
 
@@ -114,8 +142,18 @@ public:
         return *this;
     }
 
+    // since StringView is safe this can be non-explicit
     operator StringView() const { // NOLINT(google-explicit-constructor)
         return StringView(buffer, end);
+    }
+
+    // should be explicit since string_view is unsafe
+    explicit operator std::string_view() const {
+        return std::string_view(buffer, end);
+    }
+
+    explicit operator std::string() const {
+        return std::string(buffer, end);
     }
 
     void operator=(const StringBuffer&) = delete;

@@ -49,25 +49,24 @@ std::size_t parse_scan(string_view str, double& ret) {
  */
 template<typename T>
 StringView StringView::scan(const StringView& pattern, T& output) const {
-    string_view content = *this;
     int i = 0, j = 0;
     while (i < length() && j < pattern.length()) {
-        if (!std::isspace(content[i])) {
-            if (std::isspace(pattern[j])) ++j;
-            else if (content[i] == pattern[j]) {
+        if (!std::isspace(view[i])) {
+            if (std::isspace(pattern.view[j])) ++j;
+            else if (view[i] == pattern.view[j]) {
                 ++i;
                 ++j;
             } else break;
-        } else if (std::isspace(pattern[j])) {
-            if (content[i] == pattern[j]) i++;
+        } else if (std::isspace(pattern.view[j])) {
+            if (view[i] == pattern.view[j]) i++;
             else ++j;
         } else break;
     }
     try {
         if (i == length() || j < pattern.length()) throw std::invalid_argument("pattern not found");
 
-        auto pos = parse_scan(content.substr(i), output);
-        return StringView(content.substr(i + pos));
+        auto pos = parse_scan(view.substr(i), output);
+        return StringView(view.substr(i + pos));
     } catch (const std::invalid_argument&) {
         output = 0;
         return {};
@@ -77,14 +76,6 @@ StringView StringView::scan(const StringView& pattern, T& output) const {
 template StringView StringView::scan(const StringView&, int64_t&) const;
 
 template StringView StringView::scan(const StringView&, double&) const;
-
-bool StringView::isNull() { return data() == nullptr; }
-
-StringView::StringView(const char* str) : string_view(str) {}
-
-StringView::StringView(const char* str, size_type len) : basic_string_view(str, len) {}
-
-StringView::StringView(const string_view& view) : basic_string_view(view) {}
 
 int64_t StringView::parse(std::string_view str, const int64_t&) {
     // string constructor copies its input, therefore we truncate the input str to make the copy less costly.
@@ -97,4 +88,8 @@ double StringView::parse(std::string_view str, const double&) {
 
 argennon::long_id StringView::parse(std::string_view str, const argennon::long_id&) {
     return util::PrefixTrie<uint64_t>::uncheckedParse(std::string(str));
+}
+
+StringView::operator std::string() const {
+    return std::string(view);
 }

@@ -24,7 +24,7 @@
 
 using namespace argennon;
 using namespace ascee::runtime;
-using std::unique_ptr, std::string, std::to_string, std::function;
+using std::unique_ptr, std::string, std::string_view, std::to_string, std::function;
 
 static inline
 void maskSignals(int how) {
@@ -66,7 +66,7 @@ void Executor::sig_handler(int sig, siginfo_t* info, void*) {
         int ret = static_cast<int>(StatusCode::internal_error);
         if (sig == SIGSEGV) ret = static_cast<int>(StatusCode::memory_fault);
         if (sig == SIGUSR1) ret = static_cast<int>(StatusCode::execution_timeout);
-        if (sig == SIGFPE) ret = static_cast<int>(StatusCode::arithmetic_error);
+        if (sig == SIGFPE || sig == SIGILL) ret = static_cast<int>(StatusCode::arithmetic_error);
         siglongjmp(session->currentCall->env, ret);
     } else {
         pthread_t thread_id = *static_cast<pthread_t*>(info->si_value.sival_ptr);
@@ -84,6 +84,7 @@ void Executor::initHandlers() {
     int err = 0;
     err += sigaction(SIGALRM, &action, nullptr);
     err += sigaction(SIGFPE, &action, nullptr);
+    err += sigaction(SIGILL, &action, nullptr);
     err += sigaction(SIGSEGV, &action, nullptr);
     err += sigaction(SIGBUS, &action, nullptr);
     err += sigaction(SIGUSR1, &action, nullptr);
@@ -137,7 +138,7 @@ AppResponse Executor::executeOne(AppRequest* req) {
     }
     session = nullptr;
 
-    return {statusCode, string(response)};
+    return {statusCode, string((StringView) response)};
 }
 
 struct InvocationArgs {

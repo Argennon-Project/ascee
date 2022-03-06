@@ -107,7 +107,7 @@ public:
             response << gReasonByStatusCode(code) << "\r\n";
             response << "Server: " << app_trie_g.toDecimalStr(app) << "\r\n";
             response << "Content-Length: " << (int) message.size() + 8 << "\r\n\r\n";
-            response << "Error: " << StringView(message) << ".";
+            response << "Error: " << message << ".";
             return response;
         }
 

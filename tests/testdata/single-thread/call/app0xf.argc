@@ -2,10 +2,8 @@
 
 dispatcher {
     append_str(response, request);
-    STRING(req, "request from 15");
-    invoke_dispatcher(85, 11, response, req);
-    STRING(temp, " got in 15");
-    append_str(response, temp);
+    invoke_dispatcher(85, 11, response, "request from 15");
+    append_str(response, " got in 15");
     return HTTP_OK;
 }
 

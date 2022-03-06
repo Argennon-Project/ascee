@@ -1,9 +1,9 @@
 
 
 dispatcher {
-    STRING(dummy, "too long");
+    string_view_c dummy = "too long";
     append_str(response, dummy);
-    STRING_BUFFER(temp, 7);
+    string_buffer_c<7> temp = {};
     append_str(temp, dummy);
     return HTTP_OK;
 }

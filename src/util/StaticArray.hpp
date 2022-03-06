@@ -25,39 +25,56 @@
 
 namespace argennon::util {
 
-template<typename T, std::size_t size>
-class StaticArray : public std::array<T, size> {
+template<typename T, std::size_t sizeValue>
+class StaticArray {
 public:
     StaticArray() = default;
 
-    StaticArray(const std::array<T, size>& a) : std::array<T, size>(a) {} // NOLINT(google-explicit-constructor)
-
-    explicit StaticArray(std::string_view base64) : std::array<T, size>() {
-        auto sizeInBytes = size * sizeof(T);
-        if (base64DecodeLen(base64.length()) > sizeInBytes) throw std::out_of_range("array is too small");
-        auto modified = base64urlDecode(base64.data(), base64.length(), this->data());
-        util::memSet(this->data() + modified, 0, sizeInBytes - modified);
-    }
-
-    std::string toBase64() {
-        return base64urlEncode(this->data(), size);
-    }
+    StaticArray(const std::array<T, sizeValue>& a) : content(a) {} // NOLINT(google-explicit-constructor)
 
     StaticArray(const StaticArray&) { std::terminate(); }
+
+    explicit StaticArray(std::string_view base64) {
+        auto sizeInBytes = sizeValue * sizeof(T);
+        if (base64DecodeLen(base64.length()) > sizeInBytes) throw std::out_of_range("array is too small");
+        auto modified = base64urlDecode(base64.data(), base64.length(), content.data());
+        util::memSet(content.data() + modified, 0, sizeInBytes - modified);
+    }
 
     StaticArray& operator=(const StaticArray&) = delete;
 
     T* operator&() { // NOLINT(google-runtime-operator)
-        return this->data();
+        return content.data();
     }
 
-    std::string toString() {
+    T& operator[](std::size_t idx) { return content.at(idx); }
+
+    const T& operator[](std::size_t idx) const { return content.at(idx); }
+
+    auto data() {
+        return content.data();
+    }
+
+    auto size() const {
+        return sizeValue;
+    }
+
+    [[nodiscard]]
+    std::string toBase64() const {
+        return base64urlEncode(content.data(), sizeValue);
+    }
+
+    [[nodiscard]]
+    std::string toString() const {
         std::string result;
-        for (const auto& elem: *this) {
+        for (const auto& elem: content) {
             result += std::to_string(elem) + ",";
         }
         return result;
     }
+
+private:
+    std::array<T, sizeValue> content;
 };
 
 } // namespace argennon::util

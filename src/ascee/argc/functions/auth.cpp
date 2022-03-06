@@ -24,6 +24,7 @@ using namespace argennon;
 using namespace ascee;
 using namespace runtime;
 using namespace util;
+using std::string_view;
 
 constexpr int nonce16_size = int(sizeof(uint16));
 constexpr int decision_nonce_size = int(sizeof(uint16));
@@ -39,7 +40,6 @@ void appendNonceToMsg(message_c& msg, long_id spender, uint32_t nonce) {
 static
 void appendSpenderToMsg(message_c& msg, long_id spender) {
     msg << ",\"forApp\":" << (std::string) spender << "}";
-    std::cout << StringView(msg) << "\n";
 }
 
 static
@@ -55,7 +55,7 @@ bool verifyWithMultiwayNonce(int nonceCount, int32 nonceIndex,
     auto pk = heap.load<PublicKey>(pkIndex);
 
     if (!invalidate) {
-        return Executor::getSession()->cryptoSigner.verify(StringView(msg), sig, pk);
+        return Executor::getSession()->cryptoSigner.verify(string_view(msg), sig, pk);
     }
 
     if (nonceCount > 1) nonceIndex += int32(spender % nonceCount) * nonce16_size;
@@ -63,7 +63,7 @@ bool verifyWithMultiwayNonce(int nonceCount, int32 nonceIndex,
     if (nonce >= nonce16_max) return false;
 
     appendNonceToMsg(msg, spender, nonce);
-    bool valid = Executor::getSession()->cryptoSigner.verify(StringView(msg), sig, pk);
+    bool valid = Executor::getSession()->cryptoSigner.verify(string_view(msg), sig, pk);
     if (valid) heap.store<uint16>(nonceIndex, nonce + 1);
 
     return valid;

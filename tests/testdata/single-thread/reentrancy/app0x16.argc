@@ -3,9 +3,9 @@
 void f(string_buffer_c<8192>& response, int32 deferred_call) {
     enter_area();
 
-    STRING(req1, "choice: 1");
-    STRING(req2, "choice: 2");
-    STRING(req3, "choice: 3");
+    string_view_c req1 =  "choice: 1";
+    string_view_c req2 =  "choice: 2";
+    string_view_c req3 =  "choice: 3";
 
     if (deferred_call) {
         invoke_deferred(23, response, req3);
@@ -13,7 +13,7 @@ void f(string_buffer_c<8192>& response, int32 deferred_call) {
         return;
     }
 
-    STRING_BUFFER(all, 1024);
+    string_buffer_c<1024> all = {};
 
     invoke_dispatcher(50, 23, response, req1);
     append_str(all, response);
@@ -45,7 +45,7 @@ int32 h() {
 }
 
 dispatcher {
-    STRING(pattern, "choice: ");
+    string_view_c pattern = "choice: ";
     int64 choice = 0;
     string_view_c rest = scan_int64(request, pattern, choice);;
 
@@ -54,8 +54,7 @@ dispatcher {
     else if (choice == 3) return h();
     else if (choice == 4) f(response, 1); // deferred call
 
-    STRING(done, " Done: ");
-    append_str(response, done);
+    append_str(response, " Done: ");
     append_int64(response, choice);
     return HTTP_OK;
 }

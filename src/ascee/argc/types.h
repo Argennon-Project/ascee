@@ -104,26 +104,32 @@ public:
             StatusCode code = StatusCode::internal_error,
             std::string thrower = ""
     ) noexcept: msg(std::move(msg)),
-                code(code), thrower(std::move(thrower)),
+                thrower(std::move(thrower)),
+                code(code),
                 message(this->thrower.empty() ? this->msg : "[" + this->thrower + "]-> " + this->msg) {}
 
     [[nodiscard]] int errorCode() const { return (int) code; }
 
     [[nodiscard]] const char* what() const noexcept override { return message.c_str(); }
 
-    const std::string thrower;
     const std::string msg;
-    const std::string message;
+    const std::string thrower;
     const StatusCode code;
+    const std::string message;
 };
 
 typedef int (* DispatcherPointer)(response_buffer_c& response, string_view_c request);
 
 #define STRING(name, str) char __##name##_buf__[] = str; string_view_c name(__##name##_buf__)
 #define STRING_BUFFER(name, size) string_buffer_c<size> name
-#define dispatcher extern "C" int dispatcher(response_buffer_c& response, string_view_c request)
+#define ARGC_NAME(id) argc_0_##id
+#define dispatcher extern "C" int32 dispatcher(response_buffer_c& ARGC_NAME(response), string_view_c ARGC_NAME(request))
 
-/// HTTP status codes. new costume coded could be defined.
+/// HTTP status codes.
+constexpr int ARGC_NAME(HTTP_OK) = 200;
+constexpr int ARGC_NAME(NOT_ACCEPTED) = 300;
+constexpr int ARGC_NAME(BAD_REQUEST) = 400;
+/*
 #define HTTP_OK 200
 #define BAD_REQUEST 400
 #define NOT_FOUND 404
@@ -141,6 +147,6 @@ typedef int (* DispatcherPointer)(response_buffer_c& response, string_view_c req
 /// This HTTP status is returned when the entrance lock is activated.
 #define REENTRANCY_DETECTED 513
 #define MAX_CALL_DEPTH_REACHED 514
-
+*/
 } // namespace ascee
 #endif // ARGENNON_ARGC_TYPES_H

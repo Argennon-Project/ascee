@@ -1,7 +1,9 @@
+int32 g() {
+    return 0;
+}
 
-
-void foo() {
-    foo();
+int32 foo() {
+    return g() * foo() + g();
 }
 
 dispatcher {
