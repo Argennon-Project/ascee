@@ -1,0 +1,8 @@
+
+
+dispatcher {
+    int32[6][2] a = {};
+    int32 y = a[5][1];
+    int32 x = a[6][1];
+    return HTTP_OK;
+}

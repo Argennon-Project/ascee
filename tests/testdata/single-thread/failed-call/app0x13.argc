@@ -4,22 +4,22 @@ dispatcher {
     string_view_c dummy = "dummy";
     string_buffer_c<2 * 1024> all = {};
 
-// time out
+    // time out
     append_str(response, dummy);
     invoke_dispatcher(40, 10, response, request);
     append_str(all, response);
 
-// division zero
+    // division zero
     append_str(response, dummy);
     invoke_dispatcher(40, 20, response, request);
     append_str(all, response);
 
-// self call: App not found
+    // self call: App not found
     append_str(response, dummy);
     invoke_dispatcher(40, 19, response, request);
     append_str(all, response);
 
-// App not declared
+    // App not declared
     append_str(response, dummy);
     invoke_dispatcher(40, 11, response, request);
     append_str(all, response);
@@ -27,6 +27,10 @@ dispatcher {
     // segmentation fault
     invoke_dispatcher(40, 21, response, request);
     append_str(all, response);
+
+     // array out of bounds
+     invoke_dispatcher(40, 24, response, request);
+     append_str(all, response);
 
     clear_buffer(response);
     append_str(response, all);

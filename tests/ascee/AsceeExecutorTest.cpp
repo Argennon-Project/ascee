@@ -268,13 +268,16 @@ TEST_F(AsceeExecutorTest, FailedCalls) {
             "append: str is too long",
             StatusCode::out_of_range,
             long_id(21)).toHttpResponse(buf);
-    // caller can see out_of_range exception so server is 19
+    Executor::Error(
+            "array::at: __n (which is 6) >= _Nm (which is 6)",
+            StatusCode::out_of_range,
+            long_id(24)).toHttpResponse(buf);
 
     AppTestCase testCase{
             .calledApp = 19,
             .request = "test request",
             .gas = NORMAL_GAS,
-            .appAccessList = {20, 21, 10, 19},
+            .appAccessList = {20, 21, 10, 19, 24},
             .wantResponse = string(buf) + " all called...",
             .wantCode = 200
     };
