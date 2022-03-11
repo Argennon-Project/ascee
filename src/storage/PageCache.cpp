@@ -37,8 +37,8 @@ PageCache::PageCache(PageLoader& loader) : loader(loader) {
 }
 
 vector<pair<full_id, Page*>>
-PageCache::prepareBlockPages(const BlockInfo& block, vector<VarLenFullID>&& pageAccessList,
-                             const vector<MigrationInfo>& chunkMigrations) {
+PageCache::preparePages(const BlockInfo& block, vector<VarLenFullID>&& pageAccessList,
+                        const vector<MigrationInfo>& chunkMigrations) {
     vector<pair<full_id, Page*>> result;
     result.reserve(pageAccessList.size());
     for (const auto& pageID: pageAccessList) {
@@ -69,7 +69,7 @@ PageCache::prepareBlockPages(const BlockInfo& block, vector<VarLenFullID>&& page
         result[migration.toIndex].second->addMigrant(std::move(migrant));
     }
 
-    return std::move(result);
+    return result;
 }
 
 void PageCache::commit(vector<pair<full_id, Page*>> modifiedPages) {

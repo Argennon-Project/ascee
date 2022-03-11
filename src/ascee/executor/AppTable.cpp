@@ -17,6 +17,8 @@
 
 #include "AppTable.h"
 
+#include <utility>
+
 using namespace argennon;
 using namespace ascee::runtime;
 
@@ -34,3 +36,5 @@ void AppTable::checkApp(long_id appID) const {
                          StatusCode::limit_violated);
     }
 }
+
+AppTable::AppTable(util::OrderedStaticMap<long_id, DispatcherPointer> callTable) : callTable(std::move(callTable)) {}

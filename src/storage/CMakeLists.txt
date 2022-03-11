@@ -8,4 +8,6 @@ add_library(asa STATIC
         PageLoader.cpp
         ChunkIndex.cpp
         PageCache.cpp
-        Page.cpp)
+        Page.cpp
+        AppIndex.cpp
+        AppLoader.cpp)

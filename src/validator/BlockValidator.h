@@ -38,6 +38,7 @@ private:
     asa::PageCache& cache;
     BlockLoader& blockLoader;
     int workersCount = -1;
+    asa::AppIndex appIndex;
 };
 
 } // namespace argennon::ave

@@ -9,7 +9,6 @@ set(SOURCE_FILES
         executor/Executor.cpp
         executor/FailureManager.cpp
         executor/VirtualSigManager.cpp
-        loader/AppLoader.cpp
         argc/functions/string.cpp
         argc/functions/invoke.cpp
         argc/functions/auth.cpp

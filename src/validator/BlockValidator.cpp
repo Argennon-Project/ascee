@@ -37,14 +37,14 @@ bool BlockValidator::conditionalValidate(const BlockInfo& current, const BlockIn
     try {
         blockLoader.setCurrentBlock(current);
 
-        ChunkIndex index(
-                cache.prepareBlockPages(previous, blockLoader.getReadonlyPageList(), blockLoader.getMigrationList()),
-                cache.prepareBlockPages(previous, blockLoader.getWritablePageList(), blockLoader.getMigrationList()),
+        ChunkIndex chunkIndex(
+                cache.preparePages(previous, blockLoader.getReadonlyPageList(), blockLoader.getMigrationList()),
+                cache.preparePages(previous, blockLoader.getWritablePageList(), blockLoader.getMigrationList()),
                 blockLoader.getProposedSizeBounds(),
                 blockLoader.getNumOfChunks()
         );
 
-        RequestProcessor processor(index, blockLoader.getNumOfRequests(), workersCount);
+        RequestProcessor processor(chunkIndex, appIndex, blockLoader.getNumOfRequests(), workersCount);
 
         processor.loadRequests(blockLoader.createRequestStreams(workersCount));
 
@@ -52,7 +52,7 @@ bool BlockValidator::conditionalValidate(const BlockInfo& current, const BlockIn
 
         auto responses = processor.executeRequests<ascee::runtime::Executor>();
 
-        cache.commit(index.getModifiedPages());
+        cache.commit(chunkIndex.getModifiedPages());
 
         return calculateDigest(responses) == blockLoader.getResponseListDigest();
     } catch (const BlockError& err) {
@@ -65,6 +65,6 @@ bool BlockValidator::conditionalValidate(const BlockInfo& current, const BlockIn
 BlockValidator::BlockValidator(
         PageCache& cache,
         BlockLoader& blockLoader,
-        int workersCount) : cache(cache), blockLoader(blockLoader) {
+        int workersCount) : cache(cache), blockLoader(blockLoader), appIndex(nullptr) {
     this->workersCount = workersCount < 1 ? (int) std::thread::hardware_concurrency() * 2 : workersCount;
 }

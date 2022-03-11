@@ -27,10 +27,11 @@ namespace argennon::ave {
 class RequestProcessor {
 public:
     RequestProcessor(
-            asa::ChunkIndex& index,
+            asa::ChunkIndex& chunkIndex,
+            asa::AppIndex& appIndex,
             int32_fast numOfRequests,
             int workersCount = -1
-    ) : scheduler(numOfRequests, index), numOfRequests(numOfRequests),
+    ) : scheduler(numOfRequests, chunkIndex, appIndex), numOfRequests(numOfRequests),
         workersCount(workersCount < 1 ? (int) std::thread::hardware_concurrency() * 2 : workersCount) {}
 
     template<class RequestStream>

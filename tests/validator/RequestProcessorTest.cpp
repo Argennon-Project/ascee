@@ -39,19 +39,22 @@ protected:
     PageLoader pl{};
     PageCache pc;
     ChunkIndex singleChunk;
+    AppLoader loader{"apps"};
+    AppIndex appIndex{&loader};
 
 public:
     RequestProcessorTest()
             : pc(pl),
               singleChunk({},
-                          pc.prepareBlockPages({10},
-                                               {{VarLenFullID(
-                                                       std::unique_ptr<byte[]>(new byte[4]{0x10, 0x44, 0x5, 0}))}},
-                                               {}),
+                          pc.preparePages({10},
+                                          {{VarLenFullID(
+                                                  std::unique_ptr<byte[]>(new byte[4]{0x10, 0x44, 0x5, 0}))}},
+                                          {}),
                           {{{app_1_id, chunk1_local_id}},
                            {{8,        3}}},
                           0) {
         singleChunk.getChunk({app_1_id, chunk1_local_id})->setSize(5);
+        appIndex.prepareApps({123}, {arg_app_id_g});
     }
 };
 
@@ -97,7 +100,7 @@ TEST_F(RequestProcessorTest, ExecOrderTest_1) {
                 {.id = 2, .adjList ={}},
                 {.id = 1, .adjList ={}},
         };
-        RequestProcessor rp(singleChunk, int(requests.size()), workers);
+        RequestProcessor rp(singleChunk, appIndex, int(requests.size()), workers);
 
         rp.loadRequests<FakeStream>({
                                             {0, 1, requests},
@@ -127,7 +130,7 @@ TEST_F(RequestProcessorTest, ExecOrderTest_2) {
                 {.id = 0, .adjList ={1, 2, 3}},
         };
 
-        RequestProcessor rp(singleChunk, int(requests.size()), 5);
+        RequestProcessor rp(singleChunk, appIndex, int(requests.size()), 5);
 
         rp.loadRequests<FakeStream>({
                                             {0, 1, requests},
@@ -163,7 +166,7 @@ TEST_F(RequestProcessorTest, ExecOrderTest_loop) {
                 {.id = 0, .adjList ={1}},
         };
 
-        RequestProcessor rp(singleChunk, int(requests.size()), 5);
+        RequestProcessor rp(singleChunk, appIndex, int(requests.size()), 5);
 
         rp.loadRequests<FakeStream>({
                                             {0, 1, requests},
@@ -249,7 +252,7 @@ TEST_F(RequestProcessorTest, SimpleDependencyGraph) {
              {{15,       0},               {15,       0}}},
             5);
 
-    RequestProcessor rp(index, int(requests.size()), 5);
+    RequestProcessor rp(index, appIndex, int(requests.size()), 5);
 
     rp.loadRequests<FakeStream>({
                                         {0, 1, requests},

@@ -20,21 +20,21 @@
 
 #include <unordered_map>
 #include "argc/types.h"
-#include "loader/AppLoader.h"
+#include "util/OrderedStaticMap.hpp"
 
 namespace argennon::ascee::runtime {
 
 
 class AppTable {
 public:
-    explicit AppTable(const std::vector<long_id>& appList) : callTable(AppLoader::global->createAppTable(appList)) {}
+    explicit AppTable(util::OrderedStaticMap<long_id, DispatcherPointer> callTable);
 
     int callApp(long_id appID, response_buffer_c& response, string_view_c request) const;
 
     void checkApp(long_id appID) const;
 
 private:
-    std::unordered_map<uint64_t, DispatcherPointer> callTable;
+    util::OrderedStaticMap<long_id, DispatcherPointer> callTable;
 };
 
 } // namespace argennon::ascee::runtime

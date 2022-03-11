@@ -151,11 +151,11 @@ private:
     }
 };
 
-/// Calculates: maps[begin] | maps[begin + 1] | maps[begin + 2] | ... | map[end - 1], where | operator merges two maps.
+
 template<class K, class V>
 static
-OrderedStaticMap<K, V> mergeAllParallel(std::vector<OrderedStaticMap<K, V>>&& maps,
-                                        std::size_t begin, std::size_t end, std::size_t k) {
+OrderedStaticMap<K, V> mergeIntervalParallel(std::vector<OrderedStaticMap<K, V>>& maps,
+                                             std::size_t begin, std::size_t end, std::size_t k) {
     using std::move;
 
     if (begin >= end) return {};
@@ -168,15 +168,15 @@ OrderedStaticMap<K, V> mergeAllParallel(std::vector<OrderedStaticMap<K, V>>&& ma
         return result;
     }
 
-    auto secondHalf = std::async([&]() { return mergeAllParallel(move(maps), (begin + end) / 2, end, k); });
-    auto&& firstHalf = mergeAllParallel(move(maps), begin, (begin + end) / 2, k);
+    auto secondHalf = std::async([&]() { return mergeIntervalParallel(maps, (begin + end) / 2, end, k); });
+    auto&& firstHalf = mergeIntervalParallel(maps, begin, (begin + end) / 2, k);
     return move(firstHalf) | secondHalf.get();
 }
 
+/// Calculates: maps[begin] | maps[begin + 1] | maps[begin + 2] | ... | map[end - 1], where | operator merges two maps.
 template<class K, class V>
-inline
 OrderedStaticMap<K, V> mergeAllParallel(std::vector<OrderedStaticMap<K, V>>&& maps, int workersCount) {
-    return mergeAllParallel(std::move(maps), 0, maps.size(), maps.size() / workersCount);
+    return mergeIntervalParallel(maps, 0, maps.size(), maps.size() / workersCount);
 }
 
 template<typename T>

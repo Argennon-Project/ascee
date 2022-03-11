@@ -37,15 +37,17 @@ protected:
     PageLoader pl{};
     PageCache pc;
     ChunkIndex singleChunk;
+    AppLoader appLoader;
+    AppIndex appIndex;
 
 public:
     RequestSchedulerTest()
-            : pc(pl),
+            : pc(pl), appLoader("apps"), appIndex(&appLoader),
               singleChunk({},
-                          pc.prepareBlockPages({10},
-                                               {{VarLenFullID(
-                                                       std::unique_ptr<byte[]>(new byte[4]{0x10, 0x44, 0x5, 0}))}},
-                                               {}),
+                          pc.preparePages({10},
+                                          {{VarLenFullID(
+                                                  std::unique_ptr<byte[]>(new byte[4]{0x10, 0x44, 0x5, 0}))}},
+                                          {}),
                           {{{app_1_id, chunk1_local_id}},
                            {{8,        3}}},
                           0) {
@@ -311,7 +313,7 @@ TEST_F(RequestSchedulerTest, ResizingCollisions) {
 }
 
 TEST_F(RequestSchedulerTest, SortingRequests) {
-    RequestScheduler scheduler(8, singleChunk);
+    RequestScheduler scheduler(8, singleChunk, appIndex);
 
     scheduler.addRequest({.id = 4, .memoryAccessMap = {
             {app_1_id},
@@ -381,7 +383,7 @@ TEST_F(RequestSchedulerTest, SortingRequests) {
 
 TEST_F(RequestSchedulerTest, CollisionsFromRequests) {
     // [13--10] [13--11] [10--11] [4--1] [1--2] [2--5] [2--10] [2--11] [5--3] [5--10] [5--11] [3--6] [3--10] [3--11] [6--10] [6--11] [7--11] [8--11]
-    RequestScheduler scheduler(14, singleChunk);
+    RequestScheduler scheduler(14, singleChunk, appIndex);
 
     scheduler.addRequest({.id = 12, .memoryAccessMap = {
             {app_1_id},
@@ -497,7 +499,7 @@ TEST_F(RequestSchedulerTest, CollisionsFromRequests) {
 
 TEST_F(RequestSchedulerTest, AdditiveCollisions) {
     // [0--1] [0--2] [1--3] [2--3] [3--4]
-    RequestScheduler scheduler(5, singleChunk);
+    RequestScheduler scheduler(5, singleChunk, appIndex);
 
     scheduler.addRequest({.id = 0, .memoryAccessMap = {
             {app_1_id},
@@ -545,7 +547,7 @@ TEST_F(RequestSchedulerTest, WritersCollisions) {
     // * * * * 3 3 3 3 w
     // * * * * 4 4 4 4 w
 
-    RequestScheduler scheduler(5, singleChunk);
+    RequestScheduler scheduler(5, singleChunk, appIndex);
 
     scheduler.addRequest({.id = 0, .memoryAccessMap = {
             {app_1_id},
@@ -600,7 +602,7 @@ TEST_F(RequestSchedulerTest, WritersCollisions) {
 
 TEST_F(RequestSchedulerTest, SimpleDagFull) {
     auto numOfRequests = 3;
-    RequestScheduler scheduler(numOfRequests, singleChunk);
+    RequestScheduler scheduler(numOfRequests, singleChunk, appIndex);
 
     scheduler.addRequest(
             {
@@ -665,6 +667,7 @@ TEST_F(RequestSchedulerTest, SimpleDagFull) {
 
 TEST_F(RequestSchedulerTest, ExecutionDag) {
     struct DagTester {
+        AppIndex appIndex{nullptr};
         RequestScheduler scheduler;
         std::vector<AppRequestIdType> want;
         int n;
@@ -676,7 +679,7 @@ TEST_F(RequestSchedulerTest, ExecutionDag) {
                 std::vector<AppRequestInfo> nodeData,
                 std::vector<AppRequestIdType> want,
                 bool wantError = false
-        ) : scheduler(n, index), want(std::move(want)), n(n), wantError(wantError) {
+        ) : scheduler(n, index, appIndex), want(std::move(want)), n(n), wantError(wantError) {
             for (int i = 0; i < n; ++i) {
                 scheduler.addRequest(std::move(nodeData.at(i)));
             }

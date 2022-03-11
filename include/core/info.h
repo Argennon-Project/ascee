@@ -159,6 +159,9 @@ struct AppRequestInfo {
     std::string httpRequest;
     int_fast32_t gas = 0;
 
+    /**
+     * A sorted list of applications that the request will call. This list can not be empty.
+     */
     std::vector<long_id> appAccessList;
     std::unordered_set<int_fast32_t> stackSizeFailures;
     std::unordered_set<int_fast32_t> cpuTimeFailures;

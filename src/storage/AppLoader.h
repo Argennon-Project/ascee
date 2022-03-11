@@ -15,8 +15,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef ARGENNON_APP_LOADER_H
-#define ARGENNON_APP_LOADER_H
+#ifndef ARG_ASA_APP_LOADER_H
+#define ARG_ASA_APP_LOADER_H
 
 #include <unordered_map>
 #include <iostream>
@@ -25,37 +25,28 @@
 #include <mutex>
 #include "argc/types.h"
 
-namespace argennon::ascee::runtime {
+namespace argennon::asa {
 
 class AppLoader {
-private:
-    struct AppHandle {
-        void* handle;
-        DispatcherPointer dispatcherPtr;
-    };
-    const std::filesystem::path libraryPath;
-    std::unordered_map<uint64_t, AppHandle> dispatchersMap;
-    std::mutex mapMutex;
 
 public:
+    struct AppHandle {
+        void* handle;
+        int version;
+        ascee::DispatcherPointer dispatcherPtr;
+    };
+
     explicit AppLoader(std::string_view libraryPath);
 
-    virtual ~AppLoader();
+    AppHandle load(long_id);
 
-    void loadApp(long_id);
+    void unLoad(AppHandle& handle);
 
-    void unLoadApp(long_id);
+private:
+    const std::filesystem::path libraryPath;
 
-    void updateApp(long_id);
 
-    DispatcherPointer getDispatcher(long_id appID);
-
-    std::unordered_map<uint64_t, DispatcherPointer>
-    createAppTable(const std::vector<long_id>& appList);
-
-    static std::unique_ptr<AppLoader> global;
 };
 
-} // namespace argennon::ascee::runtime
-
-#endif // ARGENNON_APP_LOADER_H
+} // namespace argennon::asa
+#endif // ARG_ASA_APP_LOADER_H

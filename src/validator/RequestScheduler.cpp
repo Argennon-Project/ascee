@@ -122,11 +122,9 @@ auto& RequestScheduler::requestAt(AppRequestIdType id) {
     return nodeIndex[id];
 }
 
-RequestScheduler::RequestScheduler(
-        int32_fast totalRequestCount,
-        ChunkIndex& heapIndex
-) :
+RequestScheduler::RequestScheduler(int32_fast totalRequestCount, ChunkIndex& heapIndex, asa::AppIndex& appIndex) :
         heapIndex(heapIndex),
+        appIndex(appIndex),
         remaining(totalRequestCount),
         nodeIndex(std::make_unique<std::unique_ptr<DagNode>[]>(totalRequestCount)),
         memoryAccessMaps(totalRequestCount) {}
@@ -187,6 +185,10 @@ RequestScheduler::operator std::string() const {
     return result;
 }
 
+AppTable RequestScheduler::getAppTableFor(vector<long_id>&& sortedAppList) const {
+    return appIndex.buildAppTable(std::move(sortedAppList));
+}
+
 DagNode::DagNode(AppRequestInfo&& data,
                  const RequestScheduler* scheduler) :
         adjList(std::move(data.adjList)),
@@ -196,7 +198,7 @@ DagNode::DagNode(AppRequestInfo&& data,
                 .httpRequest = std::move(data.httpRequest),
                 .gas = data.gas,
                 .modifier = scheduler->getModifierFor(data.id),
-                .appTable = AppTable(data.appAccessList),
+                .appTable = scheduler->getAppTableFor(std::move(data.appAccessList)),
                 .failureManager = FailureManager(
                         std::move(data.stackSizeFailures),
                         std::move(data.cpuTimeFailures)

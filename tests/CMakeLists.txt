@@ -27,5 +27,5 @@ target_link_libraries(Google_Tests_run gmock gtest gtest_main m ascee asa ave ar
 
 add_executable(Google_Mock_run
         ascee/AsceeExecutorTest.cpp)
-target_link_libraries(Google_Mock_run gmock gtest gtest_main m ascee_mock argutil stdc++ pthread rt pbc gmp crypto dl)
+target_link_libraries(Google_Mock_run gmock gtest gtest_main m ascee_mock asa argutil stdc++ pthread rt pbc gmp crypto dl)
 target_compile_definitions(Google_Mock_run PUBLIC ASCEE_MOCK_BUILD)

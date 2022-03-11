@@ -27,6 +27,7 @@
 #include "util/BlockingQueue.hpp"
 #include "storage/ChunkIndex.h"
 #include "ascee/executor/Executor.h"
+#include "storage/AppIndex.h"
 
 namespace argennon::ave {
 
@@ -174,10 +175,12 @@ public:
     [[nodiscard]]
     AppRequestInfo::AccessMapType sortAccessBlocks(int workersCount);
 
-    explicit RequestScheduler(int32_fast totalRequestCount, asa::ChunkIndex& heapIndex);
+    explicit RequestScheduler(int32_fast totalRequestCount, asa::ChunkIndex& heapIndex, asa::AppIndex& appIndex);
 
     [[nodiscard]]
     ascee::runtime::HeapModifier getModifierFor(AppRequestIdType requestID) const;
+
+    ascee::runtime::AppTable getAppTableFor(std::vector<long_id>&& sortedAppList) const;
 
     explicit operator std::string() const;
 
@@ -289,8 +292,10 @@ public:
         return nodeIndex[u]->isAdjacent(v);
     }
 
+
 private:
     asa::ChunkIndex& heapIndex;
+    asa::AppIndex& appIndex;
     std::atomic<int_fast32_t> remaining;
     util::BlockingQueue<DagNode*> zeroQueue;
     std::unique_ptr<std::unique_ptr<DagNode>[]> nodeIndex;

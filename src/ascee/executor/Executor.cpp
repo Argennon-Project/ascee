@@ -60,7 +60,7 @@ void Executor::sig_handler(int sig, siginfo_t* info, void*) {
     // important: session is not valid when sig == SIGALRM
     if (sig != SIGALRM) {
         if (session->guardedArea) {
-            std::cerr << "A signal was raised from guarded area." << std::endl;
+            printf("A signal was raised from guarded area.\n");
             std::terminate();
         }
         int ret = static_cast<int>(StatusCode::internal_error);

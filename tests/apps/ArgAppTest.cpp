@@ -33,9 +33,11 @@ using Access = AccessBlockInfo::Access::Type;
 class ArgAppTest : public ::testing::Test {
 protected:
     Executor executor;
+    AppLoader loader{"../apps"};
+    AppIndex appIndex{&loader};
 public:
     ArgAppTest() {
-        AppLoader::global = std::make_unique<AppLoader>("../apps");
+        appIndex.prepareApps({123}, {arg_app_id_g});
     }
 };
 
@@ -101,7 +103,7 @@ TEST_F(ArgAppTest, SimpleTransfer) {
                      },
                      {}, 4);
 
-    RequestScheduler scheduler(1, index);
+    RequestScheduler scheduler(1, index, appIndex);
 
     scheduler.addRequest(std::move(transferReq));
     scheduler.finalizeRequest(0);
@@ -142,7 +144,7 @@ TEST_F(ArgAppTest, SimpleCreateAcc) {
     ChunkIndex index({}, {{newChunkID, &p}}, {{newChunkID},
                                               {{67, 0}}}, 4);
 
-    RequestScheduler scheduler(1, index);
+    RequestScheduler scheduler(1, index, appIndex);
 
     scheduler.addRequest(std::move(createReq));
     scheduler.finalizeRequest(0);
@@ -278,7 +280,7 @@ TEST_F(ArgAppTest, TwoTransfers) {
                      },
                      {}, 4);
 
-    RequestProcessor processor(index, 2, 5);
+    RequestProcessor processor(index, appIndex, 2, 5);
 
     processor.loadRequests<FakeStream>({
                                                {0, 1, requests},

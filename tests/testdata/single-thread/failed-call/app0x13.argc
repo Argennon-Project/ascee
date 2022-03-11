@@ -28,9 +28,9 @@ dispatcher {
     invoke_dispatcher(40, 21, response, request);
     append_str(all, response);
 
-     // array out of bounds
-     invoke_dispatcher(40, 24, response, request);
-     append_str(all, response);
+    // array out of bounds
+    invoke_dispatcher(40, 24, response, request);
+    append_str(all, response);
 
     clear_buffer(response);
     append_str(response, all);

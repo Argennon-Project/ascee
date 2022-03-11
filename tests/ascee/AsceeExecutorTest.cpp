@@ -16,9 +16,10 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include "executor/Executor.h"
-#include "loader/AppLoader.h"
 #include "argc/types.h"
 #include "subtest.h"
+#include "storage/AppLoader.h"
+#include "storage/AppIndex.h"
 
 #include <gtest/gtest.h>
 
@@ -33,12 +34,11 @@ using std::string, std::vector, std::to_string;
 class AsceeExecutorTest : public ::testing::Test {
 protected:
 public:
-    AsceeExecutorTest() {
-        AppLoader::global = std::make_unique<AppLoader>("testdata/single-thread");
-    }
+    AsceeExecutorTest() {}
 };
 
 struct AppTestCase {
+    std::string_view libPath;
     long_id calledApp;
     string request;
     int_fast32_t gas;
@@ -48,12 +48,15 @@ struct AppTestCase {
 
 
     void test() const {
+        asa::AppLoader loader(libPath);
+        asa::AppIndex appIndex(&loader);
+        appIndex.prepareApps({123}, appAccessList);
         AppRequest req{
                 .calledAppID = calledApp,
                 .httpRequest = request,
                 .gas = gas,
                 .modifier = argennon::mocking::ascee::MockModifier(),
-                .appTable = AppTable(appAccessList),
+                .appTable = appIndex.buildAppTable(appAccessList),
         };
         //EXPECT_CALL(req.modifier, saveVersion()).Times(1);
         Executor executor;
@@ -66,9 +69,9 @@ struct AppTestCase {
 };
 
 TEST_F(AsceeExecutorTest, ZeroGas) {
-    AppLoader::global = std::make_unique<AppLoader>("testdata/single-thread/call");
     StringBuffer<1024> buf;
     AppTestCase testCase{
+            .libPath = "testdata/single-thread/call",
             .calledApp = 11,
             .request = "test request",
             .gas = 1,
@@ -83,8 +86,8 @@ TEST_F(AsceeExecutorTest, ZeroGas) {
 }
 
 TEST_F(AsceeExecutorTest, OneLevelCall) {
-    AppLoader::global = std::make_unique<AppLoader>("testdata/single-thread/call");
     AppTestCase testCase{
+            .libPath = "testdata/single-thread/call",
             .calledApp = 11,
             .request = "test request",
             .gas = NORMAL_GAS,
@@ -96,8 +99,8 @@ TEST_F(AsceeExecutorTest, OneLevelCall) {
 }
 
 TEST_F(AsceeExecutorTest, TwoLevelCall) {
-    AppLoader::global = std::make_unique<AppLoader>("testdata/single-thread/call");
     AppTestCase testCase{
+            .libPath = "testdata/single-thread/call",
             .calledApp = 15,
             .request = "test request",
             .gas = NORMAL_GAS,
@@ -109,9 +112,9 @@ TEST_F(AsceeExecutorTest, TwoLevelCall) {
 }
 
 TEST_F(AsceeExecutorTest, AppNotFound) {
-    AppLoader::global = std::make_unique<AppLoader>("testdata/single-thread/call");
     StringBuffer<1024> buf;
     AppTestCase testCase{
+            .libPath = "testdata/single-thread/call",
             .calledApp = 16,
             .request = "test request",
             .gas = NORMAL_GAS,
@@ -126,9 +129,9 @@ TEST_F(AsceeExecutorTest, AppNotFound) {
 }
 
 TEST_F(AsceeExecutorTest, AppNotDeclared) {
-    AppLoader::global = std::make_unique<AppLoader>("testdata/single-thread/call");
     StringBuffer<1024> buf;
     AppTestCase testCase{
+            .libPath = "testdata/single-thread/call",
             .calledApp = 15,
             .request = "test request",
             .gas = NORMAL_GAS,
@@ -144,9 +147,9 @@ TEST_F(AsceeExecutorTest, AppNotDeclared) {
 }
 
 TEST_F(AsceeExecutorTest, SimpleTimeOut) {
-    AppLoader::global = std::make_unique<AppLoader>("testdata/single-thread/timeout");
     StringBuffer<1024> buf;
     AppTestCase testCase{
+            .libPath = "testdata/single-thread/timeout",
             .calledApp = 10,
             .request = "test request",
             .gas = NORMAL_GAS,
@@ -161,13 +164,13 @@ TEST_F(AsceeExecutorTest, SimpleTimeOut) {
 }
 
 TEST_F(AsceeExecutorTest, CalledTimeOut) {
-    AppLoader::global = std::make_unique<AppLoader>("testdata/single-thread/timeout");
     StringBuffer<1024> buf;
     AppTestCase testCase{
+            .libPath = "testdata/single-thread/timeout",
             .calledApp = 12,
             .request = "test request",
             .gas = NORMAL_GAS,
-            .appAccessList = {12, 10},
+            .appAccessList = {10, 12}, // must be sorted
             .wantResponse = string(Executor::Error(
                     "cpu timer expired",
                     StatusCode::execution_timeout,
@@ -178,9 +181,9 @@ TEST_F(AsceeExecutorTest, CalledTimeOut) {
 }
 
 TEST_F(AsceeExecutorTest, SimpleStackOverflow) {
-    AppLoader::global = std::make_unique<AppLoader>("testdata/single-thread/stack-overflow");
     StringBuffer<1024> buf;
     AppTestCase testCase{
+            .libPath = "testdata/single-thread/stack-overflow",
             .calledApp = 13,
             .request = "test request",
             .gas = NORMAL_GAS,
@@ -195,9 +198,9 @@ TEST_F(AsceeExecutorTest, SimpleStackOverflow) {
 }
 
 TEST_F(AsceeExecutorTest, CalledStackOverflow) {
-    AppLoader::global = std::make_unique<AppLoader>("testdata/single-thread/stack-overflow");
     StringBuffer<1024> buf;
     AppTestCase testCase{
+            .libPath = "testdata/single-thread/stack-overflow",
             .calledApp = 14,
             .request = "test request",
             .gas = NORMAL_GAS,
@@ -212,9 +215,9 @@ TEST_F(AsceeExecutorTest, CalledStackOverflow) {
 }
 
 TEST_F(AsceeExecutorTest, CircularCallLowGas) {
-    AppLoader::global = std::make_unique<AppLoader>("testdata/single-thread/circular");
     StringBuffer<1024> buf;
     AppTestCase testCase{
+            .libPath = "testdata/single-thread/circular",
             .calledApp = 17,
             .request = "test request",
             .gas = LOW_GAS,
@@ -229,9 +232,9 @@ TEST_F(AsceeExecutorTest, CircularCallLowGas) {
 }
 
 TEST_F(AsceeExecutorTest, CircularCallHighGas) {
-    AppLoader::global = std::make_unique<AppLoader>("testdata/single-thread/circular");
     StringBuffer<1024> buf;
     AppTestCase testCase{
+            .libPath = "testdata/single-thread/circular",
             .calledApp = 17,
             .request = "test request",
             .gas = 1000000000,
@@ -246,7 +249,6 @@ TEST_F(AsceeExecutorTest, CircularCallHighGas) {
 }
 
 TEST_F(AsceeExecutorTest, FailedCalls) {
-    AppLoader::global = std::make_unique<AppLoader>("testdata/single-thread/failed-call");
     StringBuffer<1024> buf;
     Executor::Error(
             "cpu timer expired",
@@ -274,10 +276,11 @@ TEST_F(AsceeExecutorTest, FailedCalls) {
             long_id(24)).toHttpResponse(buf);
 
     AppTestCase testCase{
+            .libPath = "testdata/single-thread/failed-call",
             .calledApp = 19,
             .request = "test request",
             .gas = NORMAL_GAS,
-            .appAccessList = {20, 21, 10, 19, 24},
+            .appAccessList = {10, 19, 20, 21, 24},
             .wantResponse = string(buf) + " all called...",
             .wantCode = 200
     };
@@ -285,7 +288,6 @@ TEST_F(AsceeExecutorTest, FailedCalls) {
 }
 
 TEST_F(AsceeExecutorTest, SimpleReentancy) {
-    AppLoader::global = std::make_unique<AppLoader>("testdata/single-thread/reentrancy");
     auto reentrancyErr = Executor::Error(
             "reentrancy is not allowed",
             StatusCode::reentrancy_attempt,
@@ -297,6 +299,7 @@ TEST_F(AsceeExecutorTest, SimpleReentancy) {
     reentrancyErr.toHttpResponse(buf);
 
     AppTestCase testCase{
+            .libPath = "testdata/single-thread/reentrancy",
             .calledApp = 22,
             .request = "choice: 1",
             .gas = NORMAL_GAS,
@@ -308,9 +311,9 @@ TEST_F(AsceeExecutorTest, SimpleReentancy) {
 }
 
 TEST_F(AsceeExecutorTest, SimpleDeferredCall) {
-    AppLoader::global = std::make_unique<AppLoader>("testdata/single-thread/reentrancy");
     StringBuffer<1024> buf;
     AppTestCase testCase{
+            .libPath = "testdata/single-thread/reentrancy",
             .calledApp = 22,
             .request = "choice: 4",
             .gas = NORMAL_GAS,

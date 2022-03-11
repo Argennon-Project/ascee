@@ -118,14 +118,17 @@ int main(int argc, char const* argv[]) {
                              dummyBlockNumber + 1
     );
 
-    ChunkIndex index({}, {
-                             {full_id(arg_app_id_g, {0x95ab000000000000, 0}), &senderPage},
-                             {full_id(arg_app_id_g, {0xaabc000000000000, 0}), &recipientPage}
-                     },
-                     {}, 2);
+    ChunkIndex chunkIndex({}, {
+                                  {full_id(arg_app_id_g, {0x95ab000000000000, 0}), &senderPage},
+                                  {full_id(arg_app_id_g, {0xaabc000000000000, 0}), &recipientPage}
+                          },
+                          {}, 2);
 
-    AppLoader::global = std::make_unique<AppLoader>("apps");
-    RequestProcessor processor(index, int(requests.size()), 3);
+    AppLoader appLoader("apps");
+    AppIndex appIndex(&appLoader);
+    appIndex.prepareApps({123}, {arg_app_id_g});
+
+    RequestProcessor processor(chunkIndex, appIndex, int(requests.size()), 3);
 
     processor.loadRequests<FakeStream>({
                                                {0, 1, requests},

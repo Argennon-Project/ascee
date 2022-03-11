@@ -36,7 +36,7 @@ public:
     PageCache(const PageCache&) = delete;
 
     std::vector<std::pair<full_id, Page*>>
-    prepareBlockPages(
+    preparePages(
             const BlockInfo& block,
             std::vector<VarLenFullID>&& pageAccessList,
             const std::vector<MigrationInfo>& chunkMigrations
