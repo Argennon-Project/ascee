@@ -17,8 +17,6 @@
 
 #include "AppTable.h"
 
-#include <utility>
-
 using namespace argennon;
 using namespace ascee::runtime;
 

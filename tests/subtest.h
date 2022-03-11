@@ -23,4 +23,14 @@
 
 #define SUB_TEST(name, variable)  { SCOPED_TRACE(std::string(name).append("\n\n")); (variable).test(); }
 
+
+#define BENCHMARK(statement, runs, name) {\
+auto start = std::chrono::steady_clock::now(); \
+for (int i = 0; i < (runs); ++i) { \
+    statement; \
+} \
+auto end = std::chrono::steady_clock::now(); \
+std::chrono::duration<double> elapsed_seconds = end - start; \
+std::cout << (name) << ": " << elapsed_seconds.count() << " seconds\n"; }
+
 #endif // ASCEE_SUBTEST_H
