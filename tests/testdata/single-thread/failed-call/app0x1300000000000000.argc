@@ -6,30 +6,30 @@ dispatcher {
 
     // time out
     append_str(response, dummy);
-    invoke_dispatcher(40, 10, response, request);
+    invoke_dispatcher(40, 0xa00000000000000, response, request);
     append_str(all, response);
 
     // division zero
     append_str(response, dummy);
-    invoke_dispatcher(40, 20, response, request);
+    invoke_dispatcher(40, 0x1400000000000000, response, request);
     append_str(all, response);
 
     // self call: App not found
     append_str(response, dummy);
-    invoke_dispatcher(40, 19, response, request);
+    invoke_dispatcher(40, 0x1300000000000000, response, request);
     append_str(all, response);
 
     // App not declared
     append_str(response, dummy);
-    invoke_dispatcher(40, 11, response, request);
+    invoke_dispatcher(40, 0xb00000000000000, response, request);
     append_str(all, response);
 
     // segmentation fault
-    invoke_dispatcher(40, 21, response, request);
+    invoke_dispatcher(40, 0x1500000000000000, response, request);
     append_str(all, response);
 
     // array out of bounds
-    invoke_dispatcher(40, 24, response, request);
+    invoke_dispatcher(40, 0x1800000000000000, response, request);
     append_str(all, response);
 
     clear_buffer(response);

@@ -8,23 +8,23 @@ void f(string_buffer_c<8192>& response, int32 deferred_call) {
     string_view_c req3 =  "choice: 3";
 
     if (deferred_call) {
-        invoke_deferred(23, response, req3);
+        invoke_deferred(0x1700000000000000, response, req3);
         // forgetting to call exit_area()...
         return;
     }
 
     string_buffer_c<1024> all = {};
 
-    invoke_dispatcher(50, 23, response, req1);
+    invoke_dispatcher(50, 0x1700000000000000, response, req1);
     append_str(all, response);
 
-    invoke_dispatcher(50, 23, response, req2);
+    invoke_dispatcher(50, 0x1700000000000000, response, req2);
     append_str(all, response);
 
-    invoke_dispatcher(50, 23, response, req1);
+    invoke_dispatcher(50, 0x1700000000000000, response, req1);
     append_str(all, response);
 
-    invoke_dispatcher(50, 23, response, req3);
+    invoke_dispatcher(50, 0x1700000000000000, response, req3);
     append_str(all, response);
 
     clear_buffer(response);

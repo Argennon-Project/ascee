@@ -30,7 +30,7 @@ void AppTable::checkApp(long_id appID) const {
             throw AsceeError("app does not exist", StatusCode::not_found);
         }
     } catch (const std::out_of_range&) {
-        throw AsceeError("app/" + std::to_string(appID) + " was not declared in the call list",
+        throw AsceeError("app/" + (std::string) appID + " was not declared in the call list",
                          StatusCode::limit_violated);
     }
 }

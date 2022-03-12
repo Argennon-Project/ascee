@@ -2,7 +2,7 @@
 
 dispatcher {
     int32[131072] dummy = {};
-    invoke_dispatcher(250, 17, response, request);
+    invoke_dispatcher(250, 0x1100000000000000, response, request);
     return HTTP_OK;
 }
 

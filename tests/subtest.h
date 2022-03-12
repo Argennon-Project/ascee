@@ -19,6 +19,7 @@
 #define ASCEE_SUBTEST_H
 
 #include "gtest/gtest.h"
+#include "gmock/gmock.h"
 #include <string>
 
 #define SUB_TEST(name, variable)  { SCOPED_TRACE(std::string(name).append("\n\n")); (variable).test(); }
