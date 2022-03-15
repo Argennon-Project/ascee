@@ -27,7 +27,7 @@
 
 #include "executor/FailureManager.h"
 #include "ThreadCpuTimer.h"
-#include "VirtualSigManager.h"
+#include "VirtualSignatureManager.h"
 #include "AppTable.h"
 #include "heap/RestrictedModifier.h"
 #include "util/crypto/CryptoSystem.h"
@@ -69,6 +69,7 @@ struct AppRequest {
     AppTable appTable;
     FailureManager failureManager;
     std::vector<AppRequestIdType> attachments;
+    VirtualSignatureManager signatureManager;
     Digest digest;
 };
 
@@ -161,7 +162,7 @@ public:
         const AppTable& appTable = request->appTable;
         FailureManager& failureManager = request->failureManager;
         std::unordered_map<uint64_t, bool> isLocked;
-        VirtualSigManager virtualSigner;
+        VirtualSignatureManager& sigManager = request->signatureManager;
         util::CryptoSystem& cryptoSigner;
 
         CallContext* currentCall = nullptr;

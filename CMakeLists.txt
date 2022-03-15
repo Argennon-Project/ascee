@@ -42,7 +42,7 @@ add_subdirectory(src/validator)
 add_subdirectory(src/storage)
 add_subdirectory(tests)
 
-add_compile_options(-Wall -Og)
+#add_compile_options(-Wall -Og)
 
 add_executable(ascee_run src/main.cpp)
 target_link_libraries(ascee_run ave asa ascee argutil stdc++ pthread rt pbc gmp crypto dl)

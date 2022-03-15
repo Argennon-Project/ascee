@@ -22,7 +22,7 @@ bool create_normal_account(long_id address, publickey_c& pk, signature_c& proof)
     return true;
 }
 
-void transfer(long_id from, long_id to, int64 amount, signature_c& sig) {
+void transfer(long_id from, long_id to, int64 amount, int16 sig_index) {
     //todo: we should check this when we are reading the request and remove this check from here
     if (amount < 0) revert("negative amount");
 
@@ -34,7 +34,7 @@ void transfer(long_id from, long_id to, int64 amount, signature_c& sig) {
     append_str(msg, ",\"amount\":");
     append_int64(msg, amount);
     // "," should not be appended to the end.
-    if (!verify_by_acc_once(from, msg, sig, sender_balance_offset)) revert("invalid address or signature");
+    if (!verify_by_acc_once(from, msg, sig_index, sender_balance_offset)) revert("invalid address or signature");
 
     // loading balance chunk
     load_account_chunk(from, 0);
@@ -48,7 +48,7 @@ void transfer(long_id from, long_id to, int64 amount, signature_c& sig) {
 
     message_c empty = {};
     int32 recipient_offset = -1;
-    if (!verify_by_acc_once(to, empty, sig, recipient_offset)) revert("invalid recipient account");
+    if (!verify_by_acc_once(to, empty, sig_index, recipient_offset)) revert("invalid recipient account");
 
     // loading nonce chunk of the recipient
     load_account_chunk(to, 0);
@@ -63,8 +63,8 @@ dispatcher {
         long_id account = p_scan_long_id(request, "/balances/", "/", position);
         long_id to = p_scan_long_id(request, "{\"to\":", ",", position);
         int64 amount = p_scan_int64(request, "\"amount\":", ",", position);
-        signature_c sig = p_scan_sig(request, "\"sig\":\"", "\"", position);
-        transfer(account, to, amount, sig);
+        int16 sig_index = p_scan_int64(request, "\"sig\":", "}", position);
+        transfer(account, to, amount, sig_index);
         append_str(response, "success and a good response!");
         return 200;
     } else if (method == "PUT") {

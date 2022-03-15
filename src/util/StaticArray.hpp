@@ -32,7 +32,10 @@ public:
 
     StaticArray(const std::array<T, sizeValue>& a) : content(a) {} // NOLINT(google-explicit-constructor)
 
-    StaticArray(const StaticArray&) { std::terminate(); }
+    explicit StaticArray(uint8_t* binary) {
+        auto sizeInBytes = sizeValue * sizeof(T);
+        util::memCopy(content.data(), binary, sizeInBytes);
+    }
 
     explicit StaticArray(std::string_view base64) {
         auto sizeInBytes = sizeValue * sizeof(T);

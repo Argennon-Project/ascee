@@ -25,20 +25,26 @@
 
 namespace argennon::ascee::runtime {
 
-class VirtualSigManager {
+class VirtualSignatureManager {
 public:
+    struct SignedMessage {
+        long_id issuerAccount;
+        std::string message;
+    };
     static const std::size_t SIG_CONSTANT_COST = 8;
     static const std::size_t MAX_COST = 128 * 1024;
 
-    void sign(long_id appID, const StringView& msg);
+    explicit VirtualSignatureManager(std::vector<SignedMessage>&& messages);
 
-    bool verify(long_id appID, const StringView& msg);
+    int32_fast sign(std::string msg, long_id issuer);
 
-    bool verifyAndInvalidate(long_id appID, const StringView& msg);
+    bool verify(std::string_view msg, long_id issuer, int32_fast index);
+
+    bool verifyAndInvalidate(std::string_view msg, long_id issuer, int32_fast index);
 
 private:
     std::size_t cost = 0;
-    std::unordered_map<uint64_t, std::unordered_set<std::string>> messages;
+    std::vector<SignedMessage> messages;
 };
 
 } // namespace argennon::ascee::runtime

@@ -80,12 +80,6 @@ long_id p_scan_long_id(string_view_c str, string_view_c start, string_view_c end
 
 string_view_c p_scan_str(string_view_c str, string_view_c start, string_view_c end, int32& pos);
 
-bool verify_by_app_once(long_id app_id, message_c& msg);
-
-bool verify_by_app(long_id app_id, message_c& msg);
-
-bool verify_by_acc(long_id account_id, message_c& msg, signature_c& sig);
-
 bool invalid(int32 offset, int32 size);
 
 void store_int64(int32 offset, int64 value);
@@ -106,13 +100,19 @@ void load_account_chunk(long_id acc_id, long_id local_id);
 
 void load_local_chunk(long_id id);
 
-bool verify_by_acc_once(long_id account_id, message_c& msg, signature_c& sig, int32& balance_offset);
-
 void store_int16(int32 offset, int16 value);
 
 void store_pk(int32 offset, int32 index, publickey_c& value);
 
 int32 get_chunk_size();
+
+bool verify_by_acc_once(long_id account_id, message_c& msg, int16 sigIndex, int32& balance_offset);
+
+bool verify_by_app_once(long_id account_id, message_c& msg, int16 sigIndex);
+
+bool verify_by_acc(long_id account_id, message_c& msg, int16 sigIndex);
+
+bool verify_by_app(long_id account_id, message_c& msg, int16 sigIndex);
 } // namespace argc
 
 #endif // ARGENNON_ARGC_FUNCTIONS_H

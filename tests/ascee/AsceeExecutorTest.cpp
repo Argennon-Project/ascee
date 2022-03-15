@@ -62,6 +62,7 @@ struct AppTestCase {
                 .gas = gas,
                 .modifier = argennon::mocking::ascee::MockModifier(),
                 .appTable = appIndex.buildAppTable(shiftedAccessList),
+                .signatureManager = VirtualSignatureManager({})
         };
         {
             testing::InSequence seq;

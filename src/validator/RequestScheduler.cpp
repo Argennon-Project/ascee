@@ -21,6 +21,7 @@
 using namespace argennon;
 using namespace ave;
 using namespace ascee::runtime;
+using namespace util;
 using std::make_unique, std::vector, asa::ChunkIndex;
 
 AppRequest* RequestScheduler::nextRequest() {
@@ -189,6 +190,34 @@ AppTable RequestScheduler::getAppTableFor(vector<long_id>&& sortedAppList) const
     return appIndex.buildAppTable(std::move(sortedAppList));
 }
 
+VirtualSignatureManager RequestScheduler::getSigManagerFor(vector<AppRequestInfo::SignedMessage>&& messageList) const {
+    if (messageList.empty()) return VirtualSignatureManager({});
+    static thread_local CryptoSystem crypto;
+    vector<VirtualSignatureManager::SignedMessage> result;
+    result.reserve(messageList.size());
+    for (auto& msg: messageList) {
+        // low level access to account data
+        bool verifies = false;
+        try {
+            auto contentPtr = heapIndex.getChunk({arg_app_id_g, {msg.issuerAccount, nonce_chunk_id_g}})
+                    ->getContentPointer(0, 2 + util::public_key_size_k).get(0);
+            uint16 decisionNonce = *(uint16*) contentPtr;
+
+            // decisionNonce == 0 means that the owner of the account is an app
+            if (decisionNonce != 0) {
+                PublicKey pk(2 + contentPtr);
+                if (crypto.verify(msg.message, msg.signature, pk)) verifies = true;
+            }
+        } catch (const std::out_of_range&) {}
+        result.emplace_back(
+                VirtualSignatureManager::SignedMessage{
+                        msg.issuerAccount,
+                        verifies ? std::move(msg.message) : ""
+                });
+    }
+    return VirtualSignatureManager(std::move(result));
+}
+
 DagNode::DagNode(AppRequestInfo&& data,
                  const RequestScheduler* scheduler) :
         adjList(std::move(data.adjList)),
@@ -204,6 +233,7 @@ DagNode::DagNode(AppRequestInfo&& data,
                         std::move(data.cpuTimeFailures)
                 ),
                 .attachments = std::move(data.attachments),
+                .signatureManager = scheduler->getSigManagerFor(std::move(data.signedMessagesList)),
                 .digest = std::move(data.digest)
                 // Members are initialized in left-to-right order as they appear in this class's base-specifier list.
         } {}

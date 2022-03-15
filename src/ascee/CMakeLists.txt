@@ -8,7 +8,7 @@ set(SOURCE_FILES
         executor/ThreadCpuTimer.cpp
         executor/Executor.cpp
         executor/FailureManager.cpp
-        executor/VirtualSigManager.cpp
+        executor/VirtualSignatureManager.cpp
         argc/functions/string.cpp
         argc/functions/invoke.cpp
         argc/functions/auth.cpp

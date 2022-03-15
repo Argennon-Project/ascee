@@ -70,7 +70,7 @@ int main(int argc, char const* argv[]) {
                                    "Content-Type: application/json; charset=utf-8\r\n"
                                    "Content-Length: 57\r\n"
                                    "\r\n"
-                                   R"({"to":0xaabc,"amount":1399,"sig":"LNUC49Lhyz702uszzNcfaU3BhPIbdaSgzqDUKzbJzLPTlFS2J9GzHlcDKbvxx5T5yfvJOTAcmnX0Oh0B_-gqPwE"})",
+                                   R"({"to":0xaabc,"amount":1399,"sig":0})",
                     .gas = 1000,
                     .appAccessList = {arg_app_id_g},
                     .memoryAccessMap = {
@@ -81,8 +81,18 @@ int main(int argc, char const* argv[]) {
                                                                       {65, Access::read_only, 0}, {8, Access::writable, 0}}},
                                              {{-3, 0, 67}, {{1, Access::writable, 0}, {2, Access::read_only, 0}, {8, Access::int_additive, 0}}},
 
-                                     }}}}
+                                     }}}},
+                    .signedMessagesList {
+                            {
+                                    0x95ab000000000000,
+                                    R"({"to":0xaabc000000000000,"amount":1399,"forApp":0x100000000000000,"nonce":11})",
+                                    util::Signature(
+                                            "LNUC49Lhyz702uszzNcfaU3BhPIbdaSgzqDUKzbJzLPTlFS2J9GzHlcDKbvxx5T5yfvJOTAcmnX0Oh0B_-gqPwE"
+                                    )
+                            },
+                    }
             }
+
     };
 
     auto dummyBlockNumber = 777;
@@ -90,32 +100,37 @@ int main(int argc, char const* argv[]) {
     Page senderPage(dummyBlockNumber);
     VarLenFullID senderPageID(std::unique_ptr<byte[]>(new byte[4]{0x1, 0x95, 0xab, 0x0}));
 
-    senderPage.applyDelta(senderPageID,
-                          Page::Delta{.content = {0,
-                                                  67 + 8, 1, 69, 11, 0,
-                                  // pk:
-                                                  167, 63, 227, 175, 206, 43, 231, 39, 62, 86, 43, 145, 251, 240, 227,
-                                                  178, 221, 130, 234, 41, 17, 67, 121, 119, 77, 0, 95, 153, 38, 130,
-                                                  216, 239, 80, 89, 85, 0, 151, 119, 0, 128, 34, 109, 35, 97, 213, 164,
-                                                  90, 32, 235, 166, 222, 205, 23, 213, 117, 203, 40, 224, 7, 128, 243,
-                                                  108, 37, 70,
-                                                  0,
-                                  // pk end
-                                                  21, 20},
-                                  .finalDigest = {}},
-                          dummyBlockNumber + 1
+    senderPage.
+            applyDelta(senderPageID,
+                       Page::Delta{.content = {0,
+                                               67 + 8, 1, 69, 11, 0,
+                               // pk:
+                                               167, 63, 227, 175, 206, 43, 231, 39, 62, 86, 43, 145, 251, 240, 227,
+                                               178, 221, 130, 234, 41, 17, 67, 121, 119, 77, 0, 95, 153, 38, 130,
+                                               216, 239, 80, 89, 85, 0, 151, 119, 0, 128, 34, 109, 35, 97, 213, 164,
+                                               90, 32, 235, 166, 222, 205, 23, 213, 117, 203, 40, 224, 7, 128, 243,
+                                               108, 37, 70,
+                                               0,
+                               // pk end
+                                               21, 20},
+                               .finalDigest = {}},
+                       dummyBlockNumber
+                       + 1
     );
 
     Page recipientPage(dummyBlockNumber);
     VarLenFullID toPageID(std::unique_ptr<byte[]>(new byte[4]{0x1, 0xaa, 0xbc, 0x0}));
-    recipientPage.applyDelta(toPageID,
-                             {{
-                                      0,
-                                      67 + 8, 1, 2, 45, 45,
-                                      66, 2, 1, 1
-                              },
-                              {}},
-                             dummyBlockNumber + 1
+    recipientPage.
+            applyDelta(toPageID,
+                       {
+                               {
+                                       0,
+                                       67 + 8, 1, 2, 45, 45,
+                                       66, 2, 1, 1
+                               },
+                               {
+                               }},
+                       dummyBlockNumber + 1
     );
 
     ChunkIndex chunkIndex({}, {
@@ -126,18 +141,36 @@ int main(int argc, char const* argv[]) {
 
     AppLoader appLoader("apps");
     AppIndex appIndex(&appLoader);
-    appIndex.prepareApps({123}, {arg_app_id_g});
+    appIndex.prepareApps({
+                                 123}, {
+                                 arg_app_id_g});
 
     RequestProcessor processor(chunkIndex, appIndex, int(requests.size()), 3);
 
     processor.loadRequests<FakeStream>({
-                                               {0, 1, requests},
+                                               {
+                                                       0, 1, requests},
                                        });
-    processor.buildDependencyGraph();
+    processor.
+
+            buildDependencyGraph();
+
     auto response = processor.executeRequests<Executor>();
 
-    printf("<<<******* Response *******>>> \n%s\n<<<************************>>>\n", response[0].httpResponse.c_str());
+    printf("<<<******* Response *******>>> \n%s\n<<<************************>>>\n", response[0].httpResponse.
 
-    std::cout << (std::string) *senderPage.getNative() << "\n";
-    std::cout << (std::string) *recipientPage.getNative() << "\n";
+            c_str()
+
+    );
+
+    std::cout << (std::string) *senderPage.
+
+            getNative()
+
+              << "\n";
+    std::cout << (std::string) *recipientPage.
+
+            getNative()
+
+              << "\n";
 }

@@ -182,6 +182,9 @@ public:
 
     ascee::runtime::AppTable getAppTableFor(std::vector<long_id>&& sortedAppList) const;
 
+    ascee::runtime::VirtualSignatureManager
+    getSigManagerFor(std::vector<AppRequestInfo::SignedMessage>&& messageList) const;
+
     explicit operator std::string() const;
 
     template<class Cluster, class Dag>

@@ -127,7 +127,9 @@ using long_long_id = LongLongID;
 using full_id = FullID;
 
 constexpr long_id arg_app_id_g = 0x100000000000000;
-constexpr uint16_t nonce_start_g = 8;
+constexpr long_id nonce_chunk_id_g = 0;
+constexpr int nonce16_size_g = int(sizeof(uint16));
+constexpr uint16_t min_nonce_g = 8;
 
 } // namespace argennon
 #endif // ASCEE_PRIMITIVES_H

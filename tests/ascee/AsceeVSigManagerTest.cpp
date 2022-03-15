@@ -17,26 +17,26 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include "gtest/gtest.h"
-#include "executor/VirtualSigManager.h"
+#include "executor/VirtualSignatureManager.h"
 
 using namespace argennon::ascee::runtime;
 
 
 TEST(AsceeVSigManagerTest, Simple) {
-    VirtualSigManager signer;
-    signer.sign(1234, "Hi all!");
+    VirtualSignatureManager signer({});
+    auto sig = signer.sign("Hi all!", 1234);
 
-    EXPECT_FALSE(signer.verify(12, "Hi all!"));
+    EXPECT_FALSE(signer.verify("Hi all!", 12, sig));
 
-    EXPECT_FALSE(signer.verify(1234, "Hi al!"));
+    EXPECT_FALSE(signer.verify("Hi al!", 1234, sig));
 
-    EXPECT_TRUE(signer.verify(1234, "Hi all!"));
+    EXPECT_TRUE(signer.verify("Hi all!", 1234, sig));
 
-    EXPECT_TRUE(signer.verifyAndInvalidate(1234, "Hi all!"));
+    EXPECT_TRUE(signer.verifyAndInvalidate("Hi all!", 1234, sig));
 
-    EXPECT_FALSE(signer.verifyAndInvalidate(1234, "Hi all!"));
+    EXPECT_FALSE(signer.verifyAndInvalidate("Hi all!", 1234, sig));
 
-    EXPECT_FALSE(signer.verify(1234, "Hi all!"));
+    EXPECT_FALSE(signer.verify("Hi all!", 1234, sig));
 }
 
 

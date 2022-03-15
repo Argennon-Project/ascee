@@ -19,12 +19,14 @@
 #define ARGENNON_INFO_H
 
 #include <string>
+#include <utility>
 #include <vector>
 #include <unordered_set>
 #include "primitives.h"
 #include "util/OrderedStaticMap.hpp"
 #include "util/PrefixTrie.hpp"
 #include "tries.hpp"
+#include "util/crypto/Keys.h"
 
 
 namespace argennon {
@@ -123,7 +125,7 @@ struct AccessBlockInfo {
      */
     bool operator<(const AccessBlockInfo& rhs) const {
         return accessType < rhs.accessType ||
-               accessType == rhs.accessType && requestID < rhs.requestID;
+               (accessType == rhs.accessType && requestID < rhs.requestID);
     }
 
     bool operator==(const AccessBlockInfo& other) const {
@@ -212,6 +214,13 @@ struct AppRequestInfo {
     // BlockLoader needs to verify that all integers in the attachments list are in [0, numOfRequests)
     std::vector<AppRequestIdType> attachments;
 
+    struct SignedMessage {
+        long_id issuerAccount;
+        std::string message;
+        util::Signature signature;
+    };
+
+    std::vector<SignedMessage> signedMessagesList;
     Digest digest;
 };
 

@@ -49,7 +49,7 @@ TEST_F(ArgAppTest, SimpleTransfer) {
                            "Content-Type: application/json; charset=utf-8\r\n"
                            "Content-Length: 57\r\n"
                            "\r\n"
-                           R"({"to":0xaabc,"amount":1399,"sig":"LNUC49Lhyz702uszzNcfaU3BhPIbdaSgzqDUKzbJzLPTlFS2J9GzHlcDKbvxx5T5yfvJOTAcmnX0Oh0B_-gqPwE"})",
+                           R"({"to":0xaabc,"amount":1399,"sig":0})",
             .gas = 1000,
             .appAccessList = {arg_app_id_g},
             .memoryAccessMap = {
@@ -60,7 +60,16 @@ TEST_F(ArgAppTest, SimpleTransfer) {
                                                               {65, Access::read_only, 0}, {8, Access::writable, 0}}},
                                      {{-3, 0, 67}, {{1, Access::writable, 0}, {2, Access::read_only, 0}, {8, Access::int_additive, 0}}},
 
-                             }}}}
+                             }}}},
+            .signedMessagesList {
+                    {
+                            0x95ab000000000000,
+                            R"({"to":0xaabc000000000000,"amount":1399,"forApp":0x100000000000000,"nonce":11})",
+                            util::Signature(
+                                    "LNUC49Lhyz702uszzNcfaU3BhPIbdaSgzqDUKzbJzLPTlFS2J9GzHlcDKbvxx5T5yfvJOTAcmnX0Oh0B_-gqPwE"
+                            )
+                    },
+            }
     };
 
     Page page_1(777);
@@ -187,7 +196,7 @@ TEST_F(ArgAppTest, TwoTransfers) {
                                    "Content-Type: application/json; charset=utf-8\r\n"
                                    "Content-Length: 57\r\n"
                                    "\r\n"
-                                   R"({"to":0xaabc,"amount":1234,"sig":"ET9Xz7GfWu87d4eKnFM6lEtfxUunEZSPD6H0WNZRC2qNvXntEVlLqjfmfeKiiu8eEeVXGiOzF0XvYSkwsZGs8gA"})",
+                                   R"({"to":0xaabc,"amount":1234,"sig":0})",
                     .gas = 1000,
                     .appAccessList = {arg_app_id_g},
                     .memoryAccessMap = {
@@ -198,7 +207,16 @@ TEST_F(ArgAppTest, TwoTransfers) {
                                                                       {65, Access::read_only, 0}, {8, Access::writable, 0}}},
                                              {{-3, 0, 67}, {{1, Access::writable, 0}, {2, Access::read_only, 0}, {8, Access::int_additive, 0}}},
 
-                                     }}}}
+                                     }}}},
+                    .signedMessagesList {
+                            {
+                                    0x95ab000000000000,
+                                    R"({"to":0xaabc000000000000,"amount":1234,"forApp":0x100000000000000,"nonce":11})",
+                                    util::Signature(
+                                            "ET9Xz7GfWu87d4eKnFM6lEtfxUunEZSPD6H0WNZRC2qNvXntEVlLqjfmfeKiiu8eEeVXGiOzF0XvYSkwsZGs8gA"
+                                    )
+                            },
+                    }
 
             },
             {
@@ -208,7 +226,7 @@ TEST_F(ArgAppTest, TwoTransfers) {
                                    "Content-Type: application/json; charset=utf-8\r\n"
                                    "Content-Length: 57\r\n"
                                    "\r\n"
-                                   R"({"to":0xaabc,"amount":556677,"sig":"O1YGnA8EUktYiTaDQudIjrjAsGrW8cB-34fulMY4d0kg4NPlY7EpNN2D9qoPWpqrinYBOvArdaPfzSkdxeV30AE"})",
+                                   R"({"to":0xaabc,"amount":556677,"sig":0})",
                     .gas = 1000,
                     .appAccessList = {arg_app_id_g},
                     .memoryAccessMap = {
@@ -218,7 +236,16 @@ TEST_F(ArgAppTest, TwoTransfers) {
                                              {{-3, 0, 67}, {{1, Access::writable, 1}, {2, Access::read_only, 1}, {8, Access::int_additive, 1}}},
                                              {{-3, 0, 2, 67}, {{1, Access::writable, 1}, {2, Access::writable, 1}, {65, Access::read_only, 1}, {8, Access::writable, 1}}},
 
-                                     }}}}
+                                     }}}},
+                    .signedMessagesList {
+                            {
+                                    0xd100000000000000,
+                                    R"({"to":0xaabc000000000000,"amount":556677,"forApp":0x100000000000000,"nonce":255})",
+                                    util::Signature(
+                                            "O1YGnA8EUktYiTaDQudIjrjAsGrW8cB-34fulMY4d0kg4NPlY7EpNN2D9qoPWpqrinYBOvArdaPfzSkdxeV30AE"
+                                    )
+                            },
+                    }
 
             }
 
@@ -280,7 +307,7 @@ TEST_F(ArgAppTest, TwoTransfers) {
                      },
                      {}, 4);
 
-    RequestProcessor processor(index, appIndex, 2, 5);
+    RequestProcessor processor(index, appIndex, 2, 3);
 
     processor.loadRequests<FakeStream>({
                                                {0, 1, requests},
