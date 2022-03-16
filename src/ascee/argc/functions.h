@@ -106,13 +106,9 @@ void store_pk(int32 offset, int32 index, publickey_c& value);
 
 int32 get_chunk_size();
 
-bool verify_by_acc_once(long_id account_id, message_c& msg, int16 sigIndex, int32& balance_offset);
+bool verify_by_acc_once(long_id issuer_account, message_c& msg, int16 sigIndex, int32& balance_offset);
 
-bool verify_by_app_once(long_id account_id, message_c& msg, int16 sigIndex);
-
-bool verify_by_acc(long_id account_id, message_c& msg, int16 sigIndex);
-
-bool verify_by_app(long_id account_id, message_c& msg, int16 sigIndex);
+bool verify_by_acc(long_id issuer_account, message_c& msg, int16 sigIndex);
 
 int16 virtual_sign(long_id issuer_account, message_c& msg);
 } // namespace argc

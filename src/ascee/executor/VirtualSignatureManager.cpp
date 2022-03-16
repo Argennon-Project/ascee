@@ -44,8 +44,9 @@ bool VirtualSignatureManager::verifyAndInvalidate(std::string_view msg, long_id 
     return false;
 }
 
-VirtualSignatureManager::VirtualSignatureManager(std::vector<SignedMessage>&& messages) : messages(
-        std::move(messages)) {}
+VirtualSignatureManager::VirtualSignatureManager(
+        std::vector<SignedMessage>&& messages
+) : messages(std::move(messages)) {}
 
 bool VirtualSignatureManager::verify(std::string_view msg, long_id issuer, int32_fast index) {
     try {

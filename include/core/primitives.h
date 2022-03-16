@@ -131,6 +131,7 @@ constexpr long_id nonce_chunk_local_id_g = 0;
 constexpr int nonce16_size_g = int(sizeof(uint16));
 constexpr uint16_t min_nonce_g = 8;
 constexpr int decision_nonce_size_g = int(sizeof(uint16));
+constexpr int arg_balance_size_g = 8;
 
 } // namespace argennon
 #endif // ASCEE_PRIMITIVES_H
