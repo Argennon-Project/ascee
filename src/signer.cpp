@@ -53,7 +53,7 @@ int main(int argc, char const* argv[]) {
     cout << "sig: " << sig.toBase64() << "\n";
     cout << "pk: " << pk2.toBase64() << "\n";
 
-    Signature sigTest("XbmMJ1msy7QCnWwZqTwG5xRWCP9-VxmMWgsqfj80N-8XfF0KJQ5J9GCXKw1hgmu9X7a6o6jckpSTJzIMWokM_AA");
+    Signature sigTest("MlzLSpbWl9kGUjH3FnMV-oD_ykknkDHi8ayBOlQGIl83icEFgeNxhtO58LU1QFVwWX4-cyKpclDid1W88RzdHgA");
     cout << signer.verify(msg, sigTest, pk2) << std::endl;
 
     return 0;

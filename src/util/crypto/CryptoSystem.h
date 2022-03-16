@@ -28,6 +28,23 @@ namespace argennon::util {
 /// This class is NOT secure and it should only be used for Debugging.
 class CryptoSystem {
 public:
+    enum class GroupType {
+        G1, G2, GT, Zr
+    };
+
+    // We shall need several element_t variables to hold the system parameters, keys and other quantities.
+    struct Element {
+        element_t e{};
+
+        operator element_t&() { // NOLINT(google-explicit-constructor)
+            return e;
+        }
+
+        Element(GroupType type, pairing_t pairing);
+
+        ~Element();
+    };
+
     CryptoSystem();
 
     ~CryptoSystem();
@@ -42,12 +59,7 @@ public:
 
 private:
     pairing_t pairing{};
-    // We shall need several element_t variables to hold the system parameters, keys and other quantities.
-    // We declare them here and initialize them in the constructor:
-    element_t g{}, h{};
-    element_t public_key{}, secret_key{};
-    element_t sig_elem{};
-    element_t temp1{}, temp2{};
+    element_t g{};
 };
 
 } // namespace argennon::util

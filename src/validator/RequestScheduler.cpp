@@ -192,7 +192,7 @@ AppTable RequestScheduler::getAppTableFor(vector<long_id>&& sortedAppList) const
 
 VirtualSignatureManager RequestScheduler::getSigManagerFor(vector<AppRequestInfo::SignedMessage>&& messageList) const {
     if (messageList.empty()) return VirtualSignatureManager({});
-    static thread_local CryptoSystem crypto;
+    static CryptoSystem crypto;
     vector<VirtualSignatureManager::SignedMessage> result;
     result.reserve(messageList.size());
     for (auto& msg: messageList) {

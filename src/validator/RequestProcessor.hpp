@@ -76,15 +76,14 @@ public:
     template<class Executor>
     std::vector<ascee::runtime::AppResponse> parallelExecuteRequests() {
         scheduler.buildExecDag();
+        // executor must be thread safe
+        Executor executor;
 
         std::vector<ascee::runtime::AppResponse> responseList(numOfRequests);
-
         std::vector<std::future<void>> pendingTasks;
         pendingTasks.reserve(workersCount);
         for (int i = 0; i < workersCount; ++i) {
             pendingTasks.emplace_back(std::async([&] {
-                // each thread must have its own executor
-                Executor executor;
                 while (auto* request = scheduler.nextRequest()) {
                     responseList[request->id] = executor.executeOne(request);
                     scheduler.submitResult(request->id, responseList[request->id].statusCode);

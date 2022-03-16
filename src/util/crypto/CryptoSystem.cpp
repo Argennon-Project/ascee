@@ -36,12 +36,14 @@ CryptoSystem::CryptoSystem() {
 
     pairing_init_set_buf(pairing, param, count);
 
+    element_t public_key{}, secret_key{};
+    element_t sig_elem{}, h{};
+
     element_init_G2(g, pairing);
     element_init_G2(public_key, pairing);
     element_init_G1(h, pairing);
     element_init_G1(sig_elem, pairing);
-    element_init_GT(temp1, pairing);
-    element_init_GT(temp2, pairing);
+
     element_init_Zr(secret_key, pairing);
 
     // generate system parameters:
@@ -69,27 +71,28 @@ CryptoSystem::CryptoSystem() {
 
     Signature signature;
     if (element_length_in_bytes_compressed(sig_elem) > signature.size()) throw std::length_error("signature length");
-}
 
-CryptoSystem::~CryptoSystem() {
-    element_clear(g);
     element_clear(h);
     element_clear(secret_key);
     element_clear(public_key);
     element_clear(sig_elem);
-    element_clear(temp1);
-    element_clear(temp2);
+}
+
+CryptoSystem::~CryptoSystem() {
+    element_clear(g);
 }
 
 void CryptoSystem::generateKeyPair(SecretKey& sk, PublicKey& pk) {
     // generate a private key:
-    element_random(secret_key);
+    Element secretKey(GroupType::Zr, pairing);
+    element_random(secretKey);
 
     // and the corresponding public key:
-    element_pow_zn(public_key, g, secret_key);
+    Element publicKey(GroupType::G2, pairing);
+    element_pow_zn(publicKey, g, secretKey);
 
-    element_to_bytes(sk.data(), secret_key);
-    element_to_bytes_compressed(pk.data(), public_key);
+    element_to_bytes(sk.data(), secretKey);
+    element_to_bytes_compressed(pk.data(), publicKey);
 }
 
 int CryptoSystem::getDigest(std::string_view msg, unsigned char* digest) {
@@ -99,41 +102,64 @@ int CryptoSystem::getDigest(std::string_view msg, unsigned char* digest) {
 }
 
 Signature CryptoSystem::sign(std::string_view msg, SecretKey& sk) {
-    element_from_bytes(secret_key, sk.data());
+    Element secretKey(GroupType::Zr, pairing);
+    element_from_bytes(secretKey, sk.data());
 
     // When given a message to sign, we first compute its hash, using some standard hash algorithm.
     // Then we map these bytes to an element h of G1:
     unsigned char digest[EVP_MAX_MD_SIZE];
     int digestLen = getDigest(msg, digest);
-
-    element_from_hash(h, digest, digestLen);
+    Element hash(GroupType::G1, pairing), sigElem(GroupType::G1, pairing);
+    element_from_hash(hash, digest, digestLen);
 
     // then sign it:
-    element_pow_zn(sig_elem, h, secret_key);
+    element_pow_zn(sigElem, hash, secretKey);
 
     Signature result;
-    element_to_bytes_compressed(result.data(), sig_elem);
-
+    element_to_bytes_compressed(result.data(), sigElem);
     return result;
 }
 
 bool CryptoSystem::verify(std::string_view msg, Signature& sig, PublicKey& pk) {
-    element_from_bytes_compressed(sig_elem, sig.data());
-    element_from_bytes_compressed(public_key, pk.data());
+    Element publicKey(GroupType::G2, pairing);
+    Element hash(GroupType::G1, pairing), sigElem(GroupType::G1, pairing);
+
+    element_from_bytes_compressed(sigElem, sig.data());
+    element_from_bytes_compressed(publicKey, pk.data());
 
     unsigned char digest[EVP_MAX_MD_SIZE];
     int digestLen = getDigest(msg, digest);
 
-    element_from_hash(h, digest, digestLen);
+    element_from_hash(hash, digest, digestLen);
 
     // To verify a signature, we compare the outputs of the pairing applied to the signature and system parameter,
     // and the pairing applied to the message hash and public key. If the pairing outputs match then the
     // signature is valid:
-    pairing_apply(temp1, sig_elem, g, pairing);
-    pairing_apply(temp2, h, public_key, pairing);
-    if (!element_cmp(temp1, temp2)) {
-        return true;
-    } else {
-        return false;
+    Element temp1(GroupType::GT, pairing), temp2(GroupType::GT, pairing);
+
+    pairing_apply(temp1, sigElem, g, pairing);
+    pairing_apply(temp2, hash, publicKey, pairing);
+
+    return !element_cmp(temp1, temp2);
+}
+
+CryptoSystem::Element::Element(GroupType type, pairing_s* pairing) {
+    switch (type) {
+        case GroupType::G1:
+            element_init_G1(e, pairing);
+            break;
+        case GroupType::G2:
+            element_init_G2(e, pairing);
+            break;
+        case GroupType::GT:
+            element_init_GT(e, pairing);
+            break;
+        case GroupType::Zr:
+            element_init_Zr(e, pairing);
+            break;
     }
+}
+
+CryptoSystem::Element::~Element() {
+    element_clear(e);
 }
