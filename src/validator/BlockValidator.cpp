@@ -48,9 +48,9 @@ bool BlockValidator::conditionalValidate(const BlockInfo& current, const BlockIn
 
         processor.loadRequests(blockLoader.createRequestStreams(workersCount));
 
-        processor.buildDependencyGraph();
+        processor.checkDependencyGraph();
 
-        auto responses = processor.executeRequests<ascee::runtime::Executor>();
+        auto responses = processor.parallelExecuteRequests<ascee::runtime::Executor>();
 
         cache.commit(chunkIndex.getModifiedPages());
 

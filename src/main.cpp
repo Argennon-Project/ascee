@@ -151,11 +151,9 @@ int main(int argc, char const* argv[]) {
                                                {
                                                        0, 1, requests},
                                        });
-    processor.
+    processor.checkDependencyGraph();
 
-            buildDependencyGraph();
-
-    auto response = processor.executeRequests<Executor>();
+    auto response = processor.parallelExecuteRequests<Executor>();
 
     printf("<<<******* Response *******>>> \n%s\n<<<************************>>>\n", response[0].httpResponse.
 

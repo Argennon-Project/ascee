@@ -47,7 +47,7 @@ public:
         }, numOfRequests, workersCount);
     }
 
-    void buildDependencyGraph() {
+    void checkDependencyGraph() {
         auto sortedMap = scheduler.sortAccessBlocks(workersCount);
 
         for (long i = 0; i < sortedMap.size(); ++i) {
@@ -63,7 +63,18 @@ public:
     };
 
     template<class Executor>
-    std::vector<ascee::runtime::AppResponse> executeRequests() {
+    std::vector<ascee::runtime::AppResponse> serialExecuteRequests() {
+        std::vector<ascee::runtime::AppResponse> responseList;
+        responseList.reserve(numOfRequests);
+        Executor executor;
+        for (int32_fast i = 0; i < numOfRequests; ++i) {
+            responseList.emplace_back(executor.executeOne(scheduler.requestAt(i)));
+        }
+        return responseList;
+    }
+
+    template<class Executor>
+    std::vector<ascee::runtime::AppResponse> parallelExecuteRequests() {
         scheduler.buildExecDag();
 
         std::vector<ascee::runtime::AppResponse> responseList(numOfRequests);

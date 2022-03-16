@@ -114,7 +114,7 @@ TEST_F(RequestProcessorTest, ExecOrderTest_1) {
         EXPECT_CALL(mock, executeOne(1)).InSequence(s1);
 
         FakeExecutor::mock = &mock;
-        rp.executeRequests<FakeExecutor>();
+        rp.parallelExecuteRequests<FakeExecutor>();
         std::cout << std::endl;
     }
 }
@@ -149,7 +149,7 @@ TEST_F(RequestProcessorTest, ExecOrderTest_2) {
 
 
         FakeExecutor::mock = &mock;
-        rp.executeRequests<FakeExecutor>();
+        rp.parallelExecuteRequests<FakeExecutor>();
         std::cout << std::endl;
     }
 }
@@ -182,7 +182,7 @@ TEST_F(RequestProcessorTest, ExecOrderTest_loop) {
 
         FakeExecutor::mock = &mock;
 
-        EXPECT_THROW(rp.executeRequests<FakeExecutor>(), BlockError);
+        EXPECT_THROW(rp.parallelExecuteRequests<FakeExecutor>(), BlockError);
         std::cout << std::endl;
     }
 }
@@ -260,5 +260,5 @@ TEST_F(RequestProcessorTest, SimpleDependencyGraph) {
                                         {3, 6, requests},
                                 });
 
-    rp.buildDependencyGraph();
+    rp.checkDependencyGraph();
 }

@@ -162,7 +162,7 @@ public:
                         const std::vector<AccessBlockInfo>& accessBlocks);
 
     /// this function is thread-safe as long as all used `id`s are distinct
-    auto& requestAt(AppRequestIdType id);
+    ascee::runtime::AppRequest* requestAt(AppRequestIdType id);
 
     /// this function is thread-safe as long as all used `id`s are distinct
     void addRequest(AppRequestInfo&& data);

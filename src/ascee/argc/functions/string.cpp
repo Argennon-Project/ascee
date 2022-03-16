@@ -19,10 +19,12 @@
 
 #include <argc/types.h>
 #include <argc/functions.h>
+#include "executor/Executor.h"
 
 using std::string;
 using namespace argennon;
 using namespace ascee;
+using namespace runtime;
 
 /*
 template<int maxSize>
@@ -50,25 +52,34 @@ void buf_to_string(const string_buffer& buf, string_t &str) {
 }
 */
 
-signature_c argc::p_scan_sig(string_view_c str, string_view_c start, string_view_c end, int32& pos) {
-    return str.matchPattern<signature_c>(start, end, pos);
+template<typename T>
+static
+T argc_p_scan(string_view_c str, string_view_c start, string_view_c end, int32& pos) {
+    try {
+        return str.matchPattern<T>(start, end, pos);
+    } catch (const std::exception& err) {
+        throw Executor::Error(err.what(), StatusCode::bad_request);
+    }
 }
 
+signature_c argc::p_scan_sig(string_view_c str, string_view_c start, string_view_c end, int32& pos) {
+    return argc_p_scan<signature_c>(str, start, end, pos);
+}
 
 publickey_c argc::p_scan_pk(string_view_c str, string_view_c start, string_view_c end, int32& pos) {
-    return str.matchPattern<publickey_c>(start, end, pos);
+    return argc_p_scan<publickey_c>(str, start, end, pos);
 }
 
 int64 argc::p_scan_int64(string_view_c str, string_view_c start, string_view_c end, int32& pos) {
-    return str.matchPattern<int64>(start, end, pos);
+    return argc_p_scan<int64>(str, start, end, pos);
 }
 
 long_id argc::p_scan_long_id(string_view_c str, string_view_c start, string_view_c end, int32& pos) {
-    return str.matchPattern<long_id>(start, end, pos);
+    return argc_p_scan<long_id>(str, start, end, pos);
 }
 
 string_view_c argc::p_scan_str(string_view_c str, string_view_c start, string_view_c end, int32& pos) {
-    return str.matchPattern<string_view_c>(start, end, pos);
+    return argc_p_scan<string_view_c>(str, start, end, pos);
 }
 
 string_view_c argc::scan_int64(string_view_c input, string_view_c pattern, int64& output) {

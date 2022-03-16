@@ -313,8 +313,8 @@ TEST_F(ArgAppTest, TwoTransfers) {
                                                {0, 1, requests},
                                                {1, 2, requests},
                                        });
-    processor.buildDependencyGraph();
-    auto response = processor.executeRequests<Executor>();
+    processor.checkDependencyGraph();
+    auto response = processor.parallelExecuteRequests<Executor>();
 
     printf("<<<******* Response *******>>> \n%s\n<<<************************>>>\n", response[0].httpResponse.c_str());
     printf("<<<******* Response *******>>> \n%s\n<<<************************>>>\n", response[1].httpResponse.c_str());

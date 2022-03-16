@@ -119,8 +119,8 @@ void RequestScheduler::addRequest(AppRequestInfo&& data) {
     nodeIndex[id] = std::make_unique<DagNode>(std::move(data), this);
 }
 
-auto& RequestScheduler::requestAt(AppRequestIdType id) {
-    return nodeIndex[id];
+AppRequest* RequestScheduler::requestAt(AppRequestIdType id) {
+    return &nodeIndex[id]->getAppRequest();
 }
 
 RequestScheduler::RequestScheduler(int32_fast totalRequestCount, ChunkIndex& heapIndex, asa::AppIndex& appIndex) :

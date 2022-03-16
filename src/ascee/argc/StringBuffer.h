@@ -83,12 +83,16 @@ public:
     template<typename T>
     T matchPattern(StringView start, StringView end, int32& pos) {
         auto foundPos = view.find((std::string_view) start, pos);
-        if (foundPos == std::string_view::npos) throw std::invalid_argument("start pattern not found");
+        if (foundPos == std::string_view::npos) {
+            throw std::invalid_argument("start pattern:" + std::string(start) + " not found");
+        }
 
         auto startPos = foundPos + start.size();
 
         foundPos = view.find((std::string_view) end, startPos);
-        if (foundPos == std::string_view::npos) throw std::invalid_argument("end pattern not found");
+        if (foundPos == std::string_view::npos) {
+            throw std::invalid_argument("end pattern:" + std::string(end) + " not found");
+        }
 
         auto len = foundPos - startPos;
         pos = int32(foundPos + end.size());
