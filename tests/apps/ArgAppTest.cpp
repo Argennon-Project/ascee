@@ -244,7 +244,7 @@ TEST_F(ArgAppTest, TwoTransfers) {
                                     0xd100000000000000,
                                     R"({"to":0xaabc000000000000,"amount":556677,"forApp":0x100000000000000,"nonce":255})",
                                     util::Signature(
-                                            "O1YGnA8EUktYiTaDQudIjrjAsGrW8cB-34fulMY4d0kg4NPlY7EpNN2D9qoPWpqrinYBOvArdaPfzSkdxeV30AE"
+                                            "MlzLSpbWl9kGUjH3FnMV-oD_ykknkDHi8ayBOlQGIl83icEFgeNxhtO58LU1QFVwWX4-cyKpclDid1W88RzdHgA"
                                     )
                             },
                     }
@@ -275,12 +275,13 @@ TEST_F(ArgAppTest, TwoTransfers) {
                       Page::Delta{.content = {0,
                                               67 + 8, 1, 70, 255, 0,
                               // pk:
-                                              167, 63, 227, 175, 206, 43, 231, 39, 62, 86, 43, 145, 251, 240, 227, 178,
-                                              221, 130, 234, 41, 17, 67, 121, 119, 77, 0, 95, 153, 38, 130, 216, 239,
-                                              80, 89, 85, 0, 151, 119, 0, 128, 34, 109, 35, 97, 213, 164, 90, 32, 235,
-                                              166, 222, 205, 23, 213, 117, 203, 40, 224, 7, 128, 243, 108, 37, 70, 0,
+                                              114, 22, 249, 146, 208, 168, 123, 133, 195, 106, 1, 214, 151, 30, 120,
+                                              212, 68, 137, 15, 44, 196, 26, 36, 117, 77, 117, 168, 34, 255, 48, 33, 2,
+                                              74, 202, 10, 109, 73, 202, 157, 101, 14, 123, 31, 252, 170, 225, 59, 19,
+                                              145, 115, 30, 178, 169, 157, 92, 103, 183, 224, 249, 75, 147, 36, 18, 64,
+                                              1,
                               // pk end
-                                              00, 20, 20},
+                                              0, 20, 20},
                               .finalDigest = {}},
                       780);
 
@@ -295,13 +296,6 @@ TEST_F(ArgAppTest, TwoTransfers) {
                         {}},
                        780);
 
-    EXPECT_EQ((std::string) *page_1.getNative(),
-              "size: 75, capacity: 75, content: 0x[ b 0 a7 3f e3 af ce 2b e7 27 3e 56 2b 91 fb f0 e3 b2 dd 82 ea 29 11 43 79 77 4d 0 5f 99 26 82 d8 ef 50 59 55 0 97 77 0 80 22 6d 23 61 d5 a4 5a 20 eb a6 de cd 17 d5 75 cb 28 e0 7 80 f3 6c 25 46 0 1e 37 0 0 0 0 0 0 ]");
-    EXPECT_EQ((std::string) *page_2.getNative(),
-              "size: 75, capacity: 75, content: 0x[ ff 0 a7 3f e3 af ce 2b e7 27 3e 56 2b 91 fb f0 e3 b2 dd 82 ea 29 11 43 79 77 4d 0 5f 99 26 82 d8 ef 50 59 55 0 97 77 0 80 22 6d 23 61 d5 a4 5a 20 eb a6 de cd 17 d5 75 cb 28 e0 7 80 f3 6c 25 46 0 0 14 14 0 0 0 0 0 ]");
-    EXPECT_EQ((std::string) *page_to.getNative(),
-              "size: 75, capacity: 75, content: 0x[ 9 9 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 0 0 0 0 0 ]");
-
     ChunkIndex index({}, {
                              {full_id(arg_app_id_g, {0x95ab000000000000, 0}), &page_1},
                              {full_id(arg_app_id_g, {0xd100000000000000, 0}), &page_2},
@@ -309,7 +303,7 @@ TEST_F(ArgAppTest, TwoTransfers) {
                      },
                      {}, 4);
     BENCHMARK_ONCE(
-            RequestProcessor processor(index, appIndex, 2, 4);
+            RequestProcessor processor(index, appIndex, 2, 3);
 
             processor.loadRequests<FakeStream>({
                                                        {0, 1, requests},
@@ -333,7 +327,7 @@ TEST_F(ArgAppTest, TwoTransfers) {
     EXPECT_EQ((std::string) *page_1.getNative(),
               "size: 75, capacity: 75, content: 0x[ c 0 a7 3f e3 af ce 2b e7 27 3e 56 2b 91 fb f0 e3 b2 dd 82 ea 29 11 43 79 77 4d 0 5f 99 26 82 d8 ef 50 59 55 0 97 77 0 80 22 6d 23 61 d5 a4 5a 20 eb a6 de cd 17 d5 75 cb 28 e0 7 80 f3 6c 25 46 0 4c 32 0 0 0 0 0 0 ]");
     EXPECT_EQ((std::string) *page_2.getNative(),
-              "size: 75, capacity: 75, content: 0x[ 0 1 a7 3f e3 af ce 2b e7 27 3e 56 2b 91 fb f0 e3 b2 dd 82 ea 29 11 43 79 77 4d 0 5f 99 26 82 d8 ef 50 59 55 0 97 77 0 80 22 6d 23 61 d5 a4 5a 20 eb a6 de cd 17 d5 75 cb 28 e0 7 80 f3 6c 25 46 0 7b 95 b 0 0 0 0 0 ]");
+              "size: 75, capacity: 75, content: 0x[ 0 1 72 16 f9 92 d0 a8 7b 85 c3 6a 1 d6 97 1e 78 d4 44 89 f 2c c4 1a 24 75 4d 75 a8 22 ff 30 21 2 4a ca a 6d 49 ca 9d 65 e 7b 1f fc aa e1 3b 13 91 73 1e b2 a9 9d 5c 67 b7 e0 f9 4b 93 24 12 40 1 7b 95 b 0 0 0 0 0 ]");
     EXPECT_EQ((std::string) *page_to.getNative(),
               "size: 75, capacity: 75, content: 0x[ 9 9 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 58 84 8 0 0 0 0 0 ]");
 }
