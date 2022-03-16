@@ -113,6 +113,8 @@ bool verify_by_app_once(long_id account_id, message_c& msg, int16 sigIndex);
 bool verify_by_acc(long_id account_id, message_c& msg, int16 sigIndex);
 
 bool verify_by_app(long_id account_id, message_c& msg, int16 sigIndex);
+
+int16 virtual_sign(long_id issuer_account, message_c& msg);
 } // namespace argc
 
 #endif // ARGENNON_ARGC_FUNCTIONS_H

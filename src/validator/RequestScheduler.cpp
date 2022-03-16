@@ -199,13 +199,13 @@ VirtualSignatureManager RequestScheduler::getSigManagerFor(vector<AppRequestInfo
         // low level access to account data
         bool verifies = false;
         try {
-            auto contentPtr = heapIndex.getChunk({arg_app_id_g, {msg.issuerAccount, nonce_chunk_id_g}})
-                    ->getContentPointer(0, 2 + util::public_key_size_k).get(0);
+            auto contentPtr = heapIndex.getChunk({arg_app_id_g, {msg.issuerAccount, nonce_chunk_local_id_g}})
+                    ->getContentPointer(0, decision_nonce_size_g + util::public_key_size_k).get();
             uint16 decisionNonce = *(uint16*) contentPtr;
 
             // decisionNonce == 0 means that the owner of the account is an app
             if (decisionNonce != 0) {
-                PublicKey pk(2 + contentPtr);
+                PublicKey pk(contentPtr + decision_nonce_size_g);
                 if (crypto.verify(msg.message, msg.signature, pk)) verifies = true;
             }
         } catch (const std::out_of_range&) {}

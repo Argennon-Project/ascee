@@ -138,7 +138,7 @@ byte* RestrictedModifier::AccessBlock::prepareToRead(int16_t version, uint32 off
         throw std::out_of_range("access block is not readable");
     }
     syncTo(version);
-    return versionList.empty() ? heapLocation.get(readSize) + offset : versionList.back().getContent() + offset;
+    return versionList.empty() ? heapLocation.get() + offset : versionList.back().getContent() + offset;
 }
 
 byte* RestrictedModifier::AccessBlock::prepareToWrite(int16_t version, uint32 offset, uint32 writeSize) {
@@ -147,7 +147,7 @@ byte* RestrictedModifier::AccessBlock::prepareToWrite(int16_t version, uint32 of
         throw std::out_of_range("block is not writable");
     }
     syncTo(version);
-    auto oldContent = versionList.empty() ? heapLocation.get(size) : versionList.back().getContent();
+    auto oldContent = versionList.empty() ? heapLocation.get() : versionList.back().getContent();
     bool added = ensureExists(version);
     if (added && size != writeSize) {
         memcpy(versionList.back().getContent(), oldContent, offset);
@@ -168,13 +168,13 @@ void RestrictedModifier::AccessBlock::wrToHeap(Chunk* chunk, int16_t version, ui
         int64_fast s = 0, a = 0;
         assert(size <= sizeof(int64_t));
         std::lock_guard<std::mutex> lock(chunk->getContentMutex());
-        memcpy(&s, heapLocation.get(size), size);
+        memcpy(&s, heapLocation.get(), size);
         memcpy(&a, versionList.back().getContent(), size);
         s += a;
         // mem copy should be inside this if block to make sure that lock_guard is protecting it.
-        memcpy(heapLocation.get(writeSize), &s, writeSize);
+        memcpy(heapLocation.get(), &s, writeSize);
     } else {
-        memcpy(heapLocation.get(writeSize), versionList.back().getContent(), writeSize);
+        memcpy(heapLocation.get(), versionList.back().getContent(), writeSize);
     }
 }
 

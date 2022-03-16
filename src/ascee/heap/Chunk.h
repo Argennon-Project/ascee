@@ -39,7 +39,7 @@ public:
 
         inline bool isNull() { return location == nullptr; }
 
-        inline byte* get(size_t accessSize) {
+        inline byte* get() {
             return location;
         }
 

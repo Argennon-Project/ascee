@@ -24,11 +24,9 @@ using namespace argennon;
 using namespace ascee;
 using namespace runtime;
 using namespace util;
-using std::string_view;
+using std::string_view, std::string;
 
-constexpr int decision_nonce_size = int(sizeof(uint16));
 constexpr uint16 nonce16_max = UINT16_MAX;
-constexpr long_id nonce_chunk = 0;
 
 static
 void appendNonceToMsg(message_c& msg, long_id spender, uint32_t nonce) {
@@ -95,14 +93,14 @@ bool verifyByAccount(long_id accountID, message_c& msg, int16 sigIndex, int32& b
     auto spender = context.caller;
     auto& heap = Executor::getSession()->heapModifier;
 
-    heap.loadChunk(accountID, nonce_chunk);
+    heap.loadChunk(accountID, nonce_chunk_local_id_g);
     if (!heap.isValid(0, nonce16_size_g)) return false;
 
     auto decisionNonce = heap.load<uint16>(0);
 
     // decisionNonce == 0 means that the owner of the account is an app
     if (decisionNonce == 0) {
-        balanceIndex = decision_nonce_size;
+        balanceIndex = decision_nonce_size_g;
         return verifyByApp(accountID, msg, sigIndex, invalidateMsg);
     }
 
@@ -125,6 +123,38 @@ bool verifyByAccount(long_id accountID, message_c& msg, int16 sigIndex, int32& b
     // decisionNonce > 2 && decisionNonce <= LAST_RESERVED_NONCE: non-used decision values. These
     // are reserved for later use.
     return false;
+}
+
+int16 argc::virtual_sign(long_id issuer_account, message_c& msg) {
+    Executor::guardArea();
+    Context context;
+    auto signer = context.caller;
+    auto& heap = Executor::getSession()->heapModifier;
+
+    heap.loadChunk(issuer_account, nonce_chunk_local_id_g);
+    if (!heap.isValid(0, nonce16_size_g)) {
+        throw Executor::Error((string) issuer_account + " is not valid",
+                              StatusCode::internal_error, "virtual_sign");
+    }
+
+    auto decisionNonce = heap.load<uint16>(0);
+
+    // decisionNonce == 0 means that the owner of the account is an app
+    if (decisionNonce != 0) {
+        throw Executor::Error((std::string) issuer_account + " does not belong to an app",
+                              StatusCode::internal_error, "virtual_sign");
+    }
+
+    long_id owner = heap.loadIdentifier(app_trie_g, nonce16_size_g, 0);
+    if (signer != owner) {
+        throw Executor::Error((string) owner + " is not owner of:" + (string) issuer_account,
+                              StatusCode::internal_error, "virtual_sign");
+    }
+
+    int16 ret = (int16) Executor::getSession()->sigManager.sign(string(msg), issuer_account);
+
+    Executor::unGuard();
+    return ret;
 }
 
 // C does not have default values or overloading we want to keep this api similar to the real argC api.

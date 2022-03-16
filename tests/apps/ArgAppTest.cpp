@@ -23,6 +23,8 @@
 #include "validator/RequestScheduler.h"
 #include "validator/RequestProcessor.hpp"
 
+// #define ASCEE_SERIAL_EXEC
+
 using namespace argennon;
 using namespace asa;
 using namespace ave;
@@ -306,15 +308,21 @@ TEST_F(ArgAppTest, TwoTransfers) {
                              {full_id(arg_app_id_g, {0xaabc000000000000, 0}), &page_to}
                      },
                      {}, 4);
+    BENCHMARK_ONCE(
+            RequestProcessor processor(index, appIndex, 2, 4);
 
-    RequestProcessor processor(index, appIndex, 2, 3);
-
-    processor.loadRequests<FakeStream>({
-                                               {0, 1, requests},
-                                               {1, 2, requests},
-                                       });
+            processor.loadRequests<FakeStream>({
+                                                       {0, 1, requests},
+                                                       {1, 2, requests},
+                                               });
+#if defined(ASCEE_SERIAL_EXEC)
+            auto response = processor.serialExecuteRequests<Executor>();, "serial two transfers:");
+#else
     processor.checkDependencyGraph();
     auto response = processor.parallelExecuteRequests<Executor>();
+    , "parallel two transfers:");
+#endif
+
 
     printf("<<<******* Response *******>>> \n%s\n<<<************************>>>\n", response[0].httpResponse.c_str());
     printf("<<<******* Response *******>>> \n%s\n<<<************************>>>\n", response[1].httpResponse.c_str());

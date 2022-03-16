@@ -95,10 +95,10 @@ public:
 
         modifier = std::make_unique<HeapModifier>(vector<long_id>{1, 2}, std::move(appMaps));
 
-        *(int64*) tempChunk1_10.getContentPointer(100, 8).get(8) = 0x102020201020202;
+        *(int64*) tempChunk1_10.getContentPointer(100, 8).get() = 0x102020201020202;
 
-        *(int64*) tempChunk1_11.getContentPointer(100, 8).get(8) = 789;
-        *(int64*) tempChunk1_11.getContentPointer(120, 8).get(8) = 321;
+        *(int64*) tempChunk1_11.getContentPointer(100, 8).get() = 789;
+        *(int64*) tempChunk1_11.getContentPointer(120, 8).get() = 321;
 
     }
 };
@@ -166,7 +166,7 @@ TEST_F(HeapModifierDeathTest, SimpleReadWrite) {
 
     modifier->writeToHeap();
 
-    EXPECT_EQ(*(int64*) tempChunk1_10.getContentPointer(150, 4).get(4), 44);
+    EXPECT_EQ(*(int64*) tempChunk1_10.getContentPointer(150, 4).get(), 44);
 }
 
 TEST_F(HeapModifierDeathTest, VersionZero) {
