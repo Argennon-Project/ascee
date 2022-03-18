@@ -29,7 +29,7 @@ using std::unique_ptr, std::make_unique;
 /// new chunks always have a size of zero. Their size usually should be changed by using reSize() function.
 /// The chunk will be zero initialized. This is important to make sure that smart contracts
 /// behave deterministically and validators will agree on the result of executing a smart contact.
-Chunk::Chunk(uint capacity) : capacity(capacity), chunkSize(0) {
+Chunk::Chunk(uint capacity) : chunkSize(0), capacity(capacity) {
     assert(capacity <= maxAllowedCapacity);
     content = make_unique<byte[]>(capacity);
     // arrays created by make_unique are value initialized.

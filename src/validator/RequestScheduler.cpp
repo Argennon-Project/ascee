@@ -174,8 +174,8 @@ HeapModifier RequestScheduler::getModifierFor(AppRequestIdType requestID) const 
 bool RequestScheduler::canMerge(const AccessBlockInfo& left, int32 leftOffset,
                                 const AccessBlockInfo& right, int32 rightOffset) {
     return left.accessType == right.accessType &&
-           (!left.accessType.isAdditive() || left.accessType.isAdditive() && leftOffset == rightOffset &&
-                                             left.size == right.size);
+           (!left.accessType.isAdditive() ||
+            (left.accessType.isAdditive() && leftOffset == rightOffset && left.size == right.size));
 }
 
 RequestScheduler::operator std::string() const {
@@ -220,7 +220,6 @@ VirtualSignatureManager RequestScheduler::getSigManagerFor(vector<AppRequestInfo
 
 DagNode::DagNode(AppRequestInfo&& data,
                  const RequestScheduler* scheduler) :
-        adjList(std::move(data.adjList)),
         request{
                 .id = data.id,
                 .calledAppID = data.calledAppID,
@@ -236,4 +235,5 @@ DagNode::DagNode(AppRequestInfo&& data,
                 .signatureManager = scheduler->getSigManagerFor(std::move(data.signedMessagesList)),
                 .digest = std::move(data.digest)
                 // Members are initialized in left-to-right order as they appear in this class's base-specifier list.
-        } {}
+        },
+        adjList(std::move(data.adjList)) {}

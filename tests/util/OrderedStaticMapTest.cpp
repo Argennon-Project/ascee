@@ -87,24 +87,25 @@ TEST(OrderedStaticMapTest, MergeParallel) {
 }
 
 TEST(OrderedStaticMapTest, SimpleAccessingBenchmark) {
-    OrderedStaticMap<int, float> singleStatic({8}, {2.5});
-    std::unordered_map<int, float> singleStd = {{8, 2.5}};
+    OrderedStaticMap<int, float> singleStatic({8}, {0.0});
+    std::unordered_map<int, float> singleStd = {{8, 0.0}};
 
     int runs = 2000000;
-    float dummy = 0;
+    float dummy = 8;
 
-    BENCHMARK(dummy += singleStatic.at(8), runs, "accessing OrderedStaticMap with one item");
+    BENCHMARK(dummy += singleStatic.at(dummy), runs, "accessing OrderedStaticMap with one item");
 
-    BENCHMARK(dummy += singleStd.at(8), runs, "accessing hash table with one item");
+    BENCHMARK(dummy += singleStd.at(dummy), runs, "accessing hash table with one item");
 
     OrderedStaticMap<int, float> multiStatic({2, 4, 7, 8, 9, 11, 15, 16, 17},
-                                             {2.5, 0.2, 0.4, 2.6, 2.1, 5.6, 1.3, 2.4, 1});
+                                             {2.5, 0.2, 0.4, 0.0, 2.1, 5.6, 1.3, 2.4, 0.0});
     std::unordered_map<int, float> multiStd = {
-            {{2, 2.5}, {4, 0.2}, {7, 0.4}, {8, 2.6}, {9, 2.1}, {11, 5.6}, {15, 1.3}, {16, 2.4}, {17, 1}}
+            {{2, 2.5}, {4, 0.2}, {7, 0.4}, {8, 0.0}, {9, 2.1}, {11, 5.6}, {15, 1.3}, {16, 2.4}, {17, 0.0}}
     };
 
-    BENCHMARK(dummy += multiStatic.at(8); dummy += multiStatic.at(17);, runs,
+    BENCHMARK(dummy += multiStatic.at(dummy); dummy += multiStatic.at(9 + dummy);, runs,
               "accessing OrderedStaticMap with 9 items");
 
-    BENCHMARK(dummy += multiStd.at(8); dummy += multiStd.at(17);, runs, "accessing std hash table with 9 items");
+    BENCHMARK(dummy += multiStd.at(dummy); dummy += multiStd.at(9 + dummy);, runs,
+              "accessing std hash table with 9 items");
 }

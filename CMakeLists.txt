@@ -3,6 +3,11 @@ project(ArgennonCore)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_C_STANDARD 99)
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+
+# if (GNU)
+add_compile_options(-Wall -Wno-sign-compare -Og)
+# endif ()
 
 include(FetchContent)
 FetchContent_Declare(
@@ -41,8 +46,6 @@ add_subdirectory(src/util)
 add_subdirectory(src/validator)
 add_subdirectory(src/storage)
 add_subdirectory(tests)
-
-#add_compile_options(-Wall -Og)
 
 add_executable(ascee_run src/main.cpp)
 target_link_libraries(ascee_run ave asa ascee argutil stdc++ pthread rt pbc gmp crypto dl)

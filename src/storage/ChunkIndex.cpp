@@ -83,8 +83,8 @@ RestrictedModifier ChunkIndex::buildModifier(const AppRequestInfo::AccessMapType
                     auto& chunkBounds = sizeBoundsInfo.at(full_id(appID, chunkLocalID));
                     if (chunkPtr->getsize() < chunkBounds.sizeLowerBound ||
                         chunkPtr->getsize() > chunkBounds.sizeUpperBound ||
-                        chunkNewSize > 0 && chunkNewSize > chunkBounds.sizeUpperBound ||
-                        chunkNewSize <= 0 && -chunkNewSize < chunkBounds.sizeLowerBound) {
+                        (chunkNewSize > 0 && chunkNewSize > chunkBounds.sizeUpperBound) ||
+                        (chunkNewSize <= 0 && -chunkNewSize < chunkBounds.sizeLowerBound)) {
                         throw BlockError("invalid sizeBounds for chunk [" +
                                          string(appID) + "::" + string(chunkLocalID) + "]");
                     }

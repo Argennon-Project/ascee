@@ -36,9 +36,9 @@ class RequestSchedulerTest : public ::testing::Test {
 protected:
     PageLoader pl{};
     PageCache pc;
-    ChunkIndex singleChunk;
     AppLoader appLoader;
     AppIndex appIndex;
+    ChunkIndex singleChunk;
 
 public:
     RequestSchedulerTest()

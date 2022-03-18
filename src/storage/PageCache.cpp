@@ -66,7 +66,7 @@ PageCache::preparePages(const BlockInfo& block, vector<VarLenFullID>&& pageAcces
                        Page::Migrant(std::move(pageAccessList[migration.fromIndex]), from->getNative()) :
                        from->extractMigrant(migration.chunkIndex);
 
-        result[migration.toIndex].second->addMigrant(std::move(migrant));
+        to->addMigrant(std::move(migrant));
     }
 
     return result;

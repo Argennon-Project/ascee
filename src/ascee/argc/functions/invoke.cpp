@@ -108,7 +108,7 @@ int argc::dependant_call(long_id app_id, response_buffer_c& response, string_vie
         for (const auto& dCall: callContext.deferredCalls) {
             // Discarding the responses of deferred calls
             response_buffer_c tempBuffer;
-            int temp = argc::dependant_call(dCall.appID, tempBuffer, StringView(dCall.request));
+            argc::dependant_call(dCall.appID, tempBuffer, StringView(dCall.request));
         }
     }
     Executor::unGuard();

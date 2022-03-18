@@ -39,16 +39,17 @@ struct AppendTestCase {
 
     void test() {
         if (wantError) {
-            if (appendType == STR)
+            if (appendType == STR) {
                 EXPECT_THROW(
                         argc::append_str(buf, (string_view_c) strToAppend),
                         std::out_of_range
                 );
-            else if (appendType == INT64)
+            } else if (appendType == INT64) {
                 EXPECT_THROW(
                         argc::append_int64(buf, int64ToAppend),
                         std::out_of_range
                 );
+            }
             return;
         }
         if (appendType == STR) argc::append_str(buf, string_view_c(strToAppend));

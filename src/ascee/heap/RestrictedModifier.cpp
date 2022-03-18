@@ -190,17 +190,17 @@ RestrictedModifier::ChunkInfo::ChunkInfo(Chunk* chunk, ResizingType resizingType
                                          const std::vector<int32>& sortedAccessedOffsets,
                                          const std::vector<AccessBlockInfo>& accessInfoList) :
 // We do not check inputs. We assume that all inputs are checked by upper layers.
+        accessTable(toAccessBlocks(chunk, sortedAccessedOffsets, accessInfoList)),
+        ptr(chunk),
+        resizing(resizingType),
+        sizeBound(sizeBound),
         size(
                 Chunk::Pointer((byte*) (&initialSize), sizeof(initialSize)),
                 sizeof(initialSize),
                 AccessBlockInfo::Access(
                         resizingType == ResizingType::expandable || resizingType == ResizingType::shrinkable ?
                         Access::Type::writable : Access::Type::read_only)
-        ),
-        sizeBound(sizeBound),
-        ptr(chunk),
-        resizing(resizingType),
-        accessTable(toAccessBlocks(chunk, sortedAccessedOffsets, accessInfoList)) {
+        ) {
     assert(sizeBound <= max_chunk_size);
 }
 

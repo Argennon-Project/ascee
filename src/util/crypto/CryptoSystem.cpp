@@ -56,8 +56,8 @@ CryptoSystem::CryptoSystem() {
         element_to_bytes(buf, g);
         fwrite(buf, 1, len, g_file);
     } else {
-        fread(buf, 1, len, g_file);
-        if (element_from_bytes(g, buf) != len) throw std::runtime_error("Crypto: could not read g");
+        auto n = fread(buf, 1, len, g_file);
+        if (n != len || element_from_bytes(g, buf) != len) throw std::runtime_error("Crypto: could not read g");
     }
     fclose(g_file);
 
