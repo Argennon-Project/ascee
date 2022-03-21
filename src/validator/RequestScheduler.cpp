@@ -227,6 +227,7 @@ DagNode::DagNode(AppRequestInfo&& data,
                 .gas = data.gas,
                 .modifier = scheduler->getModifierFor(data.id),
                 .appTable = scheduler->getAppTableFor(std::move(data.appAccessList)),
+                .useControlledExecution = data.useControlledExecution,
                 .failureManager = FailureManager(
                         std::move(data.stackSizeFailures),
                         std::move(data.cpuTimeFailures)

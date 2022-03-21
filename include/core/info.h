@@ -165,6 +165,7 @@ struct AppRequestInfo {
      * A sorted list of applications that the request will call. This list can not be empty.
      */
     std::vector<long_id> appAccessList;
+    bool useControlledExecution;
     std::unordered_set<int_fast32_t> stackSizeFailures;
     std::unordered_set<int_fast32_t> cpuTimeFailures;
 

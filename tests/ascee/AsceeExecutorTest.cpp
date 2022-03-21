@@ -41,6 +41,7 @@ struct AppTestCase {
     string request;
     int_fast32_t gas;
     vector<long_id> appAccessList;
+    bool useControlled = true;
     string wantResponse;
     int wantCode;
     vector<std::pair<std::string_view, uint64_t>> wantCalls;
@@ -62,6 +63,7 @@ struct AppTestCase {
                 .gas = gas,
                 .modifier = argennon::mocking::ascee::MockModifier(),
                 .appTable = appIndex.buildAppTable(shiftedAccessList),
+                .useControlledExecution = useControlled,
                 .signatureManager = VirtualSignatureManager({})
         };
         {
@@ -116,6 +118,7 @@ TEST_F(AsceeExecutorTest, OneLevelCall) {
             .request = "test request",
             .gas = NORMAL_GAS,
             .appAccessList = {11},
+            .useControlled = false,
             .wantResponse = "test request is DONE!",
             .wantCode = 200,
             .wantCalls = {
@@ -134,6 +137,7 @@ TEST_F(AsceeExecutorTest, TwoLevelCall) {
             .request = "test request",
             .gas = NORMAL_GAS,
             .appAccessList = {11, 15},
+            .useControlled = false,
             .wantResponse = "request from 15 is DONE! got in 15",
             .wantCode = 200,
             .wantCalls = {

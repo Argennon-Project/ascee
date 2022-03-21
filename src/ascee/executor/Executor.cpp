@@ -23,7 +23,8 @@
 #include "Executor.h"
 
 using namespace argennon;
-using namespace ascee::runtime;
+using namespace ascee;
+using namespace runtime;
 using std::unique_ptr, std::string, std::string_view, std::to_string, std::function;
 
 static inline
@@ -39,8 +40,7 @@ void maskSignals(int how) {
 
 }
 
-static
-void* registerRecoveryStack() {
+void* Executor::registerRecoveryStack() {
     stack_t sig_stack;
 
     sig_stack.ss_sp = malloc(SIGSTKSZ);
@@ -65,8 +65,8 @@ void Executor::sig_handler(int sig, siginfo_t* info, void*) {
         }
         int ret = static_cast<int>(StatusCode::internal_error);
         if (sig == SIGSEGV) ret = static_cast<int>(StatusCode::memory_fault);
-        if (sig == SIGUSR1) ret = static_cast<int>(StatusCode::execution_timeout);
-        if (sig == SIGFPE || sig == SIGILL) ret = static_cast<int>(StatusCode::arithmetic_error);
+        else if (sig == SIGUSR1) ret = static_cast<int>(StatusCode::execution_timeout);
+        else if (sig == SIGFPE || sig == SIGILL) ret = static_cast<int>(StatusCode::arithmetic_error);
         siglongjmp(session->currentCall->env, ret);
     } else {
         pthread_t thread_id = *static_cast<pthread_t*>(info->si_value.sival_ptr);
@@ -91,26 +91,12 @@ void Executor::initHandlers() {
     if (err) throw std::runtime_error("error in creating handlers");
 }
 
-/**
- * The correct usage of this function is to use it at the start of the critical area and only call unGuard() when the
- * code is completed normally. For example:
- * @code
- * int f() {
- *     guardArea();
- *
- *     // no unGuard should be called here.
- *     throw std::exception();
- *
- *     unGuard();
- *     return 0;
- * }
- */
-void Executor::guardArea() {
+void Executor::ControlledCaller::guardArea() {
     session->guardedArea = true;
     maskSignals(SIG_BLOCK);
 }
 
-void Executor::unGuard() {
+void Executor::ControlledCaller::unGuard() {
     maskSignals(SIG_UNBLOCK);
     session->guardedArea = false;
 }
@@ -123,14 +109,22 @@ AppResponse Executor::executeOne(AppRequest* req) {
     try {
         SessionInfo threadSession{
                 .request = req,
-                .cryptoSigner = cryptoSigner,
+                //.cryptoSigner = cryptoSigner,
         };
         session = &threadSession;
-
-        CallResourceHandler rootResourceCtx(req->gas);
-        CallContext rootInfoCtx;
-        statusCode = argc::invoke_dispatcher(255, req->calledAppID, response, string_view_c(req->httpRequest));
-        rootResourceCtx.complete();
+        if (req->useControlledExecution) {
+            callManager = std::make_unique<ControlledCaller>();
+            ControlledCaller::CallResourceHandler rootResourceCtx(req->gas);
+            CallContext rootInfoCtx;
+            statusCode = callApp(255, req->calledAppID, response, string_view_c(req->httpRequest));
+            rootResourceCtx.complete();
+        } else {
+            callManager = std::make_unique<OptimisticCaller>();
+            ThreadCpuTimer cpuTimer;
+            cpuTimer.setAlarm(default_exec_time_nsec);
+            CallContext rootInfoCtx;
+            statusCode = callApp(255, req->calledAppID, response, string_view_c(req->httpRequest));
+        }
         session->heapModifier.writeToHeap();
     } catch (const std::out_of_range& err) {
         //todo: fix this
@@ -141,117 +135,12 @@ AppResponse Executor::executeOne(AppRequest* req) {
     return {statusCode, string((StringView) response)};
 }
 
-struct InvocationArgs {
-    const function<int(long_id, ascee::response_buffer_c&, ascee::string_view_c)>& invoker;
-
-    long_id app_id;
-    ascee::string_view_c request;
-    ascee::response_buffer_c& response;
-    int_fast64_t execTime;
-    Executor::SessionInfo* session;
-};
-
-void* Executor::threadStart(void* voidArgs) {
-    auto* args = (InvocationArgs*) voidArgs;
-
-    void* recoveryStack = registerRecoveryStack();
-    session = args->session;
-
-    int* ret = (int*) malloc(sizeof(int));
-    if (ret == nullptr) throw std::runtime_error("memory allocation error");
-
-    ThreadCpuTimer cpuTimer;
-    cpuTimer.setAlarm(args->execTime);
-
-    *ret = args->invoker(args->app_id, args->response, args->request);
-
-    free(recoveryStack);
-    return ret;
-}
-
-int Executor::controlledExec(const function<int(long_id, response_buffer_c&, string_view_c)>& invoker,
-                             long_id app_id,
-                             response_buffer_c& response, string_view_c request,
-                             int_fast64_t execTime, size_t stackSize) {
-    pthread_t threadID;
-    pthread_attr_t threadAttr;
-
-    int err = pthread_attr_init(&threadAttr);
-    if (err) throw std::runtime_error(to_string(errno) + ": failed to init thread attributes");
-
-    err = pthread_attr_setstacksize(&threadAttr, stackSize);
-    if (err) throw std::runtime_error(to_string(errno) + ": can't set stack size");
-
-    InvocationArgs args = {
-            .invoker = invoker,
-            .app_id = app_id,
-            .request = request,
-            .response = response,
-            .execTime = execTime,
-            .session = Executor::getSession()
-    };
-
-    err = pthread_create(&threadID, &threadAttr, threadStart, &args);
-    if (err) throw std::runtime_error(to_string(errno) + ": thread creation failed");
-
-    pthread_attr_destroy(&threadAttr);
-    // We ignore errors here
-
-    void* retPtr;
-    err = pthread_join(threadID, &retPtr);
-    int ret = err ? int(StatusCode::internal_error) : *(int*) retPtr;
-
-    free(retPtr);
-    return ret;
+int Executor::callApp(byte forwarded_gas, long_id app_id, response_buffer_c& response, string_view_c request) {
+    return callManager->executeApp(forwarded_gas, app_id, response, request);
 }
 
 Executor::Executor() {
     if (!initialized.exchange(true)) initHandlers();
-}
-
-static inline
-int64_t calculateExternalGas(int64_t currentGas) {
-    // the geometric series approaches 1 / (1 - q) so the total amount of externalGas would be 2 * currentGas
-    return 2 * currentGas / 3;
-}
-
-#define MIN_GAS 1
-
-Executor::CallResourceHandler::CallResourceHandler(byte forwardedGas) {
-    prevResources = session->currentResources;
-    caller = session->currentCall->appID;
-
-    gas = (prevResources->remainingExternalGas * forwardedGas) >> 8;
-    if (gas <= MIN_GAS) throw AsceeError("forwarded gas is too low", StatusCode::invalid_operation);
-
-    id = session->failureManager.nextInvocation();
-    prevResources->remainingExternalGas -= gas;
-    remainingExternalGas = calculateExternalGas(gas);
-
-    session->currentResources = this;
-    heapVersion = session->heapModifier.saveVersion();
-}
-
-Executor::CallResourceHandler::CallResourceHandler(int_fast32_t initialGas) {
-    id = session->failureManager.nextInvocation();
-    caller = 0;
-    gas = 0;
-    remainingExternalGas = initialGas;
-
-    session->currentResources = this;
-    heapVersion = 0;
-}
-
-Executor::CallResourceHandler::~CallResourceHandler() noexcept {
-    guardArea();
-    session->currentResources = prevResources;
-    session->failureManager.completeInvocation();
-    if (!completed) {
-        session->heapModifier.restoreVersion(heapVersion);
-    }
-    // CallInfoContext's destructor restores the caller's context, but we also do this here to make sure.
-    session->heapModifier.loadContext(caller);
-    unGuard();
 }
 
 Executor::CallContext::CallContext(long_id app) : appID(app) {
@@ -277,4 +166,159 @@ Executor::CallContext::~CallContext() noexcept {
     session->currentCall = prevCallInfo;
     unGuard();
 }
+
+
+struct InvocationArgs {
+    long_id app_id;
+    ascee::string_view_c request;
+    ascee::response_buffer_c& response;
+    int_fast64_t execTime;
+    Executor::SessionInfo* session;
+};
+
+static
+int invoke_noexcept(long_id app_id, response_buffer_c& response, string_view_c request) {
+    int ret;
+    try {
+        ret = argc::dependant_call(app_id, response, request);
+    } catch (const Executor::Error& ee) {
+        ret = ee.errorCode();
+        ee.toHttpResponse(response.clear());
+    }
+    return ret;
+}
+
+void* Executor::ControlledCaller::threadStart(void* voidArgs) {
+    auto* args = (InvocationArgs*) voidArgs;
+
+    void* recoveryStack = registerRecoveryStack();
+    session = args->session;
+
+    int* ret = (int*) malloc(sizeof(int));
+    if (ret == nullptr) throw std::runtime_error("memory allocation error");
+
+    ThreadCpuTimer cpuTimer;
+    cpuTimer.setAlarm(args->execTime);
+
+    *ret = invoke_noexcept(args->app_id, args->response, args->request);
+
+    free(recoveryStack);
+    return ret;
+}
+
+int Executor::ControlledCaller::executeApp(byte forwarded_gas, long_id app_id,
+                                           response_buffer_c& response, string_view_c request) {
+    guardArea();
+    int ret;
+    try {
+        CallResourceHandler resourceContext(forwarded_gas);
+        pthread_t threadID;
+        pthread_attr_t threadAttr;
+
+        int err = pthread_attr_init(&threadAttr);
+        if (err) throw std::runtime_error(to_string(errno) + ": failed to init thread attributes");
+
+        err = pthread_attr_setstacksize(&threadAttr, resourceContext.getStackSize());
+        if (err) throw std::runtime_error(to_string(errno) + ": can't set stack size");
+
+        InvocationArgs args = {
+                .app_id = app_id,
+                .request = request,
+                .response = response,
+                .execTime = resourceContext.getExecTime(),
+                .session = Executor::getSession()
+        };
+
+        err = pthread_create(&threadID, &threadAttr, threadStart, &args);
+        if (err) throw std::runtime_error(to_string(errno) + ": thread creation failed");
+
+        pthread_attr_destroy(&threadAttr);
+        // We ignore errors here
+
+        void* retPtr;
+        err = pthread_join(threadID, &retPtr);
+        ret = err ? int(StatusCode::internal_error) : *(int*) retPtr;
+
+        free(retPtr);
+        if (ret < 400) resourceContext.complete();
+    } catch (const AsceeError& ae) {
+        ret = ae.errorCode();
+        Executor::Error(ae).toHttpResponse(response.clear());
+    }
+    // unBlockSignals() should be called here, in case resourceContext's constructor throws an exception.
+    unGuard();
+    return ret;
+}
+
+static inline
+int64_t calculateExternalGas(int64_t currentGas) {
+    // the geometric series approaches 1 / (1 - q) so the total amount of externalGas would be 2 * currentGas
+    return 2 * currentGas / 3;
+}
+
+#define MIN_GAS 1
+
+Executor::ControlledCaller::CallResourceHandler::CallResourceHandler(byte forwardedGas) {
+    prevResources = session->currentResources;
+    caller = session->currentCall->appID;
+
+    gas = (prevResources->remainingExternalGas * forwardedGas) >> 8;
+    if (gas <= MIN_GAS) throw AsceeError("forwarded gas is too low", StatusCode::invalid_operation);
+
+    id = session->failureManager.nextInvocation();
+    prevResources->remainingExternalGas -= gas;
+    remainingExternalGas = calculateExternalGas(gas);
+
+    session->currentResources = this;
+    heapVersion = session->heapModifier.saveVersion();
+}
+
+Executor::ControlledCaller::CallResourceHandler::CallResourceHandler(int_fast32_t initialGas) {
+    id = session->failureManager.nextInvocation();
+    caller = 0;
+    gas = 0;
+    remainingExternalGas = initialGas;
+    session->currentResources = this;
+    heapVersion = 0;
+}
+
+Executor::ControlledCaller::CallResourceHandler::~CallResourceHandler() noexcept {
+    Executor::guardArea();
+    session->currentResources = prevResources;
+    session->failureManager.completeInvocation();
+    if (!completed) {
+        session->heapModifier.restoreVersion(heapVersion);
+    }
+    // CallInfoContext's destructor restores the caller's context, but we also do this here to make sure.
+    session->heapModifier.loadContext(caller);
+    Executor::unGuard();
+}
+
+Executor::OptimisticCaller::CallResourceHandler::CallResourceHandler() {
+    caller = session->currentCall->appID;
+    heapVersion = session->heapModifier.saveVersion();
+}
+
+Executor::OptimisticCaller::CallResourceHandler::~CallResourceHandler() noexcept {
+    Executor::guardArea();
+    if (!completed) {
+        session->heapModifier.restoreVersion(heapVersion);
+    }
+    // CallInfoContext's destructor restores the caller's context, but we also do this here to make sure.
+    session->heapModifier.loadContext(caller);
+    Executor::unGuard();
+}
+
+int Executor::OptimisticCaller::executeApp(byte forwarded_gas, long_id app_id,
+                                           response_buffer_c& response, string_view_c request) {
+    try {
+        CallResourceHandler resourceContext;
+        auto ret = argc::dependant_call(app_id, response, request);
+        if (ret < 400) resourceContext.complete();
+        return ret;
+    } catch (const AsceeError& ae) {
+        throw BlockError("an optimistic call failed");
+    }
+}
+
 

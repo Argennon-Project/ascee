@@ -115,34 +115,8 @@ int argc::dependant_call(long_id app_id, response_buffer_c& response, string_vie
     return ret;
 }
 
-static
-int invoke_noexcept(long_id app_id, response_buffer_c& response, string_view_c request) {
-    int ret;
-    try {
-        ret = argc::dependant_call(app_id, response, request);
-    } catch (const Executor::Error& ee) {
-        ret = ee.errorCode();
-        ee.toHttpResponse(response.clear());
-    }
-    return ret;
-}
 
 int argc::invoke_dispatcher(byte forwarded_gas, long_id app_id, response_buffer_c& response, string_view_c request) {
-    Executor::guardArea();
-
-    int ret;
-    try {
-        Executor::CallResourceHandler resourceContext(forwarded_gas);
-        ret = Executor::controlledExec(invoke_noexcept, app_id, response, request,
-                                       resourceContext.getExecTime(), resourceContext.getStackSize());
-        if (ret < 400) resourceContext.complete();
-    } catch (const AsceeError& ae) {
-        ret = ae.errorCode();
-        Executor::Error(ae).toHttpResponse(response.clear());
-    }
-
-    // unBlockSignals() should be called here, in case resourceContext's constructor throws an exception.
-    Executor::unGuard();
-    return ret;
+    return Executor::callApp(forwarded_gas, app_id, response, request);
 }
 

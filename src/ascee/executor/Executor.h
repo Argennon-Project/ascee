@@ -18,6 +18,7 @@
 #ifndef ARGENNON_EXECUTOR_H
 #define ARGENNON_EXECUTOR_H
 
+
 #include <csignal>
 #include <csetjmp>
 
@@ -31,8 +32,6 @@
 #include "AppTable.h"
 #include "heap/RestrictedModifier.h"
 #include "util/crypto/CryptoSystem.h"
-
-// #define ASCEE_MOCK_BUILD
 
 // We can not use virtual function since runtime binding can hurt performance. The better option for us is to use
 // templates. However, since the session object needs to be available in almost all argc functions it has to be defined
@@ -67,6 +66,7 @@ struct AppRequest {
     int32_fast gas;
     HeapModifier modifier;
     AppTable appTable;
+    bool useControlledExecution;
     FailureManager failureManager;
     std::vector<AppRequestIdType> attachments;
     VirtualSignatureManager signatureManager;
@@ -84,7 +84,82 @@ struct DeferredArgs {
 };
 
 class Executor {
+private:
+    class CallManager {
+    public:
+        virtual int executeApp(byte forwarded_gas, long_id app_id,
+                               response_buffer_c& response, string_view_c request) = 0;
+
+        virtual void guardArea() = 0;
+
+        virtual void unGuard() = 0;
+
+    };
+
+    class ControlledCaller : public CallManager {
+    public:
+        class CallResourceHandler {
+        public:
+            explicit CallResourceHandler(byte forwardedGas);
+
+            explicit CallResourceHandler(int_fast32_t initialGas);
+
+            [[nodiscard]] int_fast64_t getExecTime() const { return session->failureManager.getExecTime(id, gas); }
+
+            [[nodiscard]] std::size_t getStackSize() const { return session->failureManager.getStackSize(id); }
+
+            void complete() { completed = true; }
+
+            ~CallResourceHandler() noexcept;
+
+        private:
+            int_fast32_t id;
+            long_id caller;
+            int_fast32_t gas;
+            int_fast32_t remainingExternalGas;
+            int16_t heapVersion;
+            CallResourceHandler* prevResources = nullptr;
+            bool completed = false;
+        };
+
+        int executeApp(byte forwarded_gas, long_id app_id,
+                       response_buffer_c& response, string_view_c request) override;
+
+        void guardArea() override;
+
+        void unGuard() override;
+
+    private:
+        static void* threadStart(void* voidArgs);
+    };
+
+    class OptimisticCaller : public CallManager {
+    public:
+        class CallResourceHandler {
+        public:
+            explicit CallResourceHandler();
+
+            void complete() { completed = true; }
+
+            ~CallResourceHandler() noexcept;
+
+        private:
+            long_id caller;
+            int16_t heapVersion;
+            bool completed = false;
+        };
+
+        int executeApp(byte forwarded_gas, long_id app_id,
+                       response_buffer_c& response, string_view_c request) override;
+
+        void guardArea() override {}
+
+        void unGuard() override {}
+    };
+
 public:
+    static constexpr int64_t default_exec_time_nsec = 50000000;
+
     class Error : public AsceeError {
     public:
         explicit Error(
@@ -130,30 +205,6 @@ public:
         ~CallContext() noexcept;
     };
 
-    class CallResourceHandler {
-    public:
-        explicit CallResourceHandler(byte forwardedGas);
-
-        explicit CallResourceHandler(int_fast32_t initialGas);
-
-        [[nodiscard]] int_fast64_t getExecTime() const { return session->failureManager.getExecTime(id, gas); }
-
-        [[nodiscard]] std::size_t getStackSize() const { return session->failureManager.getStackSize(id); }
-
-        void complete() { completed = true; }
-
-        ~CallResourceHandler() noexcept;
-
-    private:
-        int_fast32_t id;
-        long_id caller;
-        int_fast32_t gas;
-        int_fast32_t remainingExternalGas;
-        int16_t heapVersion;
-        CallResourceHandler* prevResources = nullptr;
-        bool completed = false;
-    };
-
     struct SessionInfo {
         AppRequest* request = nullptr;
         bool guardedArea = false;
@@ -163,10 +214,10 @@ public:
         FailureManager& failureManager = request->failureManager;
         std::unordered_map<uint64_t, bool> isLocked;
         VirtualSignatureManager& sigManager = request->signatureManager;
-        util::CryptoSystem& cryptoSigner;
+        //util::CryptoSystem& cryptoSigner;
 
         CallContext* currentCall = nullptr;
-        CallResourceHandler* currentResources = nullptr;
+        ControlledCaller::CallResourceHandler* currentResources = nullptr;
 
         //SessionInfo(const SessionInfo&) = delete;
     };
@@ -178,22 +229,34 @@ public:
 
     inline static SessionInfo* getSession() { return session; }
 
-    static void guardArea();
+    /**
+     * The correct usage of this function is to use it at the start of the critical area and only call unGuard() when the
+     * code is completed normally. For example:
+     * @code
+     * int f() {
+     *     guardArea();
+     *
+     *     // no unGuard should be called here.
+     *     throw std::exception();
+     *
+     *     unGuard();
+     *     return 0;
+     * }
+     */
+    static void guardArea() { callManager->guardArea(); }
 
-    static void unGuard();
+    static void unGuard() { callManager->unGuard(); }
 
     AppResponse executeOne(AppRequest* req);
 
     static
-    int controlledExec(const std::function<int(long_id, response_buffer_c&, string_view_c)>& invoker,
-                       long_id app_id,
-                       response_buffer_c& response, string_view_c request,
-
-                       int_fast64_t execTime, size_t stackSize);
+    int callApp(byte forwarded_gas, long_id app_id, response_buffer_c& response, string_view_c request);
 
 private:
     // IMPORTANT: PBC library is not thread-safe, and this instance should not be shared between threads.
-    util::CryptoSystem cryptoSigner;
+    //util::CryptoSystem cryptoSigner;
+
+    static inline std::unique_ptr<CallManager> callManager = nullptr;
 
     static inline thread_local SessionInfo* session = nullptr;
 
@@ -203,7 +266,7 @@ private:
 
     static void initHandlers();
 
-    static void* threadStart(void* voidArgs);
+    static void* registerRecoveryStack();
 };
 
 } // namespace argennon::ascee::runtime
