@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#include <gtest/gtest.h>
+#include "subtest.h"
 #include <util/crypto/CryptoSystem.h>
 
 using namespace argennon::util;
@@ -33,7 +33,7 @@ TEST(UtilCryptoTest, Simple) {
 
     std::cout << sig.toBase64() << "\n";
 
-    EXPECT_TRUE(signer.verify("Helloooo!!", sig, pk));
+    BENCHMARK(EXPECT_TRUE(signer.verify("Helloooo!!", sig, pk)), 10, "Verifying time:");
 
     EXPECT_FALSE(signer.verify("Hellooo!!", sig, pk));
 

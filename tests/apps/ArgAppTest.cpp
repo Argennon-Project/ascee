@@ -23,7 +23,7 @@
 #include "validator/RequestScheduler.h"
 #include "validator/RequestProcessor.hpp"
 
-#define ASCEE_SERIAL_EXEC
+// #define ASCEE_SERIAL_EXEC
 
 using namespace argennon;
 using namespace asa;
@@ -536,14 +536,11 @@ TEST_F(ArgAppTest, FourTransfers) {
                              {full_id(arg_app_id_g, {0xaabc000000000000, 0}), &page_to}
                      },
                      {}, 3);
-
-    RequestProcessor processor(index, appIndex, requests.size(), 3);
+    RequestProcessor processor(index, appIndex, requests.size(), 2);
 
     processor.loadRequests<FakeStream>({
-                                               {0, 1, requests},
-                                               {1, 2, requests},
-                                               {2, 3, requests},
-                                               {3, 4, requests},
+                                               {0, 2, requests},
+                                               {2, 4, requests},
                                        });
     BENCHMARK_ONCE(
 #if defined(ASCEE_SERIAL_EXEC)

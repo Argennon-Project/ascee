@@ -158,14 +158,13 @@ OrderedStaticMap<K, V> mergeIntervalParallel(std::vector<OrderedStaticMap<K, V>>
                                              std::size_t begin, std::size_t end, std::size_t k) {
     using std::move;
 
-    if (begin >= end) return {};
+    if (end <= begin) return {};
 
-    if (end < begin + k || end < begin + 3) {
-        auto&& result = std::move(maps[begin]);
-        for (std::size_t i = begin + 1; i < end; ++i) {
-            result = move(result) | move(maps[i]);
-        }
-        return result;
+    if (end == begin + 1) return maps[begin];
+
+    if (end <= begin + k) {
+        return mergeIntervalParallel(maps, begin, (begin + end) / 2, k) |
+               mergeIntervalParallel(maps, (begin + end) / 2, end, k);
     }
 
     auto secondHalf = std::async([&]() { return mergeIntervalParallel(maps, (begin + end) / 2, end, k); });
