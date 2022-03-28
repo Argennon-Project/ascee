@@ -91,12 +91,12 @@ void Executor::initHandlers() {
     if (err) throw std::runtime_error("error in creating handlers");
 }
 
-void Executor::ControlledCaller::guardArea() {
+void Executor::ControlledCaller::guardArea_() {
     session->guardedArea = true;
     maskSignals(SIG_BLOCK);
 }
 
-void Executor::ControlledCaller::unGuard() {
+void Executor::ControlledCaller::unGuard_() {
     maskSignals(SIG_UNBLOCK);
     session->guardedArea = false;
 }
@@ -113,13 +113,13 @@ AppResponse Executor::executeOne(AppRequest* req) {
         };
         session = &threadSession;
         if (req->useControlledExecution) {
-            callManager = std::make_unique<ControlledCaller>();
-            ControlledCaller::CallResourceHandler rootResourceCtx(req->gas);
+            session->callManager = std::make_unique<ControlledCaller>();
+            ControlledCaller::CallResourceHandler rootResourceCtx(req->maxClocks);
             CallContext rootInfoCtx;
             statusCode = callApp(255, req->calledAppID, response, string_view_c(req->httpRequest));
             rootResourceCtx.complete();
         } else {
-            callManager = std::make_unique<OptimisticCaller>();
+            session->callManager = std::make_unique<OptimisticCaller>();
             ThreadCpuTimer cpuTimer;
             cpuTimer.setAlarm(default_exec_time_nsec);
             CallContext rootInfoCtx;
@@ -136,7 +136,7 @@ AppResponse Executor::executeOne(AppRequest* req) {
 }
 
 int Executor::callApp(byte forwarded_gas, long_id app_id, response_buffer_c& response, string_view_c request) {
-    return callManager->executeApp(forwarded_gas, app_id, response, request);
+    return session->callManager->executeApp(forwarded_gas, app_id, response, request);
 }
 
 Executor::Executor() {
@@ -208,7 +208,7 @@ void* Executor::ControlledCaller::threadStart(void* voidArgs) {
 
 int Executor::ControlledCaller::executeApp(byte forwarded_gas, long_id app_id,
                                            response_buffer_c& response, string_view_c request) {
-    guardArea();
+    guardArea_();
     int ret;
     try {
         CallResourceHandler resourceContext(forwarded_gas);
@@ -246,7 +246,7 @@ int Executor::ControlledCaller::executeApp(byte forwarded_gas, long_id app_id,
         Executor::Error(ae).toHttpResponse(response.clear());
     }
     // unBlockSignals() should be called here, in case resourceContext's constructor throws an exception.
-    unGuard();
+    unGuard_();
     return ret;
 }
 
@@ -256,14 +256,13 @@ int64_t calculateExternalGas(int64_t currentGas) {
     return 2 * currentGas / 3;
 }
 
-#define MIN_GAS 1
 
 Executor::ControlledCaller::CallResourceHandler::CallResourceHandler(byte forwardedGas) {
     prevResources = session->currentResources;
     caller = session->currentCall->appID;
 
     gas = (prevResources->remainingExternalGas * forwardedGas) >> 8;
-    if (gas <= MIN_GAS) throw AsceeError("forwarded gas is too low", StatusCode::invalid_operation);
+    if (gas <= min_clocks) throw AsceeError("forwarded gas is too low", StatusCode::invalid_operation);
 
     id = session->failureManager.nextInvocation();
     prevResources->remainingExternalGas -= gas;
@@ -311,10 +310,12 @@ Executor::OptimisticCaller::CallResourceHandler::~CallResourceHandler() noexcept
 
 int Executor::OptimisticCaller::executeApp(byte forwarded_gas, long_id app_id,
                                            response_buffer_c& response, string_view_c request) {
+    guardArea_();
     try {
         CallResourceHandler resourceContext;
         auto ret = argc::dependant_call(app_id, response, request);
         if (ret < 400) resourceContext.complete();
+        unGuard_();
         return ret;
     } catch (const AsceeError& ae) {
         throw BlockError("an optimistic call failed");

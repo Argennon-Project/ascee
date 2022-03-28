@@ -51,7 +51,7 @@ TEST_F(ArgAppTest, SimpleTransfer) {
                            "Content-Length: 57\r\n"
                            "\r\n"
                            R"({"to":0xaabc,"amount":1399,"sig":0})",
-            .gas = 1000,
+            .maxClocks = 1000,
             .appAccessList = {arg_app_id_g},
             .memoryAccessMap = {
                     {arg_app_id_g},
@@ -140,7 +140,7 @@ TEST_F(ArgAppTest, SimpleCreateAcc) {
                            "Content-Length: 57\r\n"
                            "\r\n"
                            R"({"pk":"pz_jr84r5yc-ViuR-_Djst2C6ikRQ3l3TQBfmSaC2O9QWVUAl3cAgCJtI2HVpFog66bezRfVdcso4AeA82wlRgA","sig":"OcTd6Oa93sNeQpZVoN4sd7BOGGnRxfyDJnuitYpOr_g8dtGcgAX8XH2g7klAD50vhrl299NyEgGEG2FTqIscgwA"})",
-            .gas = 1000,
+            .maxClocks = 1000,
             .appAccessList = {arg_app_id_g},
             .memoryAccessMap = {
                     {arg_app_id_g},
@@ -200,7 +200,7 @@ TEST_F(ArgAppTest, TwoTransfers) {
                                    "Content-Length: 57\r\n"
                                    "\r\n"
                                    R"({"to":0xaabc,"amount":1234,"sig":0})",
-                    .gas = 1000,
+                    .maxClocks = 1000,
                     .appAccessList = {arg_app_id_g},
                     .memoryAccessMap = {
                             {arg_app_id_g},
@@ -230,7 +230,7 @@ TEST_F(ArgAppTest, TwoTransfers) {
                                    "Content-Length: 57\r\n"
                                    "\r\n"
                                    R"({"to":0xaabc,"amount":556677,"sig":0})",
-                    .gas = 1000,
+                    .maxClocks = 1000,
                     .appAccessList = {arg_app_id_g},
                     .memoryAccessMap = {
                             {arg_app_id_g},
@@ -344,7 +344,7 @@ TEST_F(ArgAppTest, FourTransfers) {
                                    "Content-Length: 57\r\n"
                                    "\r\n"
                                    R"({"to":0xaabc,"amount":1234,"sig":0})",
-                    .gas = 1000,
+                    .maxClocks  = 1000,
                     .appAccessList = {arg_app_id_g},
                     .memoryAccessMap = {
                             {arg_app_id_g},
@@ -374,7 +374,7 @@ TEST_F(ArgAppTest, FourTransfers) {
                                    "Content-Length: 57\r\n"
                                    "\r\n"
                                    R"({"to":0xaabc,"amount":556677,"sig":0})",
-                    .gas = 1000,
+                    .maxClocks = 1000,
                     .appAccessList = {arg_app_id_g},
                     .memoryAccessMap = {
                             {arg_app_id_g},
@@ -403,7 +403,7 @@ TEST_F(ArgAppTest, FourTransfers) {
                                    "Content-Length: 57\r\n"
                                    "\r\n"
                                    R"({"to":0xaabc,"amount":1234,"sig":0})",
-                    .gas = 1000,
+                    .maxClocks = 1000,
                     .appAccessList = {arg_app_id_g},
                     .memoryAccessMap = {
                             {arg_app_id_g},
@@ -432,7 +432,7 @@ TEST_F(ArgAppTest, FourTransfers) {
                                    "Content-Length: 57\r\n"
                                    "\r\n"
                                    R"({"to":0xaabc,"amount":1234,"sig":0})",
-                    .gas = 1000,
+                    .maxClocks = 1000,
                     .appAccessList = {arg_app_id_g},
                     .memoryAccessMap = {
                             {arg_app_id_g},
@@ -536,7 +536,7 @@ TEST_F(ArgAppTest, FourTransfers) {
                              {full_id(arg_app_id_g, {0xaabc000000000000, 0}), &page_to}
                      },
                      {}, 3);
-    RequestProcessor processor(index, appIndex, requests.size(), 2);
+    RequestProcessor processor(index, appIndex, requests.size(), 4);
 
     processor.loadRequests<FakeStream>({
                                                {0, 2, requests},

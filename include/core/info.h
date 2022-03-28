@@ -159,7 +159,7 @@ struct AppRequestInfo {
 
     long_id calledAppID = -1;
     std::string httpRequest;
-    int_fast32_t gas = 0;
+    int_fast32_t maxClocks = 0;
 
     /**
      * A sorted list of applications that the request will call. This list can not be empty.

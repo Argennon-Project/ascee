@@ -63,7 +63,7 @@ struct AppRequest {
     AppRequestIdType id;
     long_id calledAppID;
     std::string httpRequest;
-    int32_fast gas;
+    int32_fast maxClocks;
     HeapModifier modifier;
     AppTable appTable;
     bool useControlledExecution;
@@ -90,9 +90,9 @@ private:
         virtual int executeApp(byte forwarded_gas, long_id app_id,
                                response_buffer_c& response, string_view_c request) = 0;
 
-        virtual void guardArea() = 0;
+        virtual void guardArea_() = 0;
 
-        virtual void unGuard() = 0;
+        virtual void unGuard_() = 0;
 
     };
 
@@ -125,9 +125,9 @@ private:
         int executeApp(byte forwarded_gas, long_id app_id,
                        response_buffer_c& response, string_view_c request) override;
 
-        void guardArea() override;
+        void guardArea_() override;
 
-        void unGuard() override;
+        void unGuard_() override;
 
     private:
         static void* threadStart(void* voidArgs);
@@ -152,12 +152,13 @@ private:
         int executeApp(byte forwarded_gas, long_id app_id,
                        response_buffer_c& response, string_view_c request) override;
 
-        void guardArea() override {}
+        void guardArea_() override {}
 
-        void unGuard() override {}
+        void unGuard_() override {}
     };
 
 public:
+    static constexpr int min_clocks = 1;
     static constexpr int64_t default_exec_time_nsec = 50000000;
 
     class Error : public AsceeError {
@@ -214,6 +215,7 @@ public:
         FailureManager& failureManager = request->failureManager;
         std::unordered_map<uint64_t, bool> isLocked;
         VirtualSignatureManager& sigManager = request->signatureManager;
+        std::unique_ptr<CallManager> callManager = nullptr;
         //util::CryptoSystem& cryptoSigner;
 
         CallContext* currentCall = nullptr;
@@ -230,22 +232,22 @@ public:
     inline static SessionInfo* getSession() { return session; }
 
     /**
-     * The correct usage of this function is to use it at the start of the critical area and only call unGuard() when the
+     * The correct usage of this function is to use it at the start of the critical area and only call unGuard_() when the
      * code is completed normally. For example:
      * @code
      * int f() {
-     *     guardArea();
+     *     guardArea_();
      *
-     *     // no unGuard should be called here.
+     *     // no unGuard_ should be called here.
      *     throw std::exception();
      *
-     *     unGuard();
+     *     unGuard_();
      *     return 0;
      * }
      */
-    static void guardArea() { callManager->guardArea(); }
+    static void guardArea() { session->callManager->guardArea_(); }
 
-    static void unGuard() { callManager->unGuard(); }
+    static void unGuard() { session->callManager->unGuard_(); }
 
     AppResponse executeOne(AppRequest* req);
 
@@ -255,8 +257,6 @@ public:
 private:
     // IMPORTANT: PBC library is not thread-safe, and this instance should not be shared between threads.
     //util::CryptoSystem cryptoSigner;
-
-    static inline std::unique_ptr<CallManager> callManager = nullptr;
 
     static inline thread_local SessionInfo* session = nullptr;
 
