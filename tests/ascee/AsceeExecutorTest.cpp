@@ -60,7 +60,7 @@ struct AppTestCase {
         AppRequest req{
                 .calledAppID = calledApp << 56,
                 .httpRequest = request,
-                .gas = gas,
+                .maxClocks = gas,
                 .modifier = argennon::mocking::ascee::MockModifier(),
                 .appTable = appIndex.buildAppTable(shiftedAccessList),
                 .useControlledExecution = useControlled,

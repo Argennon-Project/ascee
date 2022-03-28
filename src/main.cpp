@@ -71,7 +71,7 @@ int main(int argc, char const* argv[]) {
                                    "Content-Length: 57\r\n"
                                    "\r\n"
                                    R"({"to":0xaabc,"amount":1399,"sig":0})",
-                    .gas = 1000,
+                    .maxClocks = 1000,
                     .appAccessList = {arg_app_id_g},
                     .memoryAccessMap = {
                             {arg_app_id_g},
