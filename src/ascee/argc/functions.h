@@ -74,6 +74,8 @@ void revert(string_view_c msg);
 
 signature_c p_scan_sig(string_view_c str, string_view_c start, string_view_c end, int32& pos);
 
+int16 p_scan_int16(string_view_c str, string_view_c start, string_view_c end, int32& pos);
+
 int64 p_scan_int64(string_view_c str, string_view_c start, string_view_c end, int32& pos);
 
 long_id p_scan_long_id(string_view_c str, string_view_c start, string_view_c end, int32& pos);

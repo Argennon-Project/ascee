@@ -74,6 +74,11 @@ int64 argc::p_scan_int64(string_view_c str, string_view_c start, string_view_c e
     return argc_p_scan<int64>(str, start, end, pos);
 }
 
+int16 argc::p_scan_int16(string_view_c str, string_view_c start, string_view_c end, int32& pos) {
+    //todo add a check for the cast here
+    return (int16) argc_p_scan<int64>(str, start, end, pos);
+}
+
 long_id argc::p_scan_long_id(string_view_c str, string_view_c start, string_view_c end, int32& pos) {
     return argc_p_scan<long_id>(str, start, end, pos);
 }

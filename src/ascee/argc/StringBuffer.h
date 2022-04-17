@@ -23,6 +23,7 @@
 #include "core/primitives.h"
 #include <string>
 #include <stdexcept>
+#include <climits>
 #include "util/StaticArray.hpp"
 
 namespace argennon::ascee::runtime {
@@ -60,8 +61,9 @@ public:
     }
 
     [[nodiscard]]
-    auto size() const {
-        return view.size();
+    int size() const {
+        if (view.size() > INT_MAX) throw std::runtime_error("string is too big");
+        return (int) view.size();
     }
 
     [[nodiscard]]

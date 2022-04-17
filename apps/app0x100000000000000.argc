@@ -63,7 +63,7 @@ dispatcher {
         long_id account = p_scan_long_id(request, "/balances/", "/", position);
         long_id to = p_scan_long_id(request, "{\"to\":", ",", position);
         int64 amount = p_scan_int64(request, "\"amount\":", ",", position);
-        int16 sig_index = p_scan_int64(request, "\"sig\":", "}", position);
+        int16 sig_index = p_scan_int16(request, "\"sig\":", "}", position);
         transfer(account, to, amount, sig_index);
         append_str(response, "success and a good response!");
         return 200;
