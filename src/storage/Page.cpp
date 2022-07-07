@@ -22,6 +22,9 @@ using namespace argennon;
 using namespace asa;
 using std::pair, std::unique_ptr;
 
+/**
+ * @copydoc Chunk::applyDelta
+ */
 void Page::applyDelta(const VarLenFullID& pageID, const Page::Delta& delta, int64_fast blockNumber) {
     if (delta.content.empty()) return;
     const byte* end = delta.content.data() + delta.content.size();

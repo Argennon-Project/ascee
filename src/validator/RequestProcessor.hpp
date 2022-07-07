@@ -32,8 +32,18 @@ public:
             int32_fast numOfRequests,
             int workersCount = -1
     ) : scheduler(numOfRequests, chunkIndex, appIndex), numOfRequests(numOfRequests),
-        workersCount(workersCount < 1 ? (int) std::thread::hardware_concurrency() * 2 : workersCount) {}
+        workersCount(workersCount < 1 ? (int) std::thread::hardware_concurrency() * 2 : workersCount) {
+    }
 
+
+    /**
+     *
+     * @tparam RequestStream is a class representing a stream of requests. It needs to have a @p next() function which
+     * returns the next @p AppRequestInfo and throws @p RequestStream::EndOfStream exception when the end of
+     * the stream is reached.
+     * @param streams is a vector of request streams. Each steam will be processed using a separate worker as long as
+     * the number of workers is less than @p workerCount.
+     */
     template<class RequestStream>
     void loadRequests(std::vector<RequestStream> streams) {
         runAll([&](int i) {

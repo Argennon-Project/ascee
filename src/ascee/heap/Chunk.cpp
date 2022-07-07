@@ -85,14 +85,16 @@ bool Chunk::shrinkSpace() {
 }
 
 /**
- * @param delta format: [ chunkSize (offsetDiff dataSize data)* 0 ]
- * offsetDiff is the difference between the end of the last data block and the start of the current data block + 1.
- * 0 indicated the end of the delta
- * type of all numbers are varSize encoded with var_size_trie_g PrefixTrie.
- * chunkSize will be XORed with the current chunk size.
- * offsetDiff and dataSize are used without XORing.
- * data is the data to be copied in the chunk
+ * @format: [ chunkSize (offsetDiff dataSize data)* 0 ]
+ * @format @p offsetDiff is the difference between the end of the last data block and the start of the current
+ * data block + 1.
+ * @format @p 0 indicates the end of the delta
+ * @format @p chunkSize will be XORed with the current chunk size.
+ * @format @p offsetDiff and dataSize are used without XORing.
+ * @format data is the data to be copied in the chunk
+ * @format Type of all numbers are varSize encoded with @p var_size_trie_g PrefixTrie.
  *
+ * @param delta
  * @return the updated delta pointer in such a way that it points to the unconsumed part of the delta array.
  */
 void Chunk::applyDelta(const byte*& delta, const byte* boundary) {

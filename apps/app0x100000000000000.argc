@@ -1,4 +1,7 @@
 
+/**
+ * This is the implementation of the ARG app.
+/*
 
 /*
 bool create_app_account(long_id address, long_id owner_id) {

@@ -172,7 +172,7 @@ struct AppRequestInfo {
     /**
      * memoryAccessMap is the sorted list of memory locations that the request will access. This list must be sorted
      * based on appIDs, chunkIDs and offsets. Defined access blocks must be non-overlapping. The first defined
-     * access block for every chunk MUST be ONE of the following access blocks:
+     * access block for every chunk MUST be ONE of the following access blocks: (* indicates an arbitrary value.)
      *
      *
      * @ResizingBlock {offset = -3, size = *, access = *} which means the request does not access the size of the chunk.
@@ -184,7 +184,13 @@ struct AppRequestInfo {
      * size > 0 the request wants to expand the chunk and sizeBound = size, which means newSize <= size. If size <= 0
      * the request can shrink the chunk and sizeBound = -size, which means newSize >= -size.
      *
-     * @note * indicates any value.
+     * An access block is defined on a chunk. Every chunk belongs to an application. So @p AccessMapType should be a
+     * hierarchical map with 3 levels. First level is indexed by appID. appID is a single 8-byte id and is
+     * represented by @p LongID type. Second level is indexed by chunkID and is a compound id containing two 8-byte
+     * identifiers represented by @p LongLongID type. The last level is indexed by the offset of the access block and
+     * is an int32. The map values are
+     * @p AccessBlockInfo objects. The map is constructed by @p OrderedStaticMap, so the keys and values should be
+     * supplied in two separate vectors. @note Keys must be sorted.
     */
     // block loader needs to endure that this list is: 1) sorted. 2) all AccessBlocks are non-overlapping.
     AccessMapType memoryAccessMap;

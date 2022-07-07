@@ -62,6 +62,10 @@ private:
 
 /// contains temporary code examples
 int main(int argc, char const* argv[]) {
+    // In this example, we want to send 1399 ARG from account 0x95ab to account 0xaabc. For this, we need to make
+    // a request to the ARG app. The information of the request should be packed in a AppRequestInfo struct. We use a
+    // vector of AppRequestInfo structs, because RequestProcessor accepts RequestStreams as input. We will later
+    // convert this vector to a stream using FakeStream class.
     std::vector<AppRequestInfo> requests{
             {
                     .id = 0,
@@ -73,6 +77,8 @@ int main(int argc, char const* argv[]) {
                                    R"({"to":0xaabc,"amount":1399,"sig":0})",
                     .maxClocks = 1000,
                     .appAccessList = {arg_app_id_g},
+                    // We need to define the required access blocks. Don't forget that KEYS MUST BE SORTED! check
+                    // memoryAccessMap documentation.
                     .memoryAccessMap = {
                             {arg_app_id_g},
                             {{{{0x95ab000000000000, 0}, {0xaabc000000000000, 0}},
@@ -97,40 +103,42 @@ int main(int argc, char const* argv[]) {
 
     auto dummyBlockNumber = 777;
 
+    // Now we create a fake state in which the ARG balance of account 0x95ab is 5141. We also set the appropriate public
+    // key for it and set its nonce to 11 so the signature can be verified. Check applyDelta document to find out
+    // how the data should be encoded.
     Page senderPage(dummyBlockNumber);
     VarLenFullID senderPageID(std::unique_ptr<byte[]>(new byte[4]{0x1, 0x95, 0xab, 0x0}));
 
-    senderPage.
-            applyDelta(senderPageID,
-                       Page::Delta{.content = {0,
-                                               67 + 8, 1, 69, 11, 0,
-                               // pk:
-                                               167, 63, 227, 175, 206, 43, 231, 39, 62, 86, 43, 145, 251, 240, 227,
-                                               178, 221, 130, 234, 41, 17, 67, 121, 119, 77, 0, 95, 153, 38, 130,
-                                               216, 239, 80, 89, 85, 0, 151, 119, 0, 128, 34, 109, 35, 97, 213, 164,
-                                               90, 32, 235, 166, 222, 205, 23, 213, 117, 203, 40, 224, 7, 128, 243,
-                                               108, 37, 70,
-                                               0,
-                               // pk end
-                                               21, 20},
-                               .finalDigest = {}},
-                       dummyBlockNumber
-                       + 1
+    senderPage.applyDelta(senderPageID,
+                          Page::Delta{.content = {0,
+                                                  67 + 8, 1, 69, 11, 0,
+                                  // pk:
+                                                  167, 63, 227, 175, 206, 43, 231, 39, 62, 86, 43, 145, 251, 240, 227,
+                                                  178, 221, 130, 234, 41, 17, 67, 121, 119, 77, 0, 95, 153, 38, 130,
+                                                  216, 239, 80, 89, 85, 0, 151, 119, 0, 128, 34, 109, 35, 97, 213, 164,
+                                                  90, 32, 235, 166, 222, 205, 23, 213, 117, 203, 40, 224, 7, 128, 243,
+                                                  108, 37, 70,
+                                                  0,
+                                  // pk end
+                                                  21, 20},
+                                  .finalDigest = {}},
+                          dummyBlockNumber
+                          + 1
     );
 
+    // We set the initial balance of the recipient account to 257.
     Page recipientPage(dummyBlockNumber);
     VarLenFullID toPageID(std::unique_ptr<byte[]>(new byte[4]{0x1, 0xaa, 0xbc, 0x0}));
-    recipientPage.
-            applyDelta(toPageID,
-                       {
-                               {
-                                       0,
-                                       67 + 8, 1, 2, 45, 45,
-                                       66, 2, 1, 1
-                               },
-                               {
-                               }},
-                       dummyBlockNumber + 1
+    recipientPage.applyDelta(toPageID,
+                             {
+                                     {
+                                             0,
+                                             67 + 8, 1, 2, 45, 45,
+                                             66, 2, 1, 1
+                                     },
+                                     {
+                                     }},
+                             dummyBlockNumber + 1
     );
 
     ChunkIndex chunkIndex({}, {
@@ -139,36 +147,22 @@ int main(int argc, char const* argv[]) {
                           },
                           {}, 2);
 
+    // "apps" is the folder that the current source for the ARG application is stored.
     AppLoader appLoader("apps");
     AppIndex appIndex(&appLoader);
-    appIndex.prepareApps({
-                                 123}, {
-                                 arg_app_id_g});
+    // Block number does not matter, and we set it to 123 just for fun.
+    appIndex.prepareApps({123}, {arg_app_id_g});
 
     RequestProcessor processor(chunkIndex, appIndex, int(requests.size()), 3);
 
-    processor.loadRequests<FakeStream>({
-                                               {
-                                                       0, 1, requests},
-                                       });
+    processor.loadRequests<FakeStream>({{0, 1, requests},});
     processor.checkDependencyGraph();
 
     auto response = processor.parallelExecuteRequests<Executor>();
 
-    printf("<<<******* Response *******>>> \n%s\n<<<************************>>>\n", response[0].httpResponse.
+    printf("<<<******* Response *******>>> \n%s\n<<<************************>>>\n",
+           response[0].httpResponse.c_str());
 
-            c_str()
-
-    );
-
-    std::cout << (std::string) *senderPage.
-
-            getNative()
-
-              << "\n";
-    std::cout << (std::string) *recipientPage.
-
-            getNative()
-
-              << "\n";
+    std::cout << (std::string) *senderPage.getNative() << "\n";
+    std::cout << (std::string) *recipientPage.getNative() << "\n";
 }
